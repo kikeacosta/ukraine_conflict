@@ -14,7 +14,7 @@ them and installs anything missing.
 ```r
 source("code/01_pop_estimates_sssu.R")
 # ... 02, 03, 04, 05, 06, 07_*, 08, 09, 10 ...
-source("code/11_estimation conflict and all-cause mortality_arriaga.R")
+source("code/11_estimation_conflict_allcause_mortality.R")
 source("code/14_e0_loss_decomposition_by_cause.R")
 ```
 
@@ -38,7 +38,7 @@ only costs that once.
 | `04` | Lee-Carter forecast → counterfactual "no war" mortality | `ukr_mxs_obs_plus_frcst_1989_2025.rds` |
 | `05` | WPP2024 age-specific fertility | `ukr_asfr_wpp_2022_2025.rds` |
 | `06` | Net emigration by age and sex | `ukr_migrants_...rds` |
-| `07_ucdp_..._invals` | Conflict death **totals** with low/high bounds | `ukr_ucdp_invals.rds` |
+| `07_ucdp_ukr_conflict_deaths` | Conflict death **totals** with low/high bounds | `ukr_ucdp_invals.rds` |
 | `07_ohchr` | Age-sex **profile** of civilian deaths | `ukr_ohchr_civilian_casualties.rds` |
 | `07_acled` | ACLED totals, comparison only | `ukr_acled.rds` |
 | `08` | Combatant deaths by age and sex from the ualosses register | `ukr_ualosses_..._sex_age_...rds` |

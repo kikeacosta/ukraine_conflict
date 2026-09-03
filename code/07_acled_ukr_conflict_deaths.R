@@ -4,7 +4,7 @@
 #
 # ACLED fatality counts are read here as an independent cross-check on the
 # UCDP totals used by the pipeline. NOTHING DOWNSTREAM CONSUMES THIS OUTPUT -
-# the estimates all run on UCDP (07_ucdp_ukr_conflict_deaths_invals.R).
+# the estimates all run on UCDP (07_ucdp_ukr_conflict_deaths.R).
 #
 # The two ACLED workbooks are not tracked in git. As with the other external
 # sources, the tidy country-year-role extract below is cached, so the raw

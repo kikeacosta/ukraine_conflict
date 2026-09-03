@@ -18,8 +18,7 @@
 #   5. Year-on-year differences in the stock give the annual NET FLOW, which
 #      is what step 11 consumes. A negative flow (as in 2024) means net return.
 #
-# INPUTS   data_input/refugees_eurostat/migr_asytpsm_*.xlsx
-#          data_input/unhcr_refugees_annual.csv
+# INPUT    data_input/refugees_eurostat/migr_asytpsm_*.xlsx
 # OUTPUT   data_inter/ukr_migrants_unchr_eurostat_sex_age_2022_2025.rds
 #          <- used by 11 and 13
 # ==============================================================================
@@ -254,21 +253,6 @@ ggsave("figures/exploratory/migs_pyramids_stock.png", w = 6, h = 3)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# loading data on total refugees
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-an <- read_csv("data_input/unhcr_refugees_annual.csv")
-
-an2 <-
-  an |>
-  select(-5:-2) |>
-  rename(year = 1, mix_r = 2, mix_a = 3) |>
-  mutate(mix_tot = mix_r + mix_a) |>
-  select(-mix_r, -mix_a) |>
-  arrange(year)
-
-copy_this(an2)
-
-
 # adjusting the total to match UNHCR data
 # there is UNHCR data by year and a total as of feb 2026, but they do not match,
 # so I will adjust the total to match the UNHCR total and keep the distribution by year as is
@@ -279,26 +263,11 @@ adj_fct <-
   mutate(adj = lst / mix) |>
   pull(adj)
 
-# looking at adjustments to match UNHCR total by year
-dt5_old <-
-  dt4 |>
-  mutate(mix_sum = sum(mix), .by = c(year)) |>
-  left_join(an2) |>
-  mutate(mix = mix * mix_tot / mix_sum) |>
-  select(-mix_sum, -mix_tot) |>
-  spread(year, mix) |>
-  mutate(
-    e2022 = -`2022`,
-    e2023 = `2022` - `2023`,
-    e2024 = `2023` - `2024`,
-    e2025 = `2024` - `2025`
-  ) |>
-  select(sex, age, e2022, e2023, e2024, e2025) |>
-  pivot_longer(-c(sex, age), names_to = "year", values_to = "mix") |>
-  mutate(year = str_sub(year, 2, 5) |> as.integer(), mix = round(mix, 0))
-
-dt5_old |>
-  summarise(mix = sum(mix), .by = c(year))
+# NOTE: an alternative adjustment (dt5_old) used to sit here, rescaling each
+# year to UNHCR's own yearly totals from unhcr_refugees_annual.csv rather than
+# to the single February-2026 stock. It was computed and printed but never
+# saved, so nothing downstream ever used it; it and its input file have been
+# retired.
 
 # adjusting to match UNHCR total final
 dt5 <-

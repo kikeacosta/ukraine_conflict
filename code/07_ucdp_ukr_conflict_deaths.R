@@ -19,8 +19,12 @@
 #
 # These totals become the civilian min/mode/max in the parameter table (10).
 #
-# NOTE: this file supersedes 07_ucdp_ukr_conflict_deaths.R, which had no
-# uncertainty bounds and is now in code/deprecated/.
+# NOTE: an earlier version of this step carried no uncertainty bounds and was
+# retired. This file was called ..._invals.R only to tell the two apart; with
+# the old one gone the suffix has been dropped.
+#
+# The output keeps the name ukr_ucdp_invals.rds, where "invals" means
+# intervals: unlike the other sources, UCDP supplies low and high bounds.
 #
 # INPUTS   data_input/ucdp/GEDEvent_v25_1.csv         (1989-2024, 239 MB)
 #          data_input/ucdp/GEDEvent_v25_01_25_12.csv  (2025 candidate events)

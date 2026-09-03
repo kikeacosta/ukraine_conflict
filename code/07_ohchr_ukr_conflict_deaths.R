@@ -5,7 +5,7 @@
 # WHAT THIS SCRIPT DOES
 # ---------------------
 # Produces the age-sex distribution of civilian conflict deaths. The yearly
-# TOTALS come from UCDP (see 07_ucdp_..._invals.R); this script only says how
+# TOTALS come from UCDP (see 07_ucdp_ukr_conflict_deaths.R); this script only says how
 # those totals are spread across age and sex.
 #
 #   1. OHCHR civilian casualties by five-year age group and sex, obtained

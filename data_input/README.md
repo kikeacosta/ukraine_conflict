@@ -66,5 +66,4 @@ aggregates them to anonymous counts before anything is written to
 | `ohchr_civilian_deaths.xlsx` | OHCHR annual civilian death totals |
 | `UKR_2022-2025_OHCHR.xlsx` | OHCHR civilian deaths by age and sex, via UNICEF-IGME |
 | `refugees_eurostat/` | Eurostat temporary protection registrations by age and sex |
-| `unhcr_refugees_annual.csv` | UNHCR annual refugee totals |
 | `acled/` | ACLED fatality counts, comparison only. Not tracked - the cached extract ships instead |
