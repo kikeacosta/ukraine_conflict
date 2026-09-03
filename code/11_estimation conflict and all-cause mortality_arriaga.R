@@ -27,7 +27,7 @@
 #          data_inter/ukr_ohchr_civilian_casualties.rds    (from 07_ohchr)
 #          data_inter/ukr_ualosses_...rds                  (from 08)
 #
-# OUTPUTS  data_inter/ukr_sim_draws_2022_2025.parquet  (all 5,000 draws)
+# OUTPUTS  data_inter/ukr_sim_draws_2022_2025.rds  (all 5,000 draws)
 #          data_inter/ukr_probabilistic_deaths_rates_2022_2025.rds (summary)
 #
 # The life expectancy decomposition that used to live at the bottom of this
@@ -128,9 +128,9 @@ stopifnot(
 # single implementation of the cohort-component projection.
 
 # 6. RUN (OR REUSE) THE 5,000 DRAWS ============================================
-# ~7 minutes. Cached, so re-running this script is instant unless the parquet
+# ~7 minutes. Cached, so re-running this script is instant unless the .rds file
 # is deleted. The file is large and is NOT tracked in git - see .gitignore.
-sim_output_raw <- cache_parquet("data_inter/ukr_sim_draws_2022_2025.parquet", {
+sim_output_raw <- cache_rds("data_inter/ukr_sim_draws_2022_2025.rds", {
   set.seed(42) # inside the cache block, so the cache is reproducible
 
   draws_df <- param_table %>%

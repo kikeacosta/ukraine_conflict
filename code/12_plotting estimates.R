@@ -13,7 +13,7 @@
 #
 # The cause-of-death decomposition lives in 14, not here.
 #
-# INPUTS   data_inter/ukr_sim_draws_2022_2025.parquet              (from 11)
+# INPUTS   data_inter/ukr_sim_draws_2022_2025.rds              (from 11)
 #          data_inter/ukr_probabilistic_deaths_rates_2022_2025.rds (from 11)
 #          data_inter/ukr_param_table.rds                          (from 10)
 # OUTPUTS  figures/mort_rates_*.png, figures/losses_boxplot.png,
@@ -24,7 +24,7 @@ rm(list = ls())
 gc()
 source("code/00_setup.R")
 
-draws_file <- "data_inter/ukr_sim_draws_2022_2025.parquet"
+draws_file <- "data_inter/ukr_sim_draws_2022_2025.rds"
 if (!file.exists(draws_file)) {
   stop(
     "Simulation draws not found. Run step 11 first (~7 minutes):\n  ",
@@ -34,7 +34,7 @@ if (!file.exists(draws_file)) {
 }
 
 # components, one row per draw x year x sex x age
-sim_wide <- as_tibble(read_parquet(draws_file))
+sim_wide <- as_tibble(readRDS(draws_file))
 
 # expand to the long cause format used by the plots
 sim_output_raw <-

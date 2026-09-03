@@ -32,7 +32,7 @@ source("code/00_setup.R")
 yr <- read_xlsx("data_input/ohchr_civilian_deaths.xlsx", sheet = 1)
 
 # OHCHR publishes a single documented count with no uncertainty bounds; saved
-# here for the source comparison table assembled in 16.
+# here for the source comparison table assembled in 15.
 write_rds(
   yr |> filter(year %in% 2022:2025),
   "data_inter/ukr_ohchr_annual_totals.rds"

@@ -1,6 +1,14 @@
 options(scipen = 9999)
 try(dev.off(), silent = T)
 
+# Under Rscript, printing a plot opens the default graphics device, which
+# writes a stray "Rplots.pdf" into the working directory. Every figure here is
+# saved explicitly with ggsave(), so that file is never wanted: send the
+# default device to a null device when running non-interactively.
+if (!interactive()) {
+  options(device = function(...) grDevices::pdf(NULL))
+}
+
 # installing and loading required packages ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # install pacman to streamline further package installation
@@ -31,7 +39,6 @@ packages_CRAN <- c(
   "R.utils",
   "vital",
   "fst",
-  "arrow",
   "mc2d"
 )
 
@@ -67,22 +74,32 @@ copy_this <- function(x, row.names = FALSE, col.names = TRUE, ...) {
 # exclusion rules.
 #
 # Every script that touches one of those files wraps the expensive part in
-# cache_parquet(). The cached extract is small, is tracked in git, and is
-# read back on subsequent runs, so a fresh clone can run the whole pipeline
-# end to end WITHOUT the raw downloads. `expr` is a lazily evaluated promise:
-# it is only forced when the cache is missing.
+# cache_rds(). The cached extract is small, is tracked in git, and is read
+# back on subsequent runs, so a fresh clone can run the whole pipeline end to
+# end WITHOUT the raw downloads. `expr` is a lazily evaluated promise: it is
+# only forced when the cache is missing.
 #
-#   dt <- cache_parquet("data_inter/x.parquet", { ...heavy processing... })
+#   dt <- cache_rds("data_inter/x.rds", { ...heavy processing... })
 #
-# Pass refresh = TRUE (or delete the .parquet) to rebuild from the raw file.
-cache_parquet <- function(path, expr, refresh = FALSE) {
+# Pass refresh = TRUE (or delete the .rds) to rebuild from the raw file.
+#
+# FORMAT: plain gzipped .rds, like every other intermediate in this pipeline.
+# An earlier version used parquet, on the assumption that its ability to
+# split a table across several files would be needed to keep everything under
+# GitHub's 100 MB limit. It is not - the only file that large is the
+# simulation output, which is derived, reproducible from a fixed seed, and
+# therefore excluded from version control rather than committed. Without that
+# need parquet earned nothing here: measured on the simulation draws it was
+# LARGER than gzipped .rds (104 vs 98 MB) and slower to read, while adding
+# the heavy `arrow` dependency to every clone.
+cache_rds <- function(path, expr, refresh = FALSE) {
   if (!refresh && file.exists(path)) {
     message("cache hit  : ", path)
-    return(as_tibble(arrow::read_parquet(path)))
+    return(as_tibble(readRDS(path)))
   }
   message("cache miss : rebuilding ", path, " from data_input/ ...")
   out <- expr
-  arrow::write_parquet(out, path, compression = "zstd")
+  saveRDS(out, path, compress = "gzip")
   message("cache built: ", path, " (", round(file.size(path) / 1e6, 1), " MB)")
   as_tibble(out)
 }
@@ -95,7 +112,7 @@ require_raw <- function(path) {
       "Raw input not found:\n  ",
       path,
       "\nThis file is too large for git. Either download it (see ",
-      "data_input/README.md)\nor keep the cached .parquet extract in ",
+      "data_input/README.md)\nor keep the cached .rds extract in ",
       "data_inter/ so this step can be skipped.",
       call. = FALSE
     )

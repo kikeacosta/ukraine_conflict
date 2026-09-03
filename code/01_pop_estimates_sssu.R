@@ -12,16 +12,14 @@
 #     luk = Luhansk region
 # The projection in step 11 starts from "cnt" only.
 #
-# It then derives death rates from an independent set of life tables
-# (LifeTables.xlsx, tagged source = "grig") so the SSSU rates can be compared
-# against them.
+# The population is what the pipeline consumes. The death counts are tidied
+# here too, but no later step reads them: they previously fed a comparison of
+# SSSU death rates against an independent life-table source (LifeTables.xlsx),
+# written to ukr_dts_pop_sssu_grig.rds. Nothing ever consumed that output, so
+# the comparison and its input have been retired.
 #
-# INPUTS   data_input/sssu_ukr_data.xlsx
-#          data_input/LifeTables.xlsx
-# OUTPUTS  data_inter/ukr_pop_sssu.rds           <- used by 11 and 13
-#          data_inter/ukr_dts_pop_sssu_grig.rds  <- comparison of the two rate
-#                                                   sources; not currently
-#                                                   consumed downstream
+# INPUT    data_input/sssu_ukr_data.xlsx
+# OUTPUT   data_inter/ukr_pop_sssu.rds   <- used by 11 and 13
 # ==============================================================================
 
 rm(list = ls())
@@ -120,79 +118,8 @@ pop_all <-
 
 write_rds(pop_all, "data_inter/ukr_pop_sssu.rds")
 
-# deaths + population
-dt <-
-  dts_all %>%
-  left_join(pop_all) %>%
-  filter(age != "tot") %>%
-  mutate(age = age %>% as.integer(), year = year %>% as.integer())
-
-
-# ~~~~~~~~~~~~~~~~~~~~~
-# from life tables ====
-# ~~~~~~~~~~~~~~~~~~~~~
-
-exs <-
-  read_xlsx("data_input/LifeTables.xlsx", sheet = "LT")
-
-unique(exs$Sex)
-
-mxs <-
-  exs %>%
-  filter(LT_function == "qx") %>%
-  select(-LT_function) %>%
-  rename_with(tolower) %>%
-  gather(-sex, -year, key = age, value = qx) %>%
-  mutate(
-    age = str_remove(age, "age_") %>% as.integer(),
-    year = year %>% as.integer(),
-    sex = str_sub(sex, 1, 1),
-    reg = "cnt"
-  ) %>%
-  filter(year >= 2002) %>%
-  mutate(
-    ax = case_when(age == 0 ~ 0.13, age == 100 ~ 1.25, TRUE ~ 0.5),
-    mx = qx / (1 - (1 - ax) * qx)
-  ) %>%
-  left_join(
-    dt %>%
-      select(-dts)
-  ) %>%
-  mutate(dts = mx * pop, source = "grig") %>%
-  select(-ax, -qx)
-
-dt2 <-
-  dt %>%
-  mutate(mx = dts / pop, source = "sssu") %>%
-  bind_rows(mxs) %>%
-  rename(region = reg)
-
-write_rds(dt2, "data_inter/ukr_dts_pop_sssu_grig.rds")
-
-# # life tables
-# ltb_f1 <- fread(file.path(
-#   "data_input",
-#   "WPP2024_Life_Table_Complete_Medium_Female_1950-2023.csv.gz"
-# ))
-# ltb_f2 <- fread(file.path(
-#   "data_input",
-#   "WPP2024_Life_Table_Complete_Medium_Female_2024-2100.csv.gz"
-# ))
-# ltb_m1 <- fread(file.path(
-#   "data_input",
-#   "WPP2024_Life_Table_Complete_Medium_Male_1950-2023.csv.gz"
-# ))
-# ltb_m2 <- fread(file.path(
-#   "data_input",
-#   "WPP2024_Life_Table_Complete_Medium_Male_2024-2100.csv.gz"
-# ))
-
-# # population estimates
-# pop1 <- fread(file.path(
-#   "data_input",
-#   "WPP2024_PopulationBySingleAgeSex_Medium_1950-2023.csv.gz"
-# ))
-# pop2 <- fread(file.path(
-#   "data_input",
-#   "WPP2024_PopulationBySingleAgeSex_Medium_2024-2100.csv.gz"
-# ))
+# NOTE: the deaths sheets above are read and tidied into dts_all, but nothing
+# downstream consumes them. They previously fed a comparison of SSSU death
+# rates against an independent life-table source (LifeTables.xlsx), written
+# to ukr_dts_pop_sssu_grig.rds. That output was never read by any later step,
+# so the comparison has been retired along with it.

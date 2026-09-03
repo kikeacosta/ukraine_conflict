@@ -33,7 +33,7 @@
 #
 # SIGN CONVENTION: positive = years of life expectancy LOST.
 #
-# INPUT    data_inter/ukr_sim_draws_2022_2025.parquet   (from 11)
+# INPUT    data_inter/ukr_sim_draws_2022_2025.rds   (from 11)
 # OUTPUTS  data_inter/ukr_e0_loss_by_cause_draws_2022_2025.rds
 #          data_inter/ukr_e0_loss_by_cause_summary_2022_2025.rds
 #          data_inter/ukr_conflict_deaths_by_cause_summary_2022_2025.rds
@@ -44,7 +44,7 @@ rm(list = ls())
 gc()
 source("code/00_setup.R")
 
-draws_file <- "data_inter/ukr_sim_draws_2022_2025.parquet"
+draws_file <- "data_inter/ukr_sim_draws_2022_2025.rds"
 if (!file.exists(draws_file)) {
   stop(
     "Simulation draws not found. Run step 11 first (~7 minutes):\n  ",
@@ -62,7 +62,7 @@ n_age <- length(AGES)
 # ==============================================================================
 # 1. DECOMPOSE EVERY DRAW
 # ==============================================================================
-d <- as.data.table(read_parquet(draws_file))
+d <- as.data.table(readRDS(draws_file))
 setorder(d, sim_id, year, sex, age)
 stopifnot(nrow(d) %% n_age == 0)
 

@@ -6,11 +6,11 @@ source("code/00_setup.R")
 #
 # The source workbook is ~78 MB and is not tracked in git. The extract below
 # is a few kB, so once it has been built once the raw file is never needed
-# again (see cache_parquet() in 00_setup.R).
+# again (see cache_rds() in 00_setup.R).
 #
 # NOTE: WPP2024 only publishes observed fertility up to 2023. Scripts 11 and
 # 13 carry the 2023 schedule forward to 2024 and 2025.
-asfr_y1 <- cache_parquet("data_inter/ukr_asfr_wpp_2022_2025.parquet", {
+asfr_y1 <- cache_rds("data_inter/ukr_asfr_wpp_2022_2025.rds", {
   read_xlsx(
     require_raw(paste0(
       "data_input/",
@@ -35,6 +35,8 @@ stopifnot(
 asfr_y1 %>%
   summarise(TFR = sum(fx), .by = year)
 
-write_rds(asfr_y1, "data_inter/ukr_asfr_wpp_2022_2025.rds")
+# No separate write is needed: for this step the cached extract IS the
+# pipeline output, and cache_rds() has already written it to
+# data_inter/ukr_asfr_wpp_2022_2025.rds, which is what 11 and 13 read.
 
 

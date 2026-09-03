@@ -170,7 +170,7 @@ lts <-
 
 print(lts)
 
-# saved for the manuscript figure assembled in 16
+# saved for the manuscript figure assembled in 15
 write_rds(lts, "data_inter/ukr_migration_decomposition.rds")
 
 # 6. PLOTS =====================================================================

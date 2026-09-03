@@ -1,5 +1,5 @@
 # ==============================================================================
-# STEP 16 - Manuscript figures and tables
+# STEP 15 - Manuscript figures and tables
 # ==============================================================================
 #
 # WHAT THIS SCRIPT DOES
@@ -32,7 +32,7 @@
 #   table7_totals_by_year.csv                        14   <- new
 #   tableA3_e0_loss_by_cause.csv                     14
 #
-# INPUTS   the .rds/.parquet products of steps 07-14
+# INPUTS   the .rds products of steps 07-14
 # ==============================================================================
 
 rm(list = ls())
@@ -113,11 +113,11 @@ loss_sum <- read_rds("data_inter/ukr_e0_loss_by_cause_summary_2022_2025.rds")
 deaths_sum <- read_rds("data_inter/ukr_conflict_deaths_by_cause_summary_2022_2025.rds")
 mig <- read_rds("data_inter/ukr_migration_decomposition.rds")
 
-draws_file <- "data_inter/ukr_sim_draws_2022_2025.parquet"
+draws_file <- "data_inter/ukr_sim_draws_2022_2025.rds"
 if (!file.exists(draws_file)) {
   stop("Run step 11 first: ", draws_file, call. = FALSE)
 }
-sim_wide <- as_tibble(read_parquet(draws_file))
+sim_wide <- as_tibble(readRDS(draws_file))
 n_sim <- length(unique(sim_wide$sim_id))
 message("simulation draws available: ", n_sim)
 
@@ -196,31 +196,56 @@ save_fig(fig2, "fig2_mortality_rates_by_age.png", 9, 5)
 # ==============================================================================
 # FIGURE 3 - Life expectancy loss
 # ==============================================================================
-f3_dat <- loss_draws |> as_tibble() |> nice_sex()
+# Plotted as the CHANGE in life expectancy (war minus counterfactual), so the
+# values are negative and the bars read as a fall - which is what the figure
+# is about. Everywhere else in the pipeline the same quantity is carried as a
+# positive "loss"; only the sign of the display is flipped here.
+#
+# Each box is annotated with its median (bold) and its quartiles, so the
+# spread across draws is readable without going back to table 5.
+f3_dat <-
+  loss_draws |>
+  as_tibble() |>
+  nice_sex() |>
+  mutate(chg = -loss_total)
+
 f3_sum <-
   f3_dat |>
   summarise(
-    Q1 = quantile(loss_total, 0.25),
-    Median = median(loss_total),
-    Q3 = quantile(loss_total, 0.75),
+    Q1 = quantile(chg, 0.25),
+    Median = median(chg),
+    Q3 = quantile(chg, 0.75),
     .by = c(year, sex)
   )
 
 fig3 <-
   f3_dat |>
-  ggplot(aes(x = sex, y = loss_total)) +
+  ggplot(aes(x = sex, y = chg)) +
   geom_boxplot(outlier.shape = NA, alpha = 0.6, fill = "white") +
   geom_jitter(width = 0.2, alpha = 0.04, size = 0.1, colour = "black") +
   geom_text(
     data = f3_sum,
     aes(y = Median, label = sprintf("%.2f", Median)),
-    hjust = -1.4, size = 2.6, fontface = "bold"
+    hjust = -1.5, size = 2.5, colour = "black", fontface = "bold"
+  ) +
+  geom_text(
+    data = f3_sum,
+    aes(y = Q1, label = sprintf("%.2f", Q1)),
+    vjust = 1.5, hjust = -1.8, size = 1.8, colour = "black", alpha = 0.7
+  ) +
+  geom_text(
+    data = f3_sum,
+    aes(y = Q3, label = sprintf("%.2f", Q3)),
+    vjust = -1 / 1.5, hjust = -1.8, size = 1.8, colour = "black", alpha = 0.7
   ) +
   scale_x_discrete(expand = expansion(add = c(0.4, 0.9))) +
   facet_grid(~year) +
   labs(
-    y = "Life expectancy loss (years)", x = NULL,
-    caption = paste0("Distribution across ", n_sim, " simulation draws.")
+    y = "Change in life expectancy at birth (years)", x = NULL,
+    caption = paste0(
+      "Distribution across ", n_sim,
+      " simulation draws. Bold: median. Small: 25th and 75th percentiles."
+    )
   ) +
   theme_paper() +
   theme(axis.text.x = element_text(size = 8))

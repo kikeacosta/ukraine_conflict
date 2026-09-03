@@ -112,7 +112,7 @@ identify_sex_from_names <- function(patronym, firstname) {
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # raw register -> anonymised status/year/sex/age counts (cached)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-dts <- cache_parquet("data_inter/ualosses_counts_2022_2025.parquet", {
+dts <- cache_rds("data_inter/ualosses_counts_2022_2025.rds", {
   dt2 <-
     read_xlsx(require_raw(ual_file), sheet = "Database") |>
     rename_with(tolower) |>

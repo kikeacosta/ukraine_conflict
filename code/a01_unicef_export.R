@@ -1,5 +1,5 @@
 # ==============================================================================
-# STEP 15 - UNICEF export: all 5,000 iterations, by cause of death
+# STEP A01 - UNICEF export: all 5,000 iterations, by cause of death
 # ==============================================================================
 #
 # WHAT THIS SCRIPT DOES
@@ -38,7 +38,7 @@
 # dx / exposure — NOT averaged across the single-year rates, which would not
 # be consistent with the counts.
 #
-# INPUT    data_inter/ukr_sim_draws_2022_2025.parquet   (from 11)
+# INPUT    data_inter/ukr_sim_draws_2022_2025.rds   (from 11)
 # OUTPUT   data_inter/unicef/<yymmdd>_ukraine_mx_estimates_2022_2025_
 #            conflict_and_allcause.csv  (+ .zip)
 #          Too large for git; excluded in .gitignore.
@@ -48,7 +48,7 @@ rm(list = ls())
 gc()
 source("code/00_setup.R")
 
-draws_file <- "data_inter/ukr_sim_draws_2022_2025.parquet"
+draws_file <- "data_inter/ukr_sim_draws_2022_2025.rds"
 if (!file.exists(draws_file)) {
   stop(
     "Simulation draws not found. Run step 11 first (~7 minutes):\n  ",
@@ -68,7 +68,7 @@ csv_path <- file.path(out_dir, paste0(base, ".csv"))
 zip_path <- file.path(out_dir, paste0(base, ".zip"))
 
 # 1. LOAD AND GROUP AGES =======================================================
-d <- as.data.table(read_parquet(draws_file))
+d <- as.data.table(readRDS(draws_file))
 
 # abridged groups: 0, 1, 5, 10, ..., 75, 80+
 brks <- c(0, 1, seq(5, 80, 5), Inf)

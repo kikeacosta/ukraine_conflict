@@ -12,9 +12,7 @@
 # smoothly instead of jumping at a cut point.
 #
 # INPUT    data_input/DataDxEx.csv   (deaths and exposures, 1989-2021)
-# OUTPUTS  data_inter/ukr_mx_1989_2021_adj.rds     <- used by 03
-#          data_inter/ukr_pop_1989_2021_pavlo.rds  (exposures; step 04 reads
-#            DataDxEx.csv directly, so this file is not consumed downstream)
+# OUTPUT   data_inter/ukr_mx_1989_2021_adj.rds     <- used by 03
 # ==============================================================================
 
 # Created 2026-02-02 to calculate the final tails for life tables
@@ -47,34 +45,9 @@ dt2 <-
 unique(dt2$Year)
 unique(dt2$Region)
 
-# Take exposures for LC model
-Ex_txt <-
-  dt2 |>
-  filter(Sex %in% c("females", "males")) |>
-  select(Year, Age, Sex, Ex) |>
-  mutate(
-    Sex = recode(
-      Sex,
-      females = "Female",
-      males = "Male"
-    )
-  ) |>
-  pivot_wider(
-    names_from = Sex,
-    values_from = Ex
-  ) |>
-  arrange(Year, Age)
-
-# Prepare for export
-pop <-
-  Ex_txt |>
-  select(Year, Age, Female, Male) |>
-  rename_with(tolower) |>
-  pivot_longer(cols = c(female, male), names_to = "sex", values_to = "pop")
-
-# saving population exposures
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-write_rds(pop, "data_inter/ukr_pop_1989_2021_pavlo.rds")
+# NOTE: an exposures extract (Ex_txt -> ukr_pop_1989_2021_pavlo.rds) used to
+# be built here. Step 04 reads DataDxEx.csv directly for the same exposures,
+# so nothing ever consumed that file and it has been retired.
 
 
 # We've agreed with the fitting interval

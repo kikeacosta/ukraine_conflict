@@ -24,7 +24,7 @@
 #
 # INPUTS   data_input/ucdp/GEDEvent_v25_1.csv         (1989-2024, 239 MB)
 #          data_input/ucdp/GEDEvent_v25_01_25_12.csv  (2025 candidate events)
-#          Both are cached as data_inter/ucdp_ged_events_slim.parquet, so the
+#          Both are cached as data_inter/ucdp_ged_events_slim.rds, so the
 #          raw downloads are only needed once. See data_input/README.md.
 # OUTPUT   data_inter/ukr_ucdp_invals.rds   <- used by 10
 # ==============================================================================
@@ -37,8 +37,8 @@ source("code/00_setup.R")
 # The two raw GED files total ~260 MB (v25_1 alone is 239 MB, over GitHub's
 # hard limit) and are not tracked in git. Only the twelve columns below are
 # ever used, so the cached extract is a few MB and is what the repository
-# actually ships. See cache_parquet() in 00_setup.R.
-all2 <- cache_parquet("data_inter/ucdp_ged_events_slim.parquet", {
+# actually ships. See cache_rds() in 00_setup.R.
+all2 <- cache_rds("data_inter/ucdp_ged_events_slim.rds", {
   keep <- c(
     "year", "type_of_violence", "conflict_name", "side_a", "side_b",
     "country", "deaths_a", "deaths_b", "deaths_civilians", "deaths_unknown",
@@ -309,7 +309,7 @@ all2 %>%
 # (the full event-level table used to be written to data_inter/dt_ucdp_invals.rds
 # here and then overwritten further down by a completely different object. Both
 # writes were unread by the rest of the pipeline; the slim cached extract at
-# data_inter/ucdp_ged_events_slim.parquet now serves that purpose.)
+# data_inter/ucdp_ged_events_slim.rds now serves that purpose.)
 
 
 # in Ukraine ====
@@ -342,7 +342,7 @@ copy_this(
 write_rds(ukr, "data_inter/ukr_ucdp_invals.rds")
 
 # Unadjusted vs adjusted totals for Ukraine and Russia, used by the source
-# tables assembled in 16.
+# tables assembled in 15.
 #
 #   unadjusted - every death recorded in events located in that country,
 #                in UCDP's own categories. Combatant deaths here include

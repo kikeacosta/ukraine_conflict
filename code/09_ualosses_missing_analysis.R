@@ -29,8 +29,8 @@ suelo_muerto <- 1 - suelo_vivo
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # individual-level matching -> anonymous transition counts (cached)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-transitions <- cache_parquet(
-  "data_inter/ualosses_status_transitions.parquet",
+transitions <- cache_rds(
+  "data_inter/ualosses_status_transitions.rds",
   {
     read_reg <- function(path) {
       read_xlsx(require_raw(path), sheet = "Database") |>
@@ -85,7 +85,7 @@ transitions <- cache_parquet(
 # year is not recorded. Counting the raw file again here would silently drop
 # them, so the confirmed-death total used in this script (83,182) would not
 # match the one used everywhere downstream (86,526) — and the manuscript
-# tables built in 16 would disagree with each other.
+# tables built in 15 would disagree with each other.
 stocks <-
   read_rds("data_inter/ukr_ualosses_conflict_deaths_sex_age_2022_2025.rds") |>
   summarise(n = sum(dx), .by = c(year, status)) |>
@@ -203,7 +203,7 @@ combined_losses <- confirmados_df %>%
 print("=== BALANCE DE PERDIDAS MORTALES TOTALES ESTIMADAS ===")
 print(combined_losses)
 
-# saved for the manuscript tables assembled in 16
+# saved for the manuscript tables assembled in 15
 write_rds(
   combined_losses |> mutate(year = as.integer(as.character(year))),
   "data_inter/ukr_ualosses_imputation_table.rds"
