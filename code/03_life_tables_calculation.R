@@ -1,3 +1,20 @@
+# ==============================================================================
+# STEP 03 - Period life tables, 1989-2021
+# ==============================================================================
+#
+# WHAT THIS SCRIPT DOES
+# ---------------------
+# Builds full period life tables from the adjusted rates of step 02.
+#   - infancy uses the a0 separation factors supplied in a0.csv
+#   - ages 1-99 use the standard ax = 0.5 assumption
+#   - the open interval at 100+ uses ax = 1/mx
+# lx monotonicity is checked before the tables are saved.
+#
+# INPUTS   data_inter/ukr_mx_1989_2021_adj.rds   (from 02)
+#          data_input/a0.csv
+# OUTPUT   data_inter/ukr_life_tables_1989_2021.rds   <- used by 04
+# ==============================================================================
+
 # Created 2026-02-03 to calculate life tables
 rm(list = ls())
 source("code/00_setup.R")
@@ -64,8 +81,8 @@ write_rds(lt, "data_inter/ukr_life_tables_1989_2021.rds")
 # VISUALISATION ===============================================================
 # e0
 lt |>
-  filter(Age == 0) |>
-  ggplot(aes(x = Year, y = ex, color = Sex)) +
+  filter(age == 0) |>
+  ggplot(aes(x = year, y = ex, color = sex)) +
   geom_line(linewidth = 1) +
   scale_y_continuous(limits = c(60, 78)) +
   labs(
@@ -79,12 +96,12 @@ lt |>
 # qx
 qx_plot <- lt |>
   filter(
-    Sex == "males", # swap females/males
-    Age >= 0,
-    Age <= 99
+    sex == "males", # swap females/males
+    age >= 0,
+    age <= 99
   )
 
-ggplot(qx_plot, aes(x = Age, y = qx, color = Year, group = Year)) +
+ggplot(qx_plot, aes(x = age, y = qx, color = year, group = year)) +
   geom_line(alpha = 0.6, linewidth = 0.5) +
   scale_y_log10(labels = scales::label_number()) +
   scale_color_viridis_c(option = "turbo", name = "Year", direction = -1) +

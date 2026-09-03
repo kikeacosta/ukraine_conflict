@@ -1,22 +1,41 @@
+# ==============================================================================
+# STEP 01 - Population and death counts from the State Statistics Service
+# ==============================================================================
+#
+# WHAT THIS SCRIPT DOES
+# ---------------------
+# Reads the SSSU workbook (population and deaths by single year of age, sex
+# and region) and reshapes it into tidy long form. Three regions are kept
+# separately:
+#     cnt = government-controlled mainland
+#     dnk = Donetsk region
+#     luk = Luhansk region
+# The projection in step 11 starts from "cnt" only.
+#
+# It then derives death rates from an independent set of life tables
+# (LifeTables.xlsx, tagged source = "grig") so the SSSU rates can be compared
+# against them.
+#
+# INPUTS   data_input/sssu_ukr_data.xlsx
+#          data_input/LifeTables.xlsx
+# OUTPUTS  data_inter/ukr_pop_sssu.rds           <- used by 11 and 13
+#          data_inter/ukr_dts_pop_sssu_grig.rds  <- comparison of the two rate
+#                                                   sources; not currently
+#                                                   consumed downstream
+# ==============================================================================
+
 rm(list = ls())
 source("code/00_setup.R")
 
 # loading death counts and population estimates from SSSU
-dts_cnt <- read_xlsx(
-  "data_input/sssu_ukr_data.xlsx",
-  sheet = "DeathsContinental"
-)
-dts_dnk <- read_xlsx(
-  "data_input/sssu_ukr_data.xlsx",
-  sheet = "DeathsDonetskReg"
-)
-dts_luk <- read_xlsx(
-  "data_input/sssu_ukr_data.xlsx",
-  sheet = "DeathsLuhanskReg"
-)
-pop_cnt <- read_xlsx("data_input/sssu_ukr_data.xlsx", sheet = "PopContinental")
-pop_dnk <- read_xlsx("data_input/sssu_ukr_data.xlsx", sheet = "PopDonetskReg")
-pop_luk <- read_xlsx("data_input/sssu_ukr_data.xlsx", sheet = "PopLuhanskReg")
+sssu_file <- "data_input/sssu_ukr_data.xlsx"
+
+dts_cnt <- read_xlsx(sssu_file, sheet = "DeathsContinental")
+dts_dnk <- read_xlsx(sssu_file, sheet = "DeathsDonetskReg")
+dts_luk <- read_xlsx(sssu_file, sheet = "DeathsLuhanskReg")
+pop_cnt <- read_xlsx(sssu_file, sheet = "PopContinental")
+pop_dnk <- read_xlsx(sssu_file, sheet = "PopDonetskReg")
+pop_luk <- read_xlsx(sssu_file, sheet = "PopLuhanskReg")
 
 # putting all together
 # deaths

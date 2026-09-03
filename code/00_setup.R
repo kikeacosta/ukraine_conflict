@@ -10,8 +10,8 @@ if (!require("pacman", character.only = TRUE)) {
     stop("Package pacman not found")
   }
 }
-library(pacman)
 
+library(pacman)
 packages_CRAN <- c(
   "tidyverse",
   "countrycode",
@@ -27,7 +27,12 @@ packages_CRAN <- c(
   "fields",
   "forecast",
   "ggrepel",
-  "ggh4x"
+  "ggh4x",
+  "R.utils",
+  "vital",
+  "fst",
+  "arrow",
+  "mc2d"
 )
 
 # Install required CRAN packages if not available yet
@@ -53,204 +58,60 @@ copy_this <- function(x, row.names = FALSE, col.names = TRUE, ...) {
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# functions for processing data ====
+# caching of the heavy raw sources ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Several raw files in data_input/ are far too large for version control
+# (UCDP GED is 239 MB, the WPP fertility workbook 78 MB, the ualosses
+# registers 27-46 MB). They are therefore NOT tracked in git - see
+# data_input/README.md for the download locations and .gitignore for the
+# exclusion rules.
+#
+# Every script that touches one of those files wraps the expensive part in
+# cache_parquet(). The cached extract is small, is tracked in git, and is
+# read back on subsequent runs, so a fresh clone can run the whole pipeline
+# end to end WITHOUT the raw downloads. `expr` is a lazily evaluated promise:
+# it is only forced when the cache is missing.
+#
+#   dt <- cache_parquet("data_inter/x.parquet", { ...heavy processing... })
+#
+# Pass refresh = TRUE (or delete the .parquet) to rebuild from the raw file.
+cache_parquet <- function(path, expr, refresh = FALSE) {
+  if (!refresh && file.exists(path)) {
+    message("cache hit  : ", path)
+    return(as_tibble(arrow::read_parquet(path)))
+  }
+  message("cache miss : rebuilding ", path, " from data_input/ ...")
+  out <- expr
+  arrow::write_parquet(out, path, compression = "zstd")
+  message("cache built: ", path, " (", round(file.size(path) / 1e6, 1), " MB)")
+  as_tibble(out)
+}
 
-# # function to split CDR into mx for mortality crises
-# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# dts <- ucdp2
-# pop <- exps
-# yrs <- 2023
-crd_to_mx2 <- function(dts_in, pop_in, as) {
-  ev_type <- c("Conflict", "Conflict: combatant")
-
-  # adjusting UN patterns
-  # no mortality among combatants for children under 10
-  as2 <-
-    as %>%
-    filter(eventype %in% ev_type, sex != "t") %>%
-    mutate(
-      rr = ifelse(eventype == "Conflict: combatant" & age < 10, 0, rr),
-      rr_ll = ifelse(eventype == "Conflict: combatant" & age < 10, 0, rr_ll),
-      rr_ul = ifelse(eventype == "Conflict: combatant" & age < 10, 0, rr_ul)
+# Fail early, and with a useful message, when a raw source is absent because
+# the user cloned the repository without downloading the large inputs.
+require_raw <- function(path) {
+  if (!file.exists(path)) {
+    stop(
+      "Raw input not found:\n  ",
+      path,
+      "\nThis file is too large for git. Either download it (see ",
+      "data_input/README.md)\nor keep the cached .parquet extract in ",
+      "data_inter/ so this step can be skipped.",
+      call. = FALSE
     )
-
-  # assuming civilians as deaths in "conflict" scenario
-  # and combatants in the "Conflict: combatant" scenario
-  # first assuming a CDR of 1/K
-
-  conf <-
-    dts_in %>%
-    mutate(
-      eventype = case_when(
-        role == "civilians" ~ "Conflict",
-        role == "combatants" ~ "Conflict: combatant"
-      )
-    ) %>%
-    left_join(as2, by = "eventype", relationship = "many-to-many") %>%
-    left_join(pop_in, by = join_by(year, sex, age)) %>%
-    mutate(
-      dx_sd = rr * exposure / 1000,
-      dx_sd_ll = rr_ll * exposure / 1000,
-      dx_sd_ul = rr_ul * exposure / 1000
-    )
-
-  # adjustment of death rates to match the total
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  dts3 <-
-    conf %>%
-    group_by(year, eventype) %>%
-    mutate(dx_sd_sum = sum(dx_sd)) %>%
-    ungroup() %>%
-    mutate(
-      dx = dx_sd * dts / dx_sd_sum,
-      dx_ll = dx_sd_ll * dts / dx_sd_sum,
-      dx_ul = dx_sd_ul * dts / dx_sd_sum
-    ) %>%
-    select(
-      everything(),
-      -starts_with("rr"),
-      -starts_with("dx_sd"),
-      -starts_with("inc")
-    )
-
-  dts4 <-
-    dts3 %>%
-    bind_rows(
-      dts3 %>%
-        reframe(
-          dts = sum(dts),
-          exposure = mean(exposure),
-          dx = sum(dx),
-          dx_ll = sum(dx_ll),
-          dx_ul = sum(dx_ul),
-          .by = c(year, sex, age)
-        ) %>%
-        # ungroup() %>%
-        mutate(role = "all", eventype = "all")
-    ) %>%
-    mutate(
-      mx = dx / exposure,
-      mx_ll = dx_ll / exposure,
-      mx_ul = dx_ul / exposure
-    ) %>%
-    select(year, role, sex, age, everything()) %>%
-    arrange(year, role, sex, age)
-
-  return(dts4)
+  }
+  path
 }
 
-# ungrouping ages
-ung_age_x <- function(chunk) {
-  dt_in <-
-    tibble(age = chunk$age, dx = chunk$dx, dx_mt = dx * 1e5) %>%
-    mutate(dx_mt = ifelse(dx_mt == 0, 1, dx_mt))
-  nl <- 26
-  dxs <- pclm(x = dt_in$age, y = dt_in$dx_mt, nlast = nl)$fitted
-  fit <- tibble(age = 0:100, dx = dxs / 1e5)
-
-  out <-
-    chunk %>%
-    select(year, sex) %>%
-    unique() %>%
-    left_join(fit, by = character())
-  return(out)
-}
-
-# Funtions for estimating exposures and conflict mortality rates ====
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-est_exposures <- function(chunk) {
-  chunk |>
-    left_join(migs2, by = join_by(sex, age, year)) %>%
-    left_join(exp_mort, by = join_by(sex, age, year)) %>%
-    left_join(asfr2, by = join_by(sex, age, year)) %>%
-    replace_na(list(fx = 0)) %>%
-    mutate(
-      pop2 = pop - 0.5 * ems,
-      dx = pop2 * mx,
-      exposure = pop2 - 0.5 * dx,
-      pop = ifelse(age == 0, 0.5 * sum(fx * exposure), pop),
-      pop2 = ifelse(age == 0, pop - 0.5 * ems, pop2),
-      dx = ifelse(age == 0, pop2 * mx, dx),
-      exposure = ifelse(age == 0, pop2 - 0.5 * dx, exposure)
-    ) %>%
-    select(year, sex, age, ems, dx, exposure, pop_ini = pop)
-}
-
-est_age_sex_conf <- function(exposures, cnf, rl) {
-  pop_in <-
-    exposures |>
-    mutate(
-      age = case_when(
-        age == 0 ~ 0,
-        age %in% 1:4 ~ 1,
-        age >= 75 ~ 75,
-        TRUE ~ age - age %% 5
-      )
-    ) %>%
-    reframe(exposure = sum(exposure), .by = c(year, sex, age))
-
-  yr <- unique(exposures$year)
-
-  cnf_in <-
-    cnf %>%
-    filter(year == yr)
-
-  cnf_age_sex <- crd_to_mx2(cnf_in, pop_in, as)
-
-  cnf_age_sex_ung <-
-    cnf_age_sex %>%
-    group_by(role, year, sex) %>%
-    do(ung_age_x(chunk = .data)) %>%
-    ungroup() %>%
-    rename(cnf = dx) %>%
-    filter(role == rl) %>%
-    select(-role)
-
-  return(cnf_age_sex_ung)
-}
-
-est_pop_end <- function(exposures, cnf_y) {
-  exposures %>%
-    left_join(cnf_y, by = join_by(year, sex, age)) %>%
-    # removing net migration, expected deaths, and conflict deaths
-    mutate(pop_end = pop_ini - ems - dx - cnf)
-}
-
-est_summary <- function(pop_end) {
-  sum <-
-    pop_end %>%
-    select(year, sex, age, conflict = cnf, expected = dx, pop = exposure) %>%
-    mutate(all = conflict + expected) %>%
-    mutate(across(c(all, conflict, expected), as.numeric)) %>%
-    pivot_longer(
-      c(all, conflict, expected),
-      names_to = "cause",
-      values_to = "dx"
-    ) %>%
-    mutate(mx = dx / pop)
-
-  return(sum)
-}
-
-end_to_ini <- function(pop_end) {
-  pop_end %>%
-    select(year, sex, age, pop = pop_end) %>%
-    mutate(age = ifelse(age == 100, 100, age + 1), year = year + 1) %>%
-    summarise(pop = sum(pop), .by = c(year, sex, age)) %>%
-    bind_rows(tibble(age = 0, sex = c("f", "m"), pop = 0)) |>
-    fill(year) |>
-    arrange(sex, age)
-}
-
-# function ofr estimating a life table ====
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# life table ====
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Single life table from a data frame with columns age, mx, sex.
+# Single years of age with an open interval at the last age.
 lifetable <- function(dt_in) {
   x <- dt_in$age
   mx <- dt_in$mx
   sex <- unique(dt_in$sex)
-  year <- unique(dt_in$year)
 
   m <- length(x)
   n <- c(diff(x), NA)
@@ -296,251 +157,184 @@ lifetable <- function(dt_in) {
   return(dt_out)
 }
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Funtions for forecasting mortality rates ====
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-frcst <- function(data, t = 2012:2019) {
-  x <- unique(data$age)
-  m <- length(x)
-
-  n <- length(t)
-  t.fore <- (t[n] + 1):2025
-  n.fore <- length(t.fore)
-  ## LC routine ------
-
-  ## extract deaths and exposures of interest
-  y <- data %>%
-    # filter(sex==my.sex,region==my.reg,source==my.source) %>%
-    filter(year %in% t) %>%
-    select(dts) %>%
-    pull()
-  e <- data %>%
-    # filter(sex==my.sex,region==my.reg,source==my.source) %>%
-    filter(year %in% t) %>%
-    select(pop) %>%
-    pull()
-  Y <- matrix(y, m, n)
-  E <- matrix(e, m, n)
-  LMX <- log(Y / E)
-
-  # ## check evolution of e0
-  # e0 <- apply(exp(LMX), 2, e0.mx, x=x, sex="F")
-  # # plot(t,e0)
-
-  ## plotting
-  # matplot(x,LMX,t="l",lty=1,col=rainbow(n))
-  # matplot(t,t(LMX),t="l",lty=1,col=rainbow(m))
-
-  ## starting LC parameters
-  start.pars <- LC_starting_pars(Dth = Y, Exp = E)
-  Alpha <- start.pars$Alpha
-  Beta <- start.pars$Beta
-  Kappa <- start.pars$Kappa
-  One <- start.pars$One
-  Eta <- Alpha %*% t(One) + Beta %*% t(Kappa)
-  ## compute fitted deaths
-  D.fit <- E * exp(Eta)
-
-  ## fit LC
-  ## starting the iteration
-  for (iter in 1:1000) {
-    Alpha.old <- Alpha
-    Beta.old <- Beta
-    Kappa.old <- Kappa
-    ## update Alpha
-    temp <- Update.alpha(Alpha, Beta, Kappa, One, Dth = Y, Exp = E, D.fit)
-    D.fit <- temp$D.fit
-    Alpha <- temp$Alpha
-    ## update Beta
-    temp <- Update.beta(Alpha, Beta, Kappa, One, Dth = Y, Exp = E, D.fit)
-    D.fit <- temp$D.fit
-    Beta <- temp$Beta
-    ## update Kappa
-    temp <- Update.kappa(Alpha, Beta, Kappa, One, Dth = Y, Exp = E, D.fit)
-
-    D.fit <- temp$D.fit
-    Kappa <- temp$Kappa
-    ## tolerance criterion
-    crit <- max(
-      max(abs(Alpha - Alpha.old)),
-      max(abs(Beta - Beta.old)),
-      max(abs(Kappa - Kappa.old))
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# vectorised life table ====
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Same arithmetic as lifetable() above, but computed column-wise over many
+# groups at once, so the 40,000 life tables implied by 5,000 draws x 4 years
+# x 2 sexes take seconds instead of minutes. Used by 12 and 14.
+#
+# MX : n_age x G matrix of single-year death rates, open interval at the last
+#      age. sx : length-G vector of sex ("f"/"m"), selecting the a0 rule.
+# Returns lx, Lx and ex as n_age x G matrices.
+lt_cols <- function(MX, sx) {
+  m <- nrow(MX)
+  G <- ncol(MX)
+  ax <- matrix(0.5, m, G)
+  m0 <- MX[1, ]
+  ax[1, ] <- ifelse(
+    sx == "f",
+    ifelse(
+      m0 < 0.01724,
+      0.14903 - 2.05527 * m0,
+      ifelse(m0 < 0.06891, 0.04667 + 3.88089 * m0, 0.31411)
+    ),
+    ifelse(
+      m0 < 0.02300,
+      0.14929 - 1.99545 * m0,
+      ifelse(m0 < 0.08307, 0.02832 + 3.26021 * m0, 0.29915)
     )
-    # cat(iter,crit,"\n")
-    if (crit < 1e-04) break
-  }
-
-  ## adding the constraints
-  sum.Beta <- sum(Beta)
-  Beta <- Beta / sum.Beta
-  Kappa <- Kappa * sum.Beta
-
-  ## plotting LC parameters
-  # par(mfrow=c(1,3))
-  # plot(x,Alpha)
-  # plot(x,Beta);abline(h=0)
-  # plot(t,Kappa);abline(h=0)
-  # par(mfrow=c(1,1))
-
-  ## forecasting kappa index
-
-  ## set a RW model with drift
-  modK <- Arima(
-    ts(Kappa, start = t[1]),
-    order = c(0, 1, 0),
-    include.drift = TRUE
   )
-  ## forecast Kappa until 2040
-  predK <- forecast(modK, h = n.fore)
-  ## plotting the time-series and forecast
-  # plot(predK)
-  ## forecast Kappa
-  KappaF <- predK$mean
-  ## forecast Eta
-  OneF <- matrix(1, nrow = n.fore, ncol = 1)
-  LMX.fore <- Alpha %*% t(OneF) + Beta %*% t(KappaF)
+  ax[m, ] <- 1 / MX[m, ]
 
-  ## plotting
-  # cols <- viridis(n+n.fore)
-  # matplot(x,LMX,t="l",lty=1,col=cols[1:n])
-  # matlines(x,LMX.fore,lty=1,col=cols[1:n.fore+n])
-
-  # ## life expectancy
-  # e0.fore <- apply(exp(LMX.fore),2, e0.mx, x=x, sex="F")
-
-  ## plotting e0
-  # plot(t,e0,ylim=range(e0,e0.fore),xlim=range(t,t.fore))
-  # points(t.fore,e0.fore,col=4,lwd=2,pch=16)
-
-  ## plotting rates
-  # whi.age <- 80
-  # plot(t,LMX[which(x==whi.age),],xlim=range(t,t.fore),
-  #      ylim=range(LMX[which(x==whi.age),],LMX.fore[which(x==whi.age),]))
-  # points(t.fore,LMX.fore[which(x==whi.age),],col=4,lwd=2,pch=16)
-
-  my.sex <- unique(data$sex)
-  # my.reg <- unique(data$region)
-  # my.source <- unique(data$source)
-
-  ## results in tibble
-  data.with.fore <- tibble(
-    year = rep(t.fore, each = m),
-    sex = my.sex,
-    age = rep(x, n.fore),
-    # region=my.reg,
-    # source=paste0("lc_",my.source,"_",t[n]),
-    mx = c(1e5 * exp(LMX.fore))
-  )
-
-  ## adding results to data
-  return(data.with.fore)
+  qx <- MX / (1 + (1 - ax) * MX)
+  qx[m, ] <- 1 # everyone dies in the open interval
+  lx <- rbind(1, matrix(apply(1 - qx, 2, cumprod), nrow = m)) * 1e5
+  dx <- -diff(lx)
+  Lx <- lx[-1, , drop = FALSE] + ax * dx # n = 1 in every closed interval
+  lx <- lx[-(m + 1), , drop = FALSE]
+  Lx[m, ] <- lx[m, ] / MX[m, ] # open interval
+  Lx[!is.finite(Lx)] <- 0
+  Tx <- matrix(apply(Lx, 2, function(z) rev(cumsum(rev(z)))), nrow = m)
+  list(lx = lx, Lx = Lx, ex = Tx / lx)
 }
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Arriaga decomposition ====
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Age-specific contribution of the mortality difference in each age interval
+# to the total gap in life expectancy at birth, as the sum of
+#   DE - person-years lost within the interval itself, and
+#   IE - person-years lost later, because fewer people survive the interval.
+#
+# lb / lw are lt_cols() outputs for the baseline and the "war" schedule.
+# BOTH terms are written in the same direction (baseline minus war), so both
+# are positive when the war schedule costs life expectancy and sum(TE)
+# reproduces e0_baseline - e0_war exactly. Writing one term in each direction
+# makes the components cancel and the total come out negative.
+arriaga_TE <- function(lb, lw) {
+  m <- nrow(lb$lx)
+  l0 <- lb$lx[1, ]
+  nxt <- function(M) rbind(M[-1, , drop = FALSE], NA_real_)
 
-## functions to fit Poisson LC model
+  DE <- sweep(lb$lx, 2, l0, "/") * (lb$Lx / lb$lx - lw$Lx / lw$lx)
+  IE <- (sweep(nxt(lb$lx), 2, l0, "/") -
+    sweep(lb$lx, 2, l0, "/") * (nxt(lw$lx) / lw$lx)) * nxt(lw$ex)
 
-## Starting values of LC model
-LC_starting_pars <- function(Dth, Exp) {
-  ## dimensions
-  m <- nrow(Dth)
-  n <- ncol(Dth)
-  ## starting values
-  One <- matrix(1, nrow = n, ncol = 1)
-  Fit <- log((Dth + 1) / (Exp + 2))
-  ## for Alpha, take mean of log death rates
-  Alpha <- apply(Fit / n, 1, sum, na.rm = T)
-  ## for Beta, take alpha and normalize to sum to one
-  Beta <- matrix(1 * Alpha, ncol = 1)
-  sum.Beta <- sum(Beta)
-  Beta <- Beta / sum.Beta
-  ## for Kappa, standardize a series from n to 1
-  Kappa <- matrix(seq(n, 1, by = -1), nrow = n, ncol = 1)
-  Kappa <- Kappa - mean(Kappa)
-  Kappa <- Kappa / sqrt(sum(Kappa * Kappa))
-  ## return list
-  out <- list(Alpha = Alpha, Beta = Beta, Kappa = Kappa, One = One)
+  # open interval: nobody survives past it, so there is no indirect effect
+  DE[m, ] <- (lb$lx[m, ] / l0) * (lb$ex[m, ] - lw$ex[m, ])
+  IE[m, ] <- 0
+  DE + IE
 }
 
-## Update Alpha
-Update.alpha <- function(Alpha, Beta, Kappa, One, Dth, Exp, D.fit) {
-  difD <- Dth - D.fit
-  Alpha <- Alpha +
-    difD %*% One / ifelse((D.fit %*% One) == 0, 1e-8, D.fit %*% One)
-  Eta <- Alpha %*% t(One) + Beta %*% t(Kappa)
-  D.fit <- Exp * exp(Eta)
-  list(Alpha = Alpha, D.fit = D.fit)
-}
-## Update Beta
-Update.beta <- function(Alpha, Beta, Kappa, One, Dth, Exp, D.fit) {
-  difD <- Dth - D.fit
-  Kappa2 <- Kappa * Kappa
-  Beta <- Beta +
-    difD %*% Kappa / ifelse((D.fit %*% Kappa2) == 0, 1e-8, D.fit %*% Kappa2)
-  Eta <- Alpha %*% t(One) + Beta %*% t(Kappa)
-  D.fit <- Exp * exp(Eta)
-  list(Beta = Beta, D.fit = D.fit)
-}
-## Update Kappa
-Update.kappa <- function(Alpha, Beta, Kappa, One, Dth, Exp, D.fit) {
-  difD <- Dth - D.fit
-  Beta2 <- Beta * Beta
-  Kappa <- Kappa + t(difD) %*% Beta / (t(D.fit) %*% Beta2)
-  Kappa <- Kappa - mean(Kappa)
-  Kappa <- Kappa / sqrt(sum(Kappa * Kappa))
-  Kappa <- matrix(Kappa, ncol = 1)
-  Eta <- Alpha %*% t(One) + Beta %*% t(Kappa)
-  D.fit <- Exp * exp(Eta)
-  list(Kappa = Kappa, D.fit = D.fit)
-}
-## function for constructing a classic (& rather general) lifetable
-## from mortality rates
-lifetable.mx <- function(x, mx, sex = "m", ax = NULL) {
-  m <- length(x)
-  n <- c(diff(x), NA)
-  if (is.null(ax)) {
-    ax <- rep(0, m)
-    if (x[1] != 0 | x[2] != 1) {
-      ax <- n / 2
-      ax[m] <- 1 / mx[m]
-    } else {
-      if (sex == "f") {
-        if (mx[1] >= 0.107) {
-          ax[1] <- 0.350
-        } else {
-          ax[1] <- 0.053 + 2.800 * mx[1]
-        }
-      }
-      if (sex == "m") {
-        if (mx[1] >= 0.107) {
-          ax[1] <- 0.330
-        } else {
-          ax[1] <- 0.045 + 2.684 * mx[1]
-        }
-      }
-      ax[-1] <- n[-1] / 2
-      ax[m] <- 1 / mx[m]
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# demographic assumptions shared by the projection scripts ====
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Sex ratio at birth (male births per female birth). Used by 11 and 13 to
+# split the projected births between sexes. Ukraine has run at about 1.06
+# for decades; the pipeline previously assumed 1.00 (an even split).
+srb <- 1.06
+prop_male_birth <- srb / (1 + srb)
+prop_female_birth <- 1 / (1 + srb)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# cohort-component projection for a single simulation draw ====
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Projects the population from 1 January 2022 to 31 December 2025, one year
+# at a time, and returns the death components for each year-sex-age cell.
+#
+# Shared by 11 (probabilistic estimation) and 13 (migration sensitivity) so
+# the two cannot drift apart.
+#
+# ARGUMENTS
+#   sim_id         identifier carried through to the output
+#   draws_this_sim one row per year: draw_cvs, draw_cmb, min_cmb
+#   static_inputs  year-sex-age grid with ems, mx, fx, prop_cvs, prop_cmb
+#   pop22_ini      population by sex and age on 1 January 2022
+#
+# TIMING: mid-year convention. Half the emigration and half the conflict
+# deaths are removed before exposure is computed, half the expected deaths
+# after, so exposure approximates person-years lived.
+run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
+  df_sim <- static_inputs %>%
+    left_join(draws_this_sim, by = "year") %>%
+    mutate(
+      # spread the drawn yearly totals over age and sex
+      cvs = draw_cvs * prop_cvs,
+      cmb = draw_cmb * prop_cmb,
+
+      # partition combatants: everything up to the individually confirmed
+      # count is "confirmed", the excess is attributed to the imputed missing
+      ratio_confirmed = if_else(draw_cmb > 0, min_cmb / draw_cmb, 1),
+      ratio_confirmed = pmin(pmax(ratio_confirmed, 0), 1),
+      cmb_confirmed = cmb * ratio_confirmed,
+      cmb_imputed = cmb * (1 - ratio_confirmed),
+
+      cnf = cvs + cmb
+    )
+
+  results_list <- list()
+  current_pop_ini <- pop22_ini %>% mutate(year = 2022)
+
+  for (yr in 2022:2025) {
+    yr_data <- df_sim %>%
+      filter(year == yr) %>%
+      left_join(current_pop_ini, by = c("year", "sex", "age")) %>%
+      replace_na(list(pop = 0))
+
+    yr_processed <- yr_data %>%
+      mutate(
+        pop2 = pop - 0.5 * ems - 0.5 * cnf, # population at risk
+        noc = pop2 * mx, # expected (non-conflict) deaths
+        exposure = pop2 - 0.5 * noc, # person-years lived
+
+        # age 0 is not carried in from the previous year: it is born during
+        # this one. Births = sum(ASFR x female exposure), split by the sex
+        # ratio at birth.
+        births = sum(fx * exposure),
+        pop = case_when(
+          age == 0 & sex == "f" ~ prop_female_birth * births,
+          age == 0 & sex == "m" ~ prop_male_birth * births,
+          .default = pop
+        ),
+        # then re-run the same bookkeeping for the newborn cohort
+        pop2 = ifelse(age == 0, pop - 0.5 * ems - 0.5 * cnf, pop2),
+        noc = ifelse(age == 0, pop2 * mx, noc),
+        exposure = ifelse(age == 0, pop2 - 0.5 * noc, exposure),
+
+        dx = noc + cnf, # all-cause deaths
+        pop_end = pop - ems - dx # survivors at 31 December
+      )
+
+    # keep the components only; every rate downstream is derived from these
+    results_list[[as.character(yr)]] <- yr_processed %>%
+      select(
+        year, sex, age,
+        pop = exposure,
+        expected = noc,
+        civilian = cvs,
+        combatant_confirmed = cmb_confirmed,
+        combatant_imputed = cmb_imputed
+      )
+
+    # age the survivors on into next year's starting population
+    if (yr < 2025) {
+      current_pop_ini <- yr_processed %>%
+        select(year, sex, age, pop = pop_end) %>%
+        mutate(
+          age = ifelse(age == 100, 100, age + 1), # 100+ is open
+          year = year + 1
+        ) %>%
+        summarise(pop = sum(pop), .by = c(year, sex, age)) %>%
+        bind_rows(tibble(
+          age = 0,
+          sex = c("f", "m"),
+          pop = 0,
+          year = yr + 1
+        )) %>%
+        arrange(sex, age)
     }
   }
-  qx <- n * mx / (1 + (n - ax) * mx)
-  qx[m] <- 1
-  px <- 1 - qx
-  lx <- cumprod(c(1, px)) * 100000
-  dx <- -diff(lx)
-  Lx <- n * lx[-1] + ax * dx
-  lx <- lx[-(m + 1)]
-  Lx[m] <- lx[m] / mx[m]
-  Lx[is.na(Lx)] <- 0 ## in case of NA values
-  Lx[is.infinite(Lx)] <- 0 ## in case of Inf values
-  Tx <- rev(cumsum(rev(Lx)))
-  ex <- Tx / lx
-  return.df <- data.frame(x, n, mx, ax, qx, px, lx, dx, Lx, Tx, ex)
-  return(return.df)
-}
 
-## function to derive e0 from mx (based on previous function)
-e0.mx <- function(x, mx, sex = "m", ax = NULL) {
-  lt <- lifetable.mx(x, mx, sex, ax)
-  return.ex <- lt$ex[1]
-  return(return.ex)
+  bind_rows(results_list) %>% mutate(sim_id = sim_id)
 }

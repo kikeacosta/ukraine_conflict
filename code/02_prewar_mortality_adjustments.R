@@ -1,3 +1,22 @@
+# ==============================================================================
+# STEP 02 - Old-age mortality: Kannisto extrapolation above age 90
+# ==============================================================================
+#
+# WHAT THIS SCRIPT DOES
+# ---------------------
+# Observed death rates get noisy at the oldest ages, where exposures are tiny.
+# A Kannisto model is fitted to ages 75-94 and extrapolated to 95-100.
+#
+# Observed and modelled rates are then BLENDED with a linear weight that runs
+# from fully observed at age 80 to fully modelled at age 90, so the two join
+# smoothly instead of jumping at a cut point.
+#
+# INPUT    data_input/DataDxEx.csv   (deaths and exposures, 1989-2021)
+# OUTPUTS  data_inter/ukr_mx_1989_2021_adj.rds     <- used by 03
+#          data_inter/ukr_pop_1989_2021_pavlo.rds  (exposures; step 04 reads
+#            DataDxEx.csv directly, so this file is not consumed downstream)
+# ==============================================================================
+
 # Created 2026-02-02 to calculate the final tails for life tables
 
 rm(list = ls())
@@ -190,8 +209,8 @@ mx_all |>
   summarise(max_mx_100 = max(mx_final, na.rm = TRUE))
 
 # # Save the data
-# save(mx_all, file = "mx_all.RData") # save for redundancy
 
+# Take mx_final for LC model
 mx <-
   mx_all |>
   select(-c(w_obs, w_theoretical, mx_theoretical, mx)) |>
@@ -203,37 +222,6 @@ write_rds(mx, "data_inter/ukr_mx_1989_2021_adj.rds")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# Take mx_final for LC model
-mx_txt <- mx_LT |>
-  filter(Sex %in% c("females", "males")) |>
-  select(Year, Age, Sex, mx_final) |>
-  mutate(
-    Sex = factor(
-      recode(
-        Sex,
-        females = "Female",
-        males = "Male"
-      ),
-      levels = c("Female", "Male")
-    )
-  ) |>
-  pivot_wider(
-    names_from = Sex,
-    values_from = mx_final
-  ) |>
-  arrange(Year, Age) |>
-  select(Year, Age, Female, Male)
-
-# # Export mx_final for LC model
-# write.table(
-#   mx_txt,
-#   file = "mx_final.txt",
-#   sep = "\t",
-#   row.names = FALSE,
-#   col.names = TRUE,
-#   quote = FALSE
-# )
 
 # VISUALISATION ===============================================================
 ## Semi-automatic facet plot ====
@@ -308,6 +296,10 @@ plot_mortality_batch(mx_all, 1989)
 plot_mortality_batch(mx_all, 1997)
 plot_mortality_batch(mx_all, 2005)
 plot_mortality_batch(mx_all, 2013)
+
+# to save
+plot_mortality_batch(mx_all, 2016)
+ggsave("figures/exploratory/labtalk/kannisto_adj.png", w = 8, h = 4)
 
 ## Single year plot ====
 plot_mortality_year <- function(data, year, sex_label = "females") {
