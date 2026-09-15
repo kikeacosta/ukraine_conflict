@@ -166,24 +166,22 @@ ces_shape <- ces_raw %>%
 # NOTE: CES age-sex fractionation (ces_shape, loaded above) is available for future
 # refinement of within-band distributions, but currently using pclm for simplicity.
 ung_age_mig <- function(chunk) {
+  # chunk has columns: age, mix, and grouping info (year, sex)
+  year_val <- chunk$year[1]
+  sex_val <- chunk$sex[1]
+
   dt_in <- tibble(age = chunk$age, mix = chunk$mix, mix_mt = mix * 1e5) %>%
     mutate(mix_mt = ifelse(mix_mt == 0, 1, mix_mt))
   suppressWarnings({
     mix <- pclm(x = dt_in$age, y = dt_in$mix_mt, nlast = 36)$fitted
   })
-  fit <- tibble(age = 0:100, mix = mix / 1e5)
-  out <- chunk %>% select(year, sex) %>% distinct() %>%
-    bind_cols(fit %>% select(mix))
-  return(out)
+  tibble(year = year_val, sex = sex_val, age = 0:100, mix = mix / 1e5)
 }
 
 dt4 <-
   dt3 %>%
   group_by(year, sex) %>%
-  nest() %>%
-  mutate(ungrouped = map(data, ung_age_mig)) %>%
-  unnest(ungrouped) %>%
-  select(year, sex, age, mix) %>%
+  do(ung_age_mig(.)) %>%
   ungroup()
 
 # testing ungrouping consistency
