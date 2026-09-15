@@ -55,7 +55,8 @@ data_deprecated/
 _backup_removed_data/
 figures/deprecated/
 
-# --- internal correspondence, not part of the published pipeline
+# --- internal team documents and correspondence, not published
+documents/
 review_response_*.md
 review_response_*.docx
 
