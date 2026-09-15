@@ -56,7 +56,6 @@ _backup_removed_data/
 figures/deprecated/
 
 # --- internal team documents and correspondence, not published
-documents/
 review_response_*.md
 review_response_*.docx
 
