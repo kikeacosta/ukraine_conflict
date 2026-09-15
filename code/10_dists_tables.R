@@ -59,12 +59,35 @@ cvs <-
   filter(role == "civilians") |>
   select(year, role, mode = dts, min = dts_l, max = dts_u)
 
-param_table <- bind_rows(cmb, cvs)
+# --- migration --------------------------------------------------------------
+# NET EMIGRATION by year (in person-years, cumulative stock change)
+# Based on reconciliation of Eurostat (official TP registrations),
+# UNHCR global totals, CES refugee survey (5.6M Jan 2026 mode),
+# and Pozniak border crossing data (2022-2023 observed, 2024-2025 extrapolated).
+# NOTE: Pozniak 2024-2026 migration data source/method needs confirmation.
+#
+# Mode from CES estimate of refugee population in EU+EFTA (5.6M)
+# scaled by Eurostat annual flow distribution
+# Min/Max bounds based on uncertainty in definition and coverage:
+#   floor ~2.2-2.5M (lower-bound estimate accounting for returns/measurement)
+#   ceiling ~6.2-6.5M (upper-bound estimate accounting for unregistered)
+mig <-
+  tribble(
+    ~year, ~min, ~mode, ~max,
+    2022,  1100000, 1900000, 2300000,
+    2023,  1200000, 1950000, 2400000,
+    2024,  -200000, 1200000, 1800000,
+    2025,  -500000, 600000, 1200000
+  ) |>
+  mutate(role = "migration") |>
+  select(year, role, mode, min, max)
+
+param_table <- bind_rows(cmb, cvs, mig)
 
 # rpert() requires min <= mode <= max; catch any ordering problem here rather
 # than as an obscure error inside the simulation loop
 stopifnot(
-  nrow(param_table) == 8,
+  nrow(param_table) == 12,
   all(param_table$min <= param_table$mode),
   all(param_table$mode <= param_table$max)
 )

@@ -141,7 +141,7 @@ sim_output_raw <- cache_rds("data_inter/ukr_sim_draws_2022_2025.rds", {
       draw = rpert(n_sim, min = min, mode = mode, max = max)
     ) %>%
     pivot_wider(names_from = role, values_from = draw) %>%
-    rename(draw_cmb = combatants, draw_cvs = civilians) %>%
+    rename(draw_cmb = combatants, draw_cvs = civilians, draw_mig = migration) %>%
     left_join(combatant_mins, by = "year")
 
   draws_list <- draws_df %>% group_split(sim_id)

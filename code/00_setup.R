@@ -273,9 +273,20 @@ prop_female_birth <- 1 / (1 + srb)
 # deaths are removed before exposure is computed, half the expected deaths
 # after, so exposure approximates person-years lived.
 run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
+  # Calculate the baseline migration total per year to enable scaling by draws
+  mig_mode_by_year <- static_inputs %>%
+    group_by(year) %>%
+    summarise(mig_mode = -sum(ems), .groups = "drop")
+
   df_sim <- static_inputs %>%
     left_join(draws_this_sim, by = "year") %>%
+    left_join(mig_mode_by_year, by = "year") %>%
     mutate(
+      # scale migration by the PERT draw (ems is negative outflow, draw_mig is positive)
+      ems = if_else(!is.na(draw_mig) & mig_mode > 0,
+                    ems * (draw_mig / mig_mode),
+                    ems),
+
       # spread the drawn yearly totals over age and sex
       cvs = draw_cvs * prop_cvs,
       cmb = draw_cmb * prop_cmb,
