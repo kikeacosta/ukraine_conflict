@@ -63,8 +63,15 @@ cvs <-
 # NET EMIGRATION by year (in person-years, cumulative stock change)
 # Based on reconciliation of Eurostat (official TP registrations),
 # UNHCR global totals, CES refugee survey (5.6M Jan 2026 mode),
-# and Pozniak border crossing data (2022-2023 observed, 2024-2025 extrapolated).
-# NOTE: Pozniak 2024-2026 migration data source/method needs confirmation.
+# and Pozniak/SBGSU border crossing data sourced from daily Facebook posts.
+#
+# KEY ASSUMPTIONS:
+#   1. CES age-sex distribution (Jan 2026 snapshot) applied to all annual
+#      Eurostat flows 2022-2025: assumes stable demographic profile of
+#      refugee outflows year-to-year (defensible but not proven; selective
+#      returns or multi-wave migrations could alter the structure).
+#   2. Pozniak 2022-2023 from published paper; 2024-2026 extrapolated from
+#      SBGSU Facebook-sourced tallies — source/method needs confirmation.
 #
 # Mode from CES estimate of refugee population in EU+EFTA (5.6M)
 # scaled by Eurostat annual flow distribution

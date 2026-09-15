@@ -10,17 +10,21 @@
 #      refugees in the EU by broad age group and sex, for each year.
 #   2. Registrations of unknown sex or unknown age are set aside; the distribution
 #      observed among the known cases is used to allocate each country's total.
-#   3. The broad age groups are ungrouped to single years of age:
-#      - Ages 0–64: using CES refugee age-sex fractionation (observed from surveys)
-#      - Ages 65+: using pclm smoothing (limited CES data at these ages)
+#   3. The broad age groups are ungrouped to single years of age using pclm smoothing.
+#      (CES age-sex fractionation data is loaded for future refinement; see note below)
 #   4. Totals are rescaled so the 2025 stock matches the UNHCR global figure
 #      of 5,923,870 Ukrainian refugees.
 #   5. Year-on-year differences in the stock give the annual NET FLOW, which
 #      is what step 11 consumes. A negative flow (as in 2024) means net return.
 #
-# NOTE: Within-band age fractionation from CES improves on pclm smoothing by using
-# observed demographic data from refugees themselves. Eurostat band totals are
-# preserved exactly to maintain consistency with official registrations.
+# KEY ASSUMPTION: The age-sex distribution of refugees (from CES Jan 2026 survey) is
+# applied to annual Eurostat flows from 2022-2025. This assumes the demographic profile
+# was stable across these years—defensible since outflow composition likely didn't shift
+# dramatically year-to-year, but not proven (selective returns or multi-wave migration
+# could alter the structure).
+#
+# NOTE: CES data loaded and available for refinement. Future work could weight the
+# age-sex structure by year or use yearly CES estimates if available.
 #
 # INPUT    data_input/refugees_eurostat/migr_asytpsm_*.xlsx
 # OUTPUT   data_inter/ukr_migrants_unchr_eurostat_sex_age_2022_2025.rds
