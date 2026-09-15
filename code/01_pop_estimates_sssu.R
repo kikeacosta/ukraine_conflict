@@ -7,9 +7,15 @@
 # Reads the SSSU workbook (population and deaths by single year of age, sex
 # and region) and reshapes it into tidy long form. Three regions are kept
 # separately:
-#     cnt = government-controlled mainland
-#     dnk = Donetsk region
-#     luk = Luhansk region
+#     cnt = continental Ukraine, i.e. the whole country WITHOUT Crimea and
+#           Sevastopol (sheets "*Continental"). It INCLUDES Donetsk and Luhansk.
+#     dnk = Donetsk region   - a subset of cnt
+#     luk = Luhansk region   - a subset of cnt
+# dnk and luk are shipped separately because their registration is incomplete:
+# since 2015 only their government-controlled parts register events, but SSSU
+# kept estimating their population as if coverage were complete (see the
+# workbook's ReadMe sheet). Because they are nested inside cnt, rows must never
+# be summed across regions.
 # The projection in step 11 starts from "cnt" only.
 #
 # The population is what the pipeline consumes. The death counts are tidied

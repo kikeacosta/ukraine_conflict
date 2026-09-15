@@ -51,7 +51,8 @@ exp_mort2 <- read_rds("data_inter/ukr_mxs_obs_plus_frcst_1989_2025.rds") %>%
   filter(year %in% 2022:2025, source == "frcst") %>%
   select(-source)
 
-# baseline population, 1 January 2022, government-controlled mainland
+# baseline population, 1 January 2022, continental Ukraine (without Crimea,
+# including Donetsk and Luhansk)
 pop22_ini <- read_rds("data_inter/ukr_pop_sssu.rds") %>%
   filter(reg == "cnt", year == 2022) %>%
   select(-reg)

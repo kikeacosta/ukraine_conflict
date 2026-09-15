@@ -59,7 +59,7 @@ aggregates them to anonymous counts before anything is written to
 
 | File | Source |
 |---|---|
-| `sssu_ukr_data.xlsx` | State Statistics Service of Ukraine — population and deaths by region |
+| `sssu_ukr_data.xlsx` | State Statistics Service of Ukraine — population and deaths. "Continental" means the whole country without Crimea; the Donetsk and Luhansk sheets are subsets of it, not complements |
 | `LifeTables.xlsx` | Independent life tables. No longer read by any step — the SSSU-vs-life-table rate comparison in `01` was retired because nothing consumed its output. Kept for reference |
 | `DataDxEx.csv` | Deaths and exposures 1989–2021, for the Kannisto fit and Lee-Carter model |
 | `a0.csv` | Infant mortality separation factors |

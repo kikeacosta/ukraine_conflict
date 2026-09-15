@@ -84,7 +84,7 @@ expectancy gap.
 | `09` | `suelo_vivo = 0.1` — 10% of the long-term missing are assumed alive. This drives the combatant mode and deserves a sensitivity check. |
 | `00_setup` | Sex ratio at birth `srb = 1.06`. |
 | `11`, `13` | WPP2024 publishes fertility only to 2023; the 2023 schedule is carried forward to 2024–2025. |
-| `11` | Starts from the government-controlled mainland only (SSSU region `cnt`), excluding Donetsk and Luhansk. |
+| `11` | Starts from continental Ukraine (SSSU region `cnt`): the whole country without Crimea and Sevastopol, **including** Donetsk and Luhansk. SSSU population estimates for those two regions assume complete registration, which has not held since 2015. |
 | `13` | Conflict deaths are absolute counts, so emigration shrinks the denominator and raises the rates. Step 13 quantifies how much of the loss this accounts for. |
 
 ## Layout
