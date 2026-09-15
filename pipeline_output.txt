@@ -1,0 +1,152 @@
+﻿> # Run full pipeline steps 01-14
+> # This script executes the complete Ukraine mortality estimation pipeline
+> 
+> cat("========================================\n")
+========================================
+> cat("Ukraine Conflict Mortality Pipeline\n")
+Ukraine Conflict Mortality Pipeline
+> cat("Running steps 01-14\n")
+Running steps 01-14
+> cat("========================================\n\n")
+========================================
+
+> 
+> start_time <- Sys.time()
+> 
+> # Steps 01-09: Build inputs
+> steps_input <- c("01_pop_estimates_sssu", "02_kannisto_extrapolation",
++                  "03_period_life_tables_1989_2021", "04_lee_carter_forecast",
++                  "05_fertility_wpp2024", "06_net_migration",
++                  "07_ucdp_ukr_conflict_deaths", "07_ohchr_civilian_profile",
++                  "08_ualosses_conflict_deaths", "09_ualosses_markov_imputation")
+> 
+> for (step in steps_input) {
++   cat("\n[", format(Sys.time(), "%H:%M:%S"), "] Running", step, "...\n")
++   tryCatch({
++     source(paste0("code/", step, ".R"))
++     cat("  ✓ Complete\n")
++   }, error = function(e) {
++     cat("  ✗ ERROR:", e$message, "\n")
++   })
++ }
+
+[ 16:44:08 ] Running 01_pop_estimates_sssu ...
+R.exe : Loading required package: pacman
+At line:1 char:357
++ ... _conflict"; &"C:\Program Files\R\R-4.5.2\bin\R.exe" --quiet --no-save ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Loading required package: pacman:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Installing package into 'C:/Users/eacosta/AppData/Local/R/win-library/4.5'
+(as 'lib' is unspecified)
+  ✗ ERROR: trying to use CRAN without setting a mirror 
+
+[ 16:44:08 ] Running 02_kannisto_extrapolation ...
+  ✗ ERROR: cannot open the connection 
+
+[ 16:44:08 ] Running 03_period_life_tables_1989_2021 ...
+  ✗ ERROR: cannot open the connection 
+
+[ 16:44:08 ] Running 04_lee_carter_forecast ...
+  ✗ ERROR: cannot open the connection 
+
+[ 16:44:08 ] Running 05_fertility_wpp2024 ...
+  ✗ ERROR: cannot open the connection 
+
+[ 16:44:08 ] Running 06_net_migration ...
+Installing package into 'C:/Users/eacosta/AppData/Local/R/win-library/4.5'
+(as 'lib' is unspecified)
+  ✗ ERROR: trying to use CRAN without setting a mirror 
+
+[ 16:44:09 ] Running 07_ucdp_ukr_conflict_deaths ...
+Installing package into 'C:/Users/eacosta/AppData/Local/R/win-library/4.5'
+(as 'lib' is unspecified)
+  ✗ ERROR: trying to use CRAN without setting a mirror 
+
+[ 16:44:09 ] Running 07_ohchr_civilian_profile ...
+  ✗ ERROR: cannot open the connection 
+
+[ 16:44:09 ] Running 08_ualosses_conflict_deaths ...
+  ✗ ERROR: cannot open the connection 
+
+[ 16:44:09 ] Running 09_ualosses_markov_imputation ...
+  ✗ ERROR: cannot open the connection 
+Warning messages:
+1: In file(filename, "r", encoding = encoding) :
+  cannot open file 'code/02_kannisto_extrapolation.R': No such file or directory
+2: In file(filename, "r", encoding = encoding) :
+  cannot open file 'code/03_period_life_tables_1989_2021.R': No such file or directory
+3: In file(filename, "r", encoding = encoding) :
+  cannot open file 'code/04_lee_carter_forecast.R': No such file or directory
+4: In file(filename, "r", encoding = encoding) :
+  cannot open file 'code/05_fertility_wpp2024.R': No such file or directory
+5: In file(filename, "r", encoding = encoding) :
+  cannot open file 'code/07_ohchr_civilian_profile.R': No such file or directory
+6: In file(filename, "r", encoding = encoding) :
+  cannot open file 'code/08_ualosses_conflict_deaths.R': No such file or directory
+7: In file(filename, "r", encoding = encoding) :
+  cannot open file 'code/09_ualosses_markov_imputation.R': No such file or directory
+> 
+> # Step 10: Parameters
+> cat("\n[", format(Sys.time(), "%H:%M:%S"), "] Running 10_dists_tables ...\n")
+
+[ 16:44:09 ] Running 10_dists_tables ...
+> tryCatch({
++   source("code/10_dists_tables.R")
++   cat("  ✓ Complete\n")
++ }, error = function(e) {
++   cat("  ✗ ERROR:", e$message, "\n")
++ })
+Installing package into 'C:/Users/eacosta/AppData/Local/R/win-library/4.5'
+(as 'lib' is unspecified)
+  ✗ ERROR: trying to use CRAN without setting a mirror 
+> 
+> # Step 11: 5,000 draws (~7 minutes)
+> cat("\n[", format(Sys.time(), "%H:%M:%S"), "] Running 11_estimation_conflict_allcause_mortality ...\n")
+
+[ 16:44:09 ] Running 11_estimation_conflict_allcause_mortality ...
+> cat("  (This step takes ~7 minutes)\n")
+  (This step takes ~7 minutes)
+> tryCatch({
++   source("code/11_estimation_conflict_allcause_mortality.R")
++   cat("  ✓ Complete\n")
++ }, error = function(e) {
++   cat("  ✗ ERROR:", e$message, "\n")
++ })
+Installing package into 'C:/Users/eacosta/AppData/Local/R/win-library/4.5'
+(as 'lib' is unspecified)
+  ✗ ERROR: trying to use CRAN without setting a mirror 
+> 
+> # Step 13: Sensitivity (optional)
+> cat("\n[", format(Sys.time(), "%H:%M:%S"), "] Running 13_sensitivity_migration_contributions ...\n")
+
+[ 16:44:09 ] Running 13_sensitivity_migration_contributions ...
+> tryCatch({
++   source("code/13_sensitivity_migration_contributions.R")
++   cat("  ✓ Complete\n")
++ }, error = function(e) {
++   cat("  ✗ ERROR:", e$message, "\n")
++ })
+Installing package into 'C:/Users/eacosta/AppData/Local/R/win-library/4.5'
+(as 'lib' is unspecified)
+  ✗ ERROR: trying to use CRAN without setting a mirror 
+> 
+> # Step 14: Decomposition
+> cat("\n[", format(Sys.time(), "%H:%M:%S"), "] Running 14_e0_loss_decomposition_by_cause ...\n")
+
+[ 16:44:09 ] Running 14_e0_loss_decomposition_by_cause ...
+> tryCatch({
++   source("code/14_e0_loss_decomposition_by_cause.R")
++   cat("  ✓ Complete\n")
++ }, error = function(e) {
++   cat("  ✗ ERROR:", e$message, "\n")
++ })
+Installing package into 'C:/Users/eacosta/AppData/Local/R/win-library/4.5'
+(as 'lib' is unspecified)
+  ✗ ERROR: trying to use CRAN without setting a mirror 
+> 
+> end_time <- Sys.time()
+> elapsed <- difftime(end_time, start_time, units = "mins")
+Error: object 'start_time' not found
+Execution halted
