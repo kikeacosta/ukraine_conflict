@@ -228,6 +228,10 @@ ggsave("figures/exploratory/losses_boxplot.png", w = 8, h = 3.5)
 # PERT distribution marked as dashed lines.
 cols <- c("#AE2012", "#005F73")
 
+# param_table also carries the migration components; this plot is the conflict
+# side only, and 15 draws the migration counterpart as figA2.
+param_cnf <- param_table |> filter(role %in% c("combatants", "civilians"))
+
 draws_df |>
   rename(civilians = draw_cvs, combatants = draw_cmb) |>
   pivot_longer(
@@ -238,7 +242,7 @@ draws_df |>
   ggplot(aes(x = dts, color = role, fill = role)) +
   geom_density(alpha = 0.6) +
   geom_text(
-    data = param_table,
+    data = param_cnf,
     aes(
       x = -Inf,
       y = Inf,
@@ -259,19 +263,19 @@ draws_df |>
     show.legend = FALSE
   ) +
   geom_vline(
-    data = param_table,
+    data = param_cnf,
     aes(xintercept = mode, color = role),
     linetype = "dashed",
     show.legend = FALSE
   ) +
   geom_vline(
-    data = param_table,
+    data = param_cnf,
     aes(xintercept = min, color = role),
     linetype = "dashed",
     show.legend = FALSE
   ) +
   geom_vline(
-    data = param_table,
+    data = param_cnf,
     aes(xintercept = max, color = role),
     linetype = "dashed",
     show.legend = FALSE

@@ -18,7 +18,10 @@
 #   fig3_life_expectancy_loss.png                    14
 #   fig4_decomposition_migration_mortality.png       13
 #   fig5_decomposition_by_cause.png                  14   <- new
+#   fig6_uncertainty_shares.png                      11, 14 <- new
 #   figA1_pert_draw_distributions.png                10, 11
+#   figA2_pert_draw_distributions_migration.png      10, 11 <- new
+#   figA3_cumulative_migration_draws.png             11   <- new
 #
 # TABLES (written to tables/ as .csv)
 #   table1_source_totals.csv                         07_*, 08
@@ -31,6 +34,7 @@
 #   table6_totals_by_cause.csv                       14   <- new
 #   table7_totals_by_year.csv                        14   <- new
 #   tableA3_e0_loss_by_cause.csv                     14
+#   tableA4_uncertainty_shares.csv                   11, 14 <- new
 #
 # INPUTS   the .rds products of steps 07-14
 # ==============================================================================
@@ -120,6 +124,12 @@ if (!file.exists(draws_file)) {
 sim_wide <- as_tibble(readRDS(draws_file))
 n_sim <- length(unique(sim_wide$sim_id))
 message("simulation draws available: ", n_sim)
+
+# the drawn input parameters themselves, one row per simulation, year and role
+param_draws <- read_rds("data_inter/ukr_sim_param_draws.rds")
+
+MIG_ROLES <- c(mig_west = "Western displacement", mig_ru_by = "Russia / Belarus")
+COL_MIG <- c("Western displacement" = "#0A9396", "Russia / Belarus" = "#EE9B00")
 
 # ==============================================================================
 # FIGURE 1 - Death and disappearance of Ukrainian combatants
@@ -328,8 +338,133 @@ fig5 <-
 save_fig(fig5, "fig5_decomposition_by_cause.png", 8, 4.4)
 
 # ==============================================================================
+# FIGURE 6 - Where the uncertainty in the loss comes from
+# ==============================================================================
+# fig4 asks how much of the LOSS is the migration denominator. This asks how
+# much of the SPREAD in that loss is migration - a different question, and the
+# one that decides which input is worth more data.
+#
+# The three inputs are drawn independently of one another, so the variance of
+# the loss partitions additively across them: each share is the variance the
+# input carries through its own slope. What linear terms do not account for is
+# reported as its own category rather than distributed over the others.
+# Civilians and combatants are kept apart rather than summed into one
+# "conflict" term. Combatant draws are an order of magnitude larger, so a
+# combined term is dominated by combatant variation - which is nearly
+# irrelevant to the female loss, where civilians drive almost all of it.
+UNC_LAB <- c(
+  cvs   = "Civilian deaths",
+  cmb   = "Combatant deaths",
+  mig_w = "Migration: western",
+  mig_r = "Migration: Russia / Belarus",
+  resid = "Interaction"
+)
+COL_UNC <- c(
+  "Civilian deaths"             = "#AE2012",
+  "Combatant deaths"            = "#333333",
+  "Migration: western"          = "#0A9396",
+  "Migration: Russia / Belarus" = "#EE9B00",
+  "Interaction"                 = "#CCCCCC"
+)
+
+# The loss in year y is that year's death RATES: its own deaths over a
+# population that is still missing everyone who left in any earlier year. So
+# conflict enters as the year's own draw and migration as the cumulative one.
+# Using cumulative deaths instead pushes most of the variance into the
+# residual, because it is not what drives the rate.
+unc_inputs <-
+  param_draws |>
+  mutate(bucket = case_when(
+    role == "civilians"  ~ "cvs",
+    role == "combatants" ~ "cmb",
+    role == "mig_west"   ~ "mig_w",
+    role == "mig_ru_by"  ~ "mig_r"
+  )) |>
+  summarise(draw = sum(draw), .by = c(sim_id, year, bucket)) |>
+  # mig_ru_by is entered once, in 2022, but the people it removes are still
+  # absent in 2025, so the grid is filled with zeros before accumulating
+  complete(sim_id, year, bucket, fill = list(draw = 0)) |>
+  arrange(sim_id, bucket, year) |>
+  mutate(
+    val = if_else(bucket %in% c("cvs", "cmb"), draw, cumsum(draw)),
+    .by = c(sim_id, bucket)
+  ) |>
+  select(sim_id, year, bucket, val) |>
+  pivot_wider(names_from = bucket, values_from = val)
+
+# First-order variance index, Var(E[Y | X]) / Var(Y), estimated by binning X
+# on its own quantiles. This is model-free on purpose: the loss is a ratio of
+# deaths to a population that migration shrinks, so it is not linear in its
+# inputs and a regression slope attributes real structure to the residual.
+# What is left over here is genuine interaction, not a failure to fit.
+first_order <- function(y, x, nbin = 40) {
+  br <- unique(quantile(x, probs = seq(0, 1, length.out = nbin + 1)))
+  if (length(br) < 3) return(0)
+  b <- cut(x, breaks = br, include.lowest = TRUE, labels = FALSE)
+  m <- tapply(y, b, mean)
+  n <- tapply(y, b, length)
+  N <- length(y)
+  k <- length(m)
+  ss_b <- sum(n * (m - mean(y))^2)
+  ss_w <- sum((y - m[as.character(b)])^2)
+  # Each bin mean carries its own sampling noise, which inflates the between-bin
+  # sum of squares and would otherwise push the shares past 100% and leave a
+  # spuriously negative remainder. This is the standard ANOVA correction.
+  max(ss_b - (k - 1) * ss_w / (N - k), 0) / N / var(y)
+}
+
+unc_shares <-
+  loss_draws |>
+  select(sim_id, year, sex, loss_total) |>
+  left_join(unc_inputs, by = c("sim_id", "year")) |>
+  nest(.by = c(year, sex)) |>
+  mutate(sh = map(data, function(d) {
+    s <- c(
+      cvs   = first_order(d$loss_total, d$cvs),
+      cmb   = first_order(d$loss_total, d$cmb),
+      mig_w = first_order(d$loss_total, d$mig_w),
+      mig_r = first_order(d$loss_total, d$mig_r)
+    )
+    tibble(source = c(names(s), "resid"), share = c(s, 1 - sum(s)))
+  })) |>
+  select(-data) |>
+  unnest(sh) |>
+  mutate(source = factor(UNC_LAB[source], levels = unname(UNC_LAB))) |>
+  nice_sex()
+
+fig6 <-
+  unc_shares |>
+  ggplot(aes(factor(year), share, fill = source)) +
+  geom_col(width = 0.7) +
+  facet_wrap(~sex) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values = COL_UNC) +
+  labs(
+    x = NULL, y = "Share of the variance in the life expectancy loss",
+    fill = NULL,
+    caption = paste0(
+      "Variance of the loss across ", scales::comma(n_sim),
+      " draws, partitioned over inputs that are drawn independently."
+    )
+  ) +
+  theme_paper() +
+  guides(fill = guide_legend(nrow = 2))
+save_fig(fig6, "fig6_uncertainty_shares.png", 8, 4.6)
+
+save_tab(
+  unc_shares |>
+    mutate(share = scales::percent(share, accuracy = 0.1)) |>
+    pivot_wider(names_from = source, values_from = share),
+  "tableA4_uncertainty_shares.csv"
+)
+
+# ==============================================================================
 # FIGURE A1 - Distributions of the simulated conflict death totals
 # ==============================================================================
+# param_table also carries the two migration components now, and those belong
+# in A2, not here.
+param_cnf <- param_table |> filter(role %in% c("combatants", "civilians"))
+
 drawn_totals <-
   sim_wide |>
   summarise(
@@ -343,14 +478,14 @@ figA1 <-
   drawn_totals |>
   ggplot(aes(dts, colour = role, fill = role)) +
   geom_density(alpha = 0.55) +
-  geom_vline(data = param_table, aes(xintercept = mode, colour = role),
+  geom_vline(data = param_cnf, aes(xintercept = mode, colour = role),
              linetype = "dashed", show.legend = FALSE) +
-  geom_vline(data = param_table, aes(xintercept = min, colour = role),
+  geom_vline(data = param_cnf, aes(xintercept = min, colour = role),
              linetype = "dotted", show.legend = FALSE) +
-  geom_vline(data = param_table, aes(xintercept = max, colour = role),
+  geom_vline(data = param_cnf, aes(xintercept = max, colour = role),
              linetype = "dotted", show.legend = FALSE) +
   geom_text(
-    data = param_table,
+    data = param_cnf,
     aes(x = -Inf, y = Inf, label = paste0(
       scales::comma(mode, accuracy = 1), "\n(",
       scales::comma(min, accuracy = 1), " - ",
@@ -373,6 +508,102 @@ figA1 <-
   theme_paper() +
   theme(panel.grid.major.x = element_line(colour = "grey92"))
 save_fig(figA1, "figA1_pert_draw_distributions.png", 10, 5)
+
+# ==============================================================================
+# FIGURE A2 - Distributions of the simulated net emigration totals
+# ==============================================================================
+# The counterpart of A1 for the migration side. It reads differently from A1
+# in one respect: a simulation takes ONE quantile per component and holds it
+# across all four years, so within a row the panels move together and the
+# spread is a coverage scenario rather than four independent accidents.
+# west first, so its four years fill the top row and the single Russia and
+# Belarus panel sits on its own below rather than breaking the row
+mig_component <- function(r) factor(MIG_ROLES[r], levels = unname(MIG_ROLES))
+
+mig_bounds <-
+  param_table |>
+  filter(role %in% names(MIG_ROLES)) |>
+  mutate(
+    component = mig_component(role),
+    across(c(min, mode, max), \(x) x / 1e6)
+  )
+
+mig_drawn <-
+  param_draws |>
+  filter(role %in% names(MIG_ROLES)) |>
+  mutate(component = mig_component(role), draw = draw / 1e6)
+
+figA2 <-
+  mig_drawn |>
+  ggplot(aes(draw, colour = component, fill = component)) +
+  geom_density(alpha = 0.55) +
+  geom_vline(data = mig_bounds, aes(xintercept = mode, colour = component),
+             linetype = "dashed", show.legend = FALSE) +
+  geom_vline(data = mig_bounds, aes(xintercept = min, colour = component),
+             linetype = "dotted", show.legend = FALSE) +
+  geom_vline(data = mig_bounds, aes(xintercept = max, colour = component),
+             linetype = "dotted", show.legend = FALSE) +
+  geom_text(
+    data = mig_bounds,
+    aes(x = -Inf, y = Inf, label = paste0(
+      scales::number(mode, accuracy = 0.01), "\n(",
+      scales::number(min, accuracy = 0.01), " - ",
+      scales::number(max, accuracy = 0.01), ")"
+    )),
+    colour = "black", hjust = -0.08, vjust = 1.2, size = 2.4,
+    show.legend = FALSE, lineheight = 0.95
+  ) +
+  scale_fill_manual(values = COL_MIG) +
+  scale_colour_manual(values = COL_MIG) +
+  facet_nested_wrap(component ~ year, scales = "free", ncol = 4) +
+  labs(
+    x = "Net emigration (millions)", y = "Density",
+    colour = "Component", fill = "Component",
+    caption = paste0(
+      "Beta-PERT draws (n = ", scales::comma(n_sim),
+      "). Dashed line: mode. Dotted lines: min and max. Each component is ",
+      "drawn once per simulation and held across all four years."
+    )
+  ) +
+  theme_paper() +
+  theme(panel.grid.major.x = element_line(colour = "grey92"))
+save_fig(figA2, "figA2_pert_draw_distributions_migration.png", 10, 5)
+
+# ==============================================================================
+# FIGURE A3 - Cumulative net emigration implied by the draws
+# ==============================================================================
+# A2 shows the components year by year; this shows what they add up to, which
+# is the quantity the published sources actually disagree about.
+mig_cum <-
+  param_draws |>
+  filter(role %in% names(MIG_ROLES)) |>
+  summarise(total = sum(draw) / 1e6, .by = sim_id)
+
+mig_refs <- tribble(
+  ~label,                                  ~value,
+  "CES 2026 (4.0 west + 0.3 + 1.3 RU/BY)",   5.59,
+  "UNHCR 2026 global (RU/BY ~0.05)",         5.86
+)
+
+figA3 <-
+  mig_cum |>
+  ggplot(aes(total)) +
+  geom_density(fill = "#0A9396", colour = "#0A9396", alpha = 0.55) +
+  geom_vline(data = mig_refs, aes(xintercept = value, linetype = label),
+             colour = "grey20") +
+  scale_linetype_manual(values = c("dashed", "dotdash")) +
+  labs(
+    x = "Cumulative net emigration 2022-2025 (millions)", y = "Density",
+    linetype = "Published estimate",
+    caption = paste0(
+      "Beta-PERT draws (n = ", scales::comma(n_sim), ").\nNeither published ",
+      "figure pairs a register-weighted western estimate\nwith a Russia and ",
+      "Belarus component, so both sit below the mode."
+    )
+  ) +
+  theme_paper() +
+  theme(panel.grid.major.x = element_line(colour = "grey92"))
+save_fig(figA3, "figA3_cumulative_migration_draws.png", 7, 4)
 
 # ==============================================================================
 # TABLE 1 - What each source reports, cumulative 2022-2025
@@ -528,7 +759,9 @@ tab_pert <-
   select(
     year,
     combatants_mode, combatants_min, combatants_max,
-    civilians_mode, civilians_min, civilians_max
+    civilians_mode, civilians_min, civilians_max,
+    mig_west_mode, mig_west_min, mig_west_max,
+    mig_ru_by_mode, mig_ru_by_min, mig_ru_by_max
   )
 
 tab_pert <- bind_rows(

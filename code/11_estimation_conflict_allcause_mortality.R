@@ -14,10 +14,17 @@
 #               combatant deaths (ualosses register), the latter further
 #               split into confirmed and imputed-from-missing
 #
-# Conflict death TOTALS are uncertain, so they are drawn 5,000 times from PERT
-# distributions defined by the min/mode/max in the parameter table built in 10.
+# Conflict death totals and net emigration are both uncertain, so both are
+# drawn 5,000 times from the PERT bounds in the parameter table built in 10.
 # Every draw is projected through the full 2022-2025 accounting, which is what
 # gives the results their credible intervals.
+#
+# The two are drawn differently, because they are uncertain in different ways.
+# Each year's conflict total is its own unknown, so those draws are
+# independent. Migration is uncertain in its COVERAGE - how much of the
+# outflow the sources see - and that bias runs the same way in every year, so
+# each migration component is drawn once per simulation and held across all
+# four years.
 #
 # INPUTS   data_inter/ukr_param_table.rds                  (from 10)
 #          data_inter/ukr_mxs_obs_plus_frcst_1989_2025.rds (from 04)
@@ -29,6 +36,7 @@
 #
 # OUTPUTS  data_inter/ukr_sim_draws_2022_2025.rds  (all 5,000 draws)
 #          data_inter/ukr_probabilistic_deaths_rates_2022_2025.rds (summary)
+#          data_inter/ukr_sim_param_draws.rds      (the draws themselves, for 15 and 16)
 #
 # The life expectancy decomposition that used to live at the bottom of this
 # script now has its own step, 14, which runs it inside every draw instead of
@@ -128,22 +136,68 @@ stopifnot(
 # run_single_sim() is defined in 00_setup.R, so this script and 13 share a
 # single implementation of the cohort-component projection.
 
-# 6. RUN (OR REUSE) THE 5,000 DRAWS ============================================
-# ~7 minutes. Cached, so re-running this script is instant unless the .rds file
-# is deleted. The file is large and is NOT tracked in git - see .gitignore.
-sim_output_raw <- cache_rds("data_inter/ukr_sim_draws_2022_2025.rds", {
-  set.seed(42) # inside the cache block, so the cache is reproducible
+# 6. DRAW THE PARAMETERS =======================================================
+# Drawing is cheap and deterministic; the projection below is neither. Keeping
+# the two apart means the draws are on disk for the figures even when the
+# projection is read back from cache, and the projection stays a pure function
+# of them.
+set.seed(42)
 
-  draws_df <- param_table %>%
+# Conflict deaths are drawn independently in every year: what is uncertain
+# is each year's own count, and 2022 being at its ceiling says nothing
+# about 2023.
+draws_conflict_long <- param_table %>%
+  filter(role %in% c("combatants", "civilians")) %>%
+  group_by(role, year) %>%
+  reframe(
+    sim_id = 1:n_sim,
+    draw = rpert(n_sim, min = min, mode = mode, max = max)
+  )
+
+draws_conflict <- draws_conflict_long %>%
+  pivot_wider(names_from = role, values_from = draw) %>%
+  rename(draw_cmb = combatants, draw_cvs = civilians)
+
+# Migration is not like that. What is uncertain is how much of the outflow
+# the sources capture, and a register that keeps people after they return
+# does so in every year alike. Drawing the years independently would let a
+# simulation put 2022 on the register reading and 2023 on the crossing
+# reading, which is not a scenario anyone could defend. So each component
+# gets ONE quantile per simulation, held across all four years.
+mig_component_draws <- function(rl) {
+  u <- runif(n_sim)
+  param_table %>%
+    filter(role == rl) %>%
     group_by(role, year) %>%
     reframe(
       sim_id = 1:n_sim,
-      draw = rpert(n_sim, min = min, mode = mode, max = max)
-    ) %>%
-    pivot_wider(names_from = role, values_from = draw) %>%
-    rename(draw_cmb = combatants, draw_cvs = civilians, draw_mig = migration) %>%
-    left_join(combatant_mins, by = "year")
+      draw = qpert(u, min = min, mode = mode, max = max)
+    )
+}
 
+draws_mig_long <-
+  bind_rows(
+    mig_component_draws("mig_west"),
+    mig_component_draws("mig_ru_by")
+  )
+
+draws_mig <- draws_mig_long %>%
+  summarise(draw_mig = sum(draw), .by = c(sim_id, year))
+
+draws_df <- draws_conflict %>%
+  left_join(draws_mig, by = c("sim_id", "year")) %>%
+  left_join(combatant_mins, by = "year")
+
+# One tidy row per simulation, year and role. 15 draws its PERT figures from
+# this rather than re-deriving the draws from the projection output, and 16
+# uses it to attribute the spread in the results back to its inputs.
+param_draws <- bind_rows(draws_conflict_long, draws_mig_long)
+write_rds(param_draws, "data_inter/ukr_sim_param_draws.rds")
+
+# 7. RUN (OR REUSE) THE 5,000 PROJECTIONS ======================================
+# ~7 minutes. Cached, so re-running this script is instant unless the .rds file
+# is deleted. The file is large and is NOT tracked in git - see .gitignore.
+sim_output_raw <- cache_rds("data_inter/ukr_sim_draws_2022_2025.rds", {
   draws_list <- draws_df %>% group_split(sim_id)
 
   message("  running ", n_sim, " simulations ...")
@@ -157,7 +211,7 @@ sim_output_raw <- cache_rds("data_inter/ukr_sim_draws_2022_2025.rds", {
   })
 })
 
-# 7. DERIVED CAUSES AND RATES ==================================================
+# 8. DERIVED CAUSES AND RATES ==================================================
 # Stored wide (components only) and expanded here, so the cached file is six
 # times smaller than the long form and nothing can drift out of sync.
 sim_long <-
@@ -176,7 +230,7 @@ sim_long <-
   ) %>%
   mutate(mx = dx / pop)
 
-# 8. SUMMARY ACROSS DRAWS ======================================================
+# 9. SUMMARY ACROSS DRAWS ======================================================
 sce_all_probabilistic <- sim_long %>%
   summarise(
     mx_median = median(mx, na.rm = TRUE),

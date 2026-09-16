@@ -10,21 +10,23 @@
 #      refugees in the EU by broad age group and sex, for each year.
 #   2. Registrations of unknown sex or unknown age are set aside; the distribution
 #      observed among the known cases is used to allocate each country's total.
-#   3. The broad age groups are ungrouped to single years of age using pclm smoothing.
-#      (CES age-sex fractionation data is loaded for future refinement; see note below)
-#   4. Totals are rescaled so the 2025 stock matches the UNHCR global figure
-#      of 5,923,870 Ukrainian refugees.
-#   5. Year-on-year differences in the stock give the annual NET FLOW, which
-#      is what step 11 consumes. A negative flow (as in 2024) means net return.
+#   3. The broad age groups are ungrouped to single years of age using pclm
+#      smoothing, SEPARATELY FOR EACH YEAR AND SEX, so every year carries its
+#      own composition rather than a single profile imposed on all of them.
+#   4. Each year's smoothed stock is normalised to a profile and scaled to the
+#      reconciled total for that year from migration_bounds in 00_setup.R.
+#      Eurostat gives the shape; it cannot give the size, because it covers
+#      the EU only and its stock is flat after 2022 for administrative
+#      reasons rather than demographic ones.
 #
-# KEY ASSUMPTION: The age-sex distribution of refugees (from CES Jan 2026 survey) is
-# applied to annual Eurostat flows from 2022-2025. This assumes the demographic profile
-# was stable across these years—defensible since outflow composition likely didn't shift
-# dramatically year-to-year, but not proven (selective returns or multi-wave migration
-# could alter the structure).
+# The output is the annual NET FLOW by single year of age and sex, negative
+# for people leaving, which is what 11 and 13 consume.
 #
-# NOTE: CES data loaded and available for refinement. Future work could weight the
-# age-sex structure by year or use yearly CES estimates if available.
+# The CES survey is read below and plotted against the Eurostat profile as a
+# cross-check. It is NOT used to build the output: its own age-sex structure
+# describes refugees outside Russia and Belarus only (the survey excluded
+# them by design), while its value here is the annual totals in its table 1,
+# which enter through migration_bounds.
 #
 # INPUT    data_input/refugees_eurostat/migr_asytpsm_*.xlsx
 # OUTPUT   data_inter/ukr_migrants_unchr_eurostat_sex_age_2022_2025.rds
@@ -34,10 +36,6 @@
 rm(list = ls())
 gc()
 source("code/00_setup.R")
-
-# according to UNHCR, as of February 2026, there are 5.923.870 refugees from Ukraine reported globally
-# https://data.unhcr.org/en/situations/ukraine
-lst <- 5923870
 
 # eurostat 2025
 dt <-
@@ -198,12 +196,6 @@ dt4 |>
   coord_flip() +
   theme_bw()
 
-dt4 |>
-  summarise(mix = sum(mix), .by = c(year)) |>
-  filter(year == 2025) |>
-  mutate(mix_tot = lst) |>
-  mutate(adj = mix_tot / mix)
-
 # plotting both
 
 # Standardize Grouped Data
@@ -285,36 +277,44 @@ ggsave("figures/exploratory/migs_pyramids_stock.png", w = 6, h = 3)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# adjusting the total to match UNHCR data
-# there is UNHCR data by year and a total as of feb 2026, but they do not match,
-# so I will adjust the total to match the UNHCR total and keep the distribution by year as is
-adj_fct <-
-  dt4 |>
-  summarise(mix = sum(mix), .by = c(year)) |>
-  filter(year == 2025) |>
-  mutate(adj = lst / mix) |>
-  pull(adj)
+# Eurostat supplies the SHAPE, 00_setup.R supplies the SIZE
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# The registrations describe the age-sex composition of the outflow well, and
+# they describe its size badly: they cover the EU only, they exclude Russia
+# and Belarus entirely, and from 2023 the stock is flat because purges of
+# inactive status offset new grants rather than because migration stopped.
+# The totals therefore come from migration_bounds, which reconciles the
+# western and Russia/Belarus components; see 00_setup.R for the sources.
+#
+# The profile is the year's smoothed STOCK, not the year-on-year difference
+# in it. The difference cannot serve: in 2024 it is the near-cancellation of
+# two 4.3M stocks - about 1,200 people - whose age-sex shape is noise, and
+# scaling that up to a quarter of a million would amplify it 200-fold.
+# Taking the profile from the stock keeps what 06 is good for, which is that
+# each year is smoothed on its own and so carries its own composition: the
+# share of men rises over the period and the share above 45 falls, and both
+# survive into the output.
+mig_tot <-
+  migration_bounds |>
+  summarise(tot = sum(mode), .by = year)
 
-# NOTE: an alternative adjustment (dt5_old) used to sit here, rescaling each
-# year to UNHCR's own yearly totals from unhcr_refugees_annual.csv rather than
-# to the single February-2026 stock. It was computed and printed but never
-# saved, so nothing downstream ever used it; it and its input file have been
-# retired.
-
-# adjusting to match UNHCR total final
 dt5 <-
   dt4 |>
-  mutate(mix = mix * adj_fct) |>
-  spread(year, mix) |>
-  mutate(
-    e2022 = -`2022`,
-    e2023 = `2022` - `2023`,
-    e2024 = `2023` - `2024`,
-    e2025 = `2024` - `2025`
-  ) |>
-  select(sex, age, e2022, e2023, e2024, e2025) |>
-  pivot_longer(-c(sex, age), names_to = "year", values_to = "mix") |>
-  mutate(year = str_sub(year, 2, 5) |> as.integer(), mix = round(mix, 0))
+  mutate(cx = mix / sum(mix), .by = year) |>
+  left_join(mig_tot, by = "year") |>
+  # negative = people leaving, the convention 11 and 13 read
+  mutate(mix = -round(cx * tot, 0)) |>
+  select(sex, age, year, mix) |>
+  arrange(year, sex, age)
+
+# the profile must not have changed the totals it was scaled to
+stopifnot(
+  all.equal(
+    dt5 |> summarise(mix = -sum(mix), .by = year) |> arrange(year) |> pull(mix),
+    mig_tot |> arrange(year) |> pull(tot),
+    tolerance = 1e-4
+  )
+)
 
 dt5 |>
   mutate(mix = ifelse(sex == "m", -mix, mix)) |>

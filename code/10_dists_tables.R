@@ -60,33 +60,24 @@ cvs <-
   select(year, role, mode = dts, min = dts_l, max = dts_u)
 
 # --- migration --------------------------------------------------------------
-# NET EMIGRATION by year (in person-years, cumulative stock change)
-# Based on reconciliation of Eurostat (official TP registrations),
-# UNHCR global totals, CES refugee survey (5.6M Jan 2026 mode),
-# and Pozniak/SBGSU border crossing data sourced from daily Facebook posts.
+# Net emigration enters as TWO components, because two different things are
+# unknown about it and they are unknown to different degrees:
 #
-# KEY ASSUMPTIONS:
-#   1. CES age-sex distribution (Jan 2026 snapshot) applied to all annual
-#      Eurostat flows 2022-2025: assumes stable demographic profile of
-#      refugee outflows year-to-year (defensible but not proven; selective
-#      returns or multi-wave migrations could alter the structure).
-#   2. Pozniak 2022-2023 from published paper; 2024-2026 extrapolated from
-#      SBGSU Facebook-sourced tallies — source/method needs confirmation.
+#   mig_west   how much of the western outflow the sources see. The floor is
+#              CES's net border crossings, the ceiling the rescaled Eurostat
+#              register, and the gap between them is the discrepancy Pozniak
+#              (2023) set out - a register that keeps people after they
+#              return against a crossing balance that missed the peak weeks.
+#   mig_ru_by  displacement into Russia and Belarus, which no register sees
+#              and which UNHCR stopped being able to estimate in May 2025.
 #
-# Mode from CES estimate of refugee population in EU+EFTA (5.6M)
-# scaled by Eurostat annual flow distribution
-# Min/Max bounds based on uncertainty in definition and coverage:
-#   floor ~2.2-2.5M (lower-bound estimate accounting for returns/measurement)
-#   ceiling ~6.2-6.5M (upper-bound estimate accounting for unregistered)
+# The bounds, and the sources behind each number, are in migration_bounds in
+# 00_setup.R; 06 scales its age-sex profiles to the modes from the same
+# table. Both components are systematic rather than year-by-year noise, and
+# 11 draws them accordingly.
 mig <-
-  tribble(
-    ~year, ~min, ~mode, ~max,
-    2022,  1100000, 1900000, 2300000,
-    2023,  1200000, 1950000, 2400000,
-    2024,  -200000, 1200000, 1800000,
-    2025,  -500000, 600000, 1200000
-  ) |>
-  mutate(role = "migration") |>
+  migration_bounds |>
+  mutate(role = paste0("mig_", component)) |>
   select(year, role, mode, min, max)
 
 param_table <- bind_rows(cmb, cvs, mig)
@@ -94,9 +85,29 @@ param_table <- bind_rows(cmb, cvs, mig)
 # rpert() requires min <= mode <= max; catch any ordering problem here rather
 # than as an obscure error inside the simulation loop
 stopifnot(
-  nrow(param_table) == 12,
+  # 4 years x 2 conflict roles, 4 years of western migration, and the single
+  # 2022 row for Russia and Belarus
+  nrow(param_table) == 13,
   all(param_table$min <= param_table$mode),
   all(param_table$mode <= param_table$max)
+)
+
+# 06 scaled its profiles to the modes, so the draw at the mode must leave the
+# age-sex cells untouched. If these drift apart the projection silently
+# rescales every year (see the guard in run_single_sim).
+stopifnot(
+  all.equal(
+    param_table |>
+      filter(str_starts(role, "mig_")) |>
+      summarise(mode = sum(mode), .by = year) |>
+      arrange(year) |>
+      pull(mode),
+    read_rds("data_inter/ukr_migrants_unchr_eurostat_sex_age_2022_2025.rds") |>
+      summarise(mix = -sum(mix), .by = year) |>
+      arrange(year) |>
+      pull(mix),
+    tolerance = 1e-4
+  )
 )
 
 print(as.data.frame(param_table))

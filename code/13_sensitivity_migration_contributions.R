@@ -89,9 +89,11 @@ profile_props <- ual2 |> left_join(ohchr2, by = c("year", "sex", "age"))
 # 3. DETERMINISTIC "DRAW" AT THE MODE ==========================================
 draws_df <-
   param_table |>
-  select(year, role, mode) |>
+  # the two migration components are one input to the projection
+  mutate(role = if_else(str_starts(role, "mig_"), "migration", role)) |>
+  summarise(mode = sum(mode), .by = c(year, role)) |>
   spread(role, mode) %>%
-  rename(draw_cmb = combatants, draw_cvs = civilians) |>
+  rename(draw_cmb = combatants, draw_cvs = civilians, draw_mig = migration) |>
   left_join(
     param_table |> filter(role == "combatants") |> select(year, min_cmb = min),
     by = "year"
