@@ -117,12 +117,22 @@ loss_sum <- read_rds("data_inter/ukr_e0_loss_by_cause_summary_2022_2025.rds")
 deaths_sum <- read_rds("data_inter/ukr_conflict_deaths_by_cause_summary_2022_2025.rds")
 mig <- read_rds("data_inter/ukr_migration_decomposition.rds")
 
-draws_file <- "data_inter/ukr_sim_draws_2022_2025.rds"
+# The draws file is named for the simulation size, so 15 reads the one matching
+# the n_sim it was configured with rather than whatever the last run left behind.
+draws_file <- sprintf("data_inter/ukr_sim_draws_2022_2025_n%d.rds", n_sim)
 if (!file.exists(draws_file)) {
-  stop("Run step 11 first: ", draws_file, call. = FALSE)
+  stop("Run step 11 first (at n_sim = ", n_sim, "): ", draws_file, call. = FALSE)
 }
 sim_wide <- as_tibble(readRDS(draws_file))
-n_sim <- length(unique(sim_wide$sim_id))
+
+# and it must actually hold that many draws: if it does not, the file has been
+# renamed or truncated, and every interval below would be reported at a size it
+# was not computed at
+n_found <- length(unique(sim_wide$sim_id))
+if (n_found != n_sim) {
+  stop("draws file holds ", n_found, " simulations but n_sim is ", n_sim,
+       ": ", draws_file, call. = FALSE)
+}
 message("simulation draws available: ", n_sim)
 
 # the drawn input parameters themselves, one row per simulation, year and role
@@ -1022,5 +1032,30 @@ tA2 <-
 
 save_tab(tA2, "tableA2_status_transitions.csv")
 print(tA2)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# provenance stamp for the whole table set
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# The figures carry the draw count in their captions; a .csv cannot, so it is
+# recorded once here and covers the whole set. The leading underscore keeps it
+# out of the manuscript tables - everything else directly in tables/ is a
+# deliverable.
+run_provenance <- tibble(
+  field = c("n_draws", "seed", "draws_file", "run_finished", "git_commit"),
+  value = c(
+    format(n_sim),
+    "42",
+    basename(draws_file),
+    format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+    tryCatch(
+      suppressWarnings(
+        system("git rev-parse --short HEAD", intern = TRUE, ignore.stderr = TRUE)
+      )[1],
+      error = function(e) NA_character_
+    )
+  )
+)
+save_tab(run_provenance, "_run_provenance.csv")
+print(run_provenance)
 
 message("\nDone. Figures in figures/, tables in tables/.")

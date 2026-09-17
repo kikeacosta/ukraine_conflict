@@ -258,6 +258,25 @@ prop_female_birth <- 1 / (1 + srb)
 # to data_inter/ (ukr_migration_bounds.rds); see documents/migration_methodology.md.
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# simulation size ====
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Number of Monte Carlo draws, read by 11 and 15. THE DEFAULT IS THE
+# PRODUCTION VALUE, so a run started without thinking about it is slow but
+# correct; the fast path has to be asked for explicitly:
+#
+#   UKR_N_SIM=1000 Rscript code/11_estimation_conflict_allcause_mortality.R
+#
+# 20,000 holds the Monte Carlo error of the reported quantiles below the two
+# decimal places they are printed to: the worst cell, the 2.5% quantile of the
+# male loss in 2025, sits at about 0.018 years. 1,000 raises that to about
+# 0.08 and is for construction only. Medians stay good to roughly 0.05 there,
+# and because the seed is fixed, two runs of the SAME size draw the same PERT
+# quantiles, so a difference between them is far more precise than either run
+# on its own - which is what makes the small size usable for comparisons.
+n_sim <- as.integer(Sys.getenv("UKR_N_SIM", "20000"))
+stopifnot(!is.na(n_sim), n_sim >= 100)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # cohort-component projection for a single simulation draw ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Projects the population from 1 January 2022 to 31 December 2025, one year

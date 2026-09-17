@@ -48,7 +48,10 @@ gc()
 source("code/00_setup.R")
 
 # 1. SIMULATION CONTROL ========================================================
-n_sim <- 5000
+# n_sim comes from 00_setup.R: 20,000 by default, overridden with UKR_N_SIM for
+# construction runs. The cache below is keyed by it, so a run at one size can
+# never be served the other size's draws.
+message("simulation size: n_sim = ", n_sim)
 
 # 2. BASELINE DEMOGRAPHIC INPUTS ===============================================
 
@@ -196,10 +199,19 @@ draws_df <- draws_conflict %>%
 param_draws <- bind_rows(draws_conflict_long, draws_mig_long)
 write_rds(param_draws, "data_inter/ukr_sim_param_draws.rds")
 
-# 7. RUN (OR REUSE) THE 5,000 PROJECTIONS ======================================
-# ~7 minutes. Cached, so re-running this script is instant unless the .rds file
-# is deleted. The file is large and is NOT tracked in git - see .gitignore.
-sim_output_raw <- cache_rds("data_inter/ukr_sim_draws_2022_2025.rds", {
+# 7. RUN (OR REUSE) THE PROJECTIONS ============================================
+# About 7 minutes at 5,000 draws and 28 at 20,000. Cached, so re-running this
+# script is instant unless the .rds file is deleted.
+#
+# THE FILE NAME CARRIES THE DRAW COUNT. Without it, a cache built during
+# construction at 1,000 draws would be handed straight back to a production run
+# asking for 20,000, and every interval would be reported at a size it was
+# never computed at. Keying the name also means switching between the two sizes
+# costs nothing, because each keeps its own cache.
+#
+# Large, and NOT tracked in git - see .gitignore.
+sim_draws_file <- sprintf("data_inter/ukr_sim_draws_2022_2025_n%d.rds", n_sim)
+sim_output_raw <- cache_rds(sim_draws_file, {
   draws_list <- draws_df %>% group_split(sim_id)
 
   message("  running ", n_sim, " simulations ...")
