@@ -109,7 +109,7 @@
 #
 # HOW TO ADD IT (no code changes needed)
 #   1. Append one row per country and year end to the CSV above:
-#        country (CAN or USA), date (YYYY-12-31), cumulative_arrivals,
+#        country (CAN or USA), date (YYYY-12-31), value, basis ("arrivals"),
 #        qualifier ("exact"), source, url, accessed, note.
 #      Delete any anchor the new rows make redundant.
 #   2. Save a copy of each source page or file (PDF/HTML/XLSX) in
@@ -234,10 +234,27 @@ unhcr_ru_by <-
 # were ~260k), and holds Canada flat at ~75k in 2022-2024 before jumping to
 # 174k in 2025, a reporting change rather than a flow.
 #
-# Current approximation: linear interpolation between dated cumulative-arrival
-# anchors, evaluated at 31 December, flat after the last anchor. Arrivals are
-# used as if they were a stock, which overstates it by whoever has since left
-# Canada or the USA.
+# Current approximation: linear interpolation between dated anchors, evaluated
+# at 31 December, flat after the last one. What the register stock needs is
+# PEOPLE PRESENT, so each series ends on a published count of people present
+# and uses programme arrivals only for the earlier years, when the programmes
+# had just opened and few had yet left, so arrivals still approximate a stock:
+#
+#   CANADA  298,128 cumulative CUAET entries to 1 Apr 2024 (entry closed
+#           31 Mar 2024), then 274,000 people in Canada at May 2025
+#           (CES 2026 p. 12). The fall is departure and onward movement, which
+#           the earlier arrivals-only series could not show at all.
+#   USA     93,928 U4U arrivals to Dec 2022, then 260,000 people present.
+#           CES dates that count at Nov 2025, but also reports (p. 22) that
+#           U4U "was effectively suspended for new applications in early
+#           2025". The anchor is therefore placed at 31 Jan 2025: with intake
+#           stopped, the stock had plateaued by then, and dating it at Nov
+#           2025 would spread the rise over two years in which it could not
+#           have happened.
+#
+# The two bases are spliced, so the Canadian decline is partly a change of
+# definition rather than pure return; see documents/migration_methodology.md
+# section 8.
 anchors <-
   read_csv("data_input/migration/national_programme_arrivals_PLACEHOLDER.csv",
            show_col_types = FALSE) |>
@@ -248,13 +265,13 @@ programme <-
   group_by(country) |>
   reframe(
     year = yrs,
-    arrivals = approx(
-      x = as.numeric(date), y = cumulative_arrivals,
+    present = approx(
+      x = as.numeric(date), y = value,
       xout = as.numeric(as.Date(paste0(yrs, "-12-31"))),
       rule = 2
     )$y
   ) |>
-  pivot_wider(names_from = country, values_from = arrivals) |>
+  pivot_wider(names_from = country, values_from = present) |>
   rename(canada_placeholder = CAN, usa_placeholder = USA)
 
 register_stock <-
