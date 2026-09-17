@@ -171,16 +171,43 @@ stopifnot(
 # of them.
 set.seed(42)
 
-# Conflict deaths are drawn independently in every year: what is uncertain
-# is each year's own count, and 2022 being at its ceiling says nothing
-# about 2023.
-draws_conflict_long <- param_table %>%
-  filter(role %in% c("combatants", "civilians")) %>%
+# CIVILIANS are drawn independently in every year. What is uncertain is each
+# year's own count, coming from event reporting specific to that year's
+# events, and 2022 being at its ceiling says nothing about 2023.
+draws_cvs_long <- param_table %>%
+  filter(role == "civilians") %>%
   group_by(role, year) %>%
   reframe(
     sim_id = 1:n_sim,
     draw = rpert(n_sim, min = min, mode = mode, max = max)
   )
+
+# COMBATANTS are not like that, although they look like a count. Their bounds
+# ARE the imputation of the missing: the minimum is "none of the missing are
+# dead", the maximum is "all of them are", and the mode is the assumed 10%
+# alive (see 09 and 10). Where the truth sits inside that range is ONE
+# property of how disappearances resolve - the same registers, the same
+# recovery and identification process - not four separate facts. A year's own
+# range already reflects its own duration since disappearance, which is why
+# the range widens from 31% of the mode in 2022 to 81% in 2025.
+#
+# So the component gets one quantile per simulation, held across all four
+# years: exactly the treatment migration gets below, and for the same reason.
+# Drawing the years independently would let a single simulation put 2022 at
+# none-of-the-missing-dead and 2025 at all-of-them-dead, which is not a
+# scenario anyone could defend, and it understates the spread of the four-year
+# total by more than 40% (SD 8,611 against 14,891) because independent errors
+# partly cancel in the sum.
+u_cmb <- runif(n_sim)
+draws_cmb_long <- param_table %>%
+  filter(role == "combatants") %>%
+  group_by(role, year) %>%
+  reframe(
+    sim_id = 1:n_sim,
+    draw = qpert(u_cmb, min = min, mode = mode, max = max)
+  )
+
+draws_conflict_long <- bind_rows(draws_cvs_long, draws_cmb_long)
 
 draws_conflict <- draws_conflict_long %>%
   pivot_wider(names_from = role, values_from = draw) %>%
