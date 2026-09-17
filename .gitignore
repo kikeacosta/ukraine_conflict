@@ -70,3 +70,6 @@ review_response_*.docx
 #     01 that used it was retired because nothing consumed its output.
 #     Kept on disk, out of the repository.
 data_input/LifeTables.xlsx
+
+# --- methodology working drafts, not part of the repository
+documents/tests/

@@ -260,20 +260,35 @@ prop_female_birth <- 1 / (1 + srb)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # simulation size ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Number of Monte Carlo draws, read by 11 and 15. THE DEFAULT IS THE
-# PRODUCTION VALUE, so a run started without thinking about it is slow but
-# correct; the fast path has to be asked for explicitly:
+# THE number of Monte Carlo draws for the whole pipeline. Change it here and
+# everything follows: 11 draws this many and names its cache after it, 15
+# reads that cache and stamps the number into the tables, and the figures
+# carry it in their captions.
 #
-#   UKR_N_SIM=1000 Rscript code/11_estimation_conflict_allcause_mortality.R
+#   1000   CONSTRUCTION (current). ~1.5 min in 11. Monte Carlo error of the
+#          reported quantiles is about 0.08 years in the worst cell, the 2.5%
+#          quantile of the male loss in 2025, so individual bounds move in the
+#          second decimal between runs. Medians stay good to roughly 0.05.
+#          Because the seed is fixed, two runs of the SAME size draw the same
+#          PERT quantiles, so differences between pipeline states are far more
+#          precise than either state on its own - which is what makes this
+#          size usable for comparing changes.
 #
-# 20,000 holds the Monte Carlo error of the reported quantiles below the two
-# decimal places they are printed to: the worst cell, the 2.5% quantile of the
-# male loss in 2025, sits at about 0.018 years. 1,000 raises that to about
-# 0.08 and is for construction only. Medians stay good to roughly 0.05 there,
-# and because the seed is fixed, two runs of the SAME size draw the same PERT
-# quantiles, so a difference between them is far more precise than either run
-# on its own - which is what makes the small size usable for comparisons.
-n_sim <- as.integer(Sys.getenv("UKR_N_SIM", "20000"))
+#   20000  PRODUCTION, for the estimates that get reported. ~28 min in 11.
+#          Brings that worst cell to about 0.018 years, inside the two decimal
+#          places the intervals are printed to.
+#
+# SET THIS TO 20000 BEFORE GENERATING THE FINAL ESTIMATES. Nothing silently
+# depends on remembering: the cache file name carries the size, 15 refuses a
+# cache that does not match, and tables/_run_provenance.csv records what every
+# table was built from.
+n_sim <- 1000
+
+# One-off override that does not need the file edited, e.g. a quick check at
+# another size: UKR_N_SIM=20000 Rscript code/11_...R
+if (nzchar(Sys.getenv("UKR_N_SIM"))) {
+  n_sim <- as.integer(Sys.getenv("UKR_N_SIM"))
+}
 stopifnot(!is.na(n_sim), n_sim >= 100)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
