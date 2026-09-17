@@ -1,0 +1,766 @@
+<!doctype html>
+<html lang="en-US" prefix="og: https://ogp.me/ns#">
+
+<head><meta charset="UTF-8"><script>if(navigator.userAgent.match(/MSIE|Internet Explorer/i)||navigator.userAgent.match(/Trident\/7\..*?rv:11/i)){var href=document.location.href;if(!href.match(/[?&]nowprocket/)){if(href.indexOf("?")==-1){if(href.indexOf("#")==-1){document.location.href=href+"?nowprocket=1"}else{document.location.href=href.replace("#","?nowprocket=1#")}}else{if(href.indexOf("#")==-1){document.location.href=href+"&nowprocket=1"}else{document.location.href=href.replace("#","&nowprocket=1#")}}}}</script><script>class RocketLazyLoadScripts{constructor(){this.v="1.2.6",this.triggerEvents=["keydown","mousedown","mousemove","touchmove","touchstart","touchend","wheel"],this.userEventHandler=this._triggerListener.bind(this),this.touchStartHandler=this._onTouchStart.bind(this),this.touchMoveHandler=this._onTouchMove.bind(this),this.touchEndHandler=this._onTouchEnd.bind(this),this.clickHandler=this._onClick.bind(this),this.interceptedClicks=[],this.interceptedClickListeners=[],this._interceptClickListeners(this),window.addEventListener("pageshow",t=>{this.persisted=t.persisted,this.everythingLoaded&&this._triggerLastFunctions()}),this.CSPIssue=sessionStorage.getItem("rocketCSPIssue"),document.addEventListener("securitypolicyviolation",t=>{this.CSPIssue||"script-src-elem"!==t.violatedDirective||"data"!==t.blockedURI||(this.CSPIssue=!0,sessionStorage.setItem("rocketCSPIssue",!0))}),document.addEventListener("DOMContentLoaded",()=>{this._preconnect3rdParties()}),this.delayedScripts={normal:[],async:[],defer:[]},this.trash=[],this.allJQueries=[]}_addUserInteractionListener(t){if(document.hidden){t._triggerListener();return}this.triggerEvents.forEach(e=>window.addEventListener(e,t.userEventHandler,{passive:!0})),window.addEventListener("touchstart",t.touchStartHandler,{passive:!0}),window.addEventListener("mousedown",t.touchStartHandler),document.addEventListener("visibilitychange",t.userEventHandler)}_removeUserInteractionListener(){this.triggerEvents.forEach(t=>window.removeEventListener(t,this.userEventHandler,{passive:!0})),document.removeEventListener("visibilitychange",this.userEventHandler)}_onTouchStart(t){"HTML"!==t.target.tagName&&(window.addEventListener("touchend",this.touchEndHandler),window.addEventListener("mouseup",this.touchEndHandler),window.addEventListener("touchmove",this.touchMoveHandler,{passive:!0}),window.addEventListener("mousemove",this.touchMoveHandler),t.target.addEventListener("click",this.clickHandler),this._disableOtherEventListeners(t.target,!0),this._renameDOMAttribute(t.target,"onclick","rocket-onclick"),this._pendingClickStarted())}_onTouchMove(t){window.removeEventListener("touchend",this.touchEndHandler),window.removeEventListener("mouseup",this.touchEndHandler),window.removeEventListener("touchmove",this.touchMoveHandler,{passive:!0}),window.removeEventListener("mousemove",this.touchMoveHandler),t.target.removeEventListener("click",this.clickHandler),this._disableOtherEventListeners(t.target,!1),this._renameDOMAttribute(t.target,"rocket-onclick","onclick"),this._pendingClickFinished()}_onTouchEnd(){window.removeEventListener("touchend",this.touchEndHandler),window.removeEventListener("mouseup",this.touchEndHandler),window.removeEventListener("touchmove",this.touchMoveHandler,{passive:!0}),window.removeEventListener("mousemove",this.touchMoveHandler)}_onClick(t){t.target.removeEventListener("click",this.clickHandler),this._disableOtherEventListeners(t.target,!1),this._renameDOMAttribute(t.target,"rocket-onclick","onclick"),this.interceptedClicks.push(t),t.preventDefault(),t.stopPropagation(),t.stopImmediatePropagation(),this._pendingClickFinished()}_replayClicks(){window.removeEventListener("touchstart",this.touchStartHandler,{passive:!0}),window.removeEventListener("mousedown",this.touchStartHandler),this.interceptedClicks.forEach(t=>{t.target.dispatchEvent(new MouseEvent("click",{view:t.view,bubbles:!0,cancelable:!0}))})}_interceptClickListeners(t){EventTarget.prototype.addEventListenerWPRocketBase=EventTarget.prototype.addEventListener,EventTarget.prototype.addEventListener=function(e,i,r){"click"!==e||t.windowLoaded||i===t.clickHandler||t.interceptedClickListeners.push({target:this,func:i,options:r}),(this||window).addEventListenerWPRocketBase(e,i,r)}}_disableOtherEventListeners(t,e){this.interceptedClickListeners.forEach(i=>{i.target===t&&(e?t.removeEventListener("click",i.func,i.options):t.addEventListener("click",i.func,i.options))}),t.parentNode!==document.documentElement&&this._disableOtherEventListeners(t.parentNode,e)}_waitForPendingClicks(){return new Promise(t=>{this._isClickPending?this._pendingClickFinished=t:t()})}_pendingClickStarted(){this._isClickPending=!0}_pendingClickFinished(){this._isClickPending=!1}_renameDOMAttribute(t,e,i){t.hasAttribute&&t.hasAttribute(e)&&(event.target.setAttribute(i,event.target.getAttribute(e)),event.target.removeAttribute(e))}_triggerListener(){this._removeUserInteractionListener(this),"loading"===document.readyState?document.addEventListener("DOMContentLoaded",this._loadEverythingNow.bind(this)):this._loadEverythingNow()}_preconnect3rdParties(){let t=[];document.querySelectorAll("script[type=rocketlazyloadscript][data-rocket-src]").forEach(e=>{let i=e.getAttribute("data-rocket-src");if(i&&!i.startsWith("data:")){0===i.indexOf("//")&&(i=location.protocol+i);try{let r=new URL(i).origin;r!==location.origin&&t.push({src:r,crossOrigin:e.crossOrigin||"module"===e.getAttribute("data-rocket-type")})}catch(s){}}}),t=[...new Map(t.map(t=>[JSON.stringify(t),t])).values()],this._batchInjectResourceHints(t,"preconnect")}async _loadEverythingNow(){this.lastBreath=Date.now(),this._delayEventListeners(this),this._delayJQueryReady(this),this._handleDocumentWrite(),this._registerAllDelayedScripts(),this._preloadAllScripts(),await this._loadScriptsFromList(this.delayedScripts.normal),await this._loadScriptsFromList(this.delayedScripts.defer),await this._loadScriptsFromList(this.delayedScripts.async);try{await this._triggerDOMContentLoaded(),await this._pendingWebpackRequests(this),await this._triggerWindowLoad()}catch(t){console.error(t)}window.dispatchEvent(new Event("rocket-allScriptsLoaded")),this.everythingLoaded=!0,this._waitForPendingClicks().then(()=>{this._replayClicks()}),this._emptyTrash()}_registerAllDelayedScripts(){document.querySelectorAll("script[type=rocketlazyloadscript]").forEach(t=>{t.hasAttribute("data-rocket-src")?t.hasAttribute("async")&&!1!==t.async?this.delayedScripts.async.push(t):t.hasAttribute("defer")&&!1!==t.defer||"module"===t.getAttribute("data-rocket-type")?this.delayedScripts.defer.push(t):this.delayedScripts.normal.push(t):this.delayedScripts.normal.push(t)})}async _transformScript(t){if(await this._littleBreath(),!0===t.noModule&&"noModule"in HTMLScriptElement.prototype){t.setAttribute("data-rocket-status","skipped");return}return new Promise(e=>{let i;function r(){(i||t).setAttribute("data-rocket-status","executed"),e()}try{if(navigator.userAgent.indexOf("Firefox/")>0||""===navigator.vendor||this.CSPIssue)i=document.createElement("script"),[...t.attributes].forEach(t=>{let e=t.nodeName;"type"!==e&&("data-rocket-type"===e&&(e="type"),"data-rocket-src"===e&&(e="src"),i.setAttribute(e,t.nodeValue))}),t.text&&(i.text=t.text),i.hasAttribute("src")?(i.addEventListener("load",r),i.addEventListener("error",function(){i.setAttribute("data-rocket-status","failed-network"),e()}),setTimeout(()=>{i.isConnected||e()},1)):(i.text=t.text,r()),t.parentNode.replaceChild(i,t);else{let s=t.getAttribute("data-rocket-type"),n=t.getAttribute("data-rocket-src");s?(t.type=s,t.removeAttribute("data-rocket-type")):t.removeAttribute("type"),t.addEventListener("load",r),t.addEventListener("error",i=>{this.CSPIssue&&i.target.src.startsWith("data:")?(console.log("WPRocket: data-uri blocked by CSP -> fallback"),t.removeAttribute("src"),this._transformScript(t).then(e)):(t.setAttribute("data-rocket-status","failed-network"),e())}),n?(t.removeAttribute("data-rocket-src"),t.src=n):t.src="data:text/javascript;base64,"+window.btoa(unescape(encodeURIComponent(t.text)))}}catch(a){t.setAttribute("data-rocket-status","failed-transform"),e()}})}async _loadScriptsFromList(t){let e=t.shift();return e&&e.isConnected?(await this._transformScript(e),this._loadScriptsFromList(t)):Promise.resolve()}_preloadAllScripts(){this._batchInjectResourceHints([...this.delayedScripts.normal,...this.delayedScripts.defer,...this.delayedScripts.async],"preload")}_batchInjectResourceHints(t,e){var i=document.createDocumentFragment();t.forEach(t=>{let r=t.getAttribute&&t.getAttribute("data-rocket-src")||t.src;if(r&&!r.startsWith("data:")){let s=document.createElement("link");s.href=r,s.rel=e,"preconnect"!==e&&(s.as="script"),t.getAttribute&&"module"===t.getAttribute("data-rocket-type")&&(s.crossOrigin=!0),t.crossOrigin&&(s.crossOrigin=t.crossOrigin),t.integrity&&(s.integrity=t.integrity),i.appendChild(s),this.trash.push(s)}}),document.head.appendChild(i)}_delayEventListeners(t){let e={};function i(i,r){return e[r].eventsToRewrite.indexOf(i)>=0&&!t.everythingLoaded?"rocket-"+i:i}function r(t,r){var s;!e[s=t]&&(e[s]={originalFunctions:{add:s.addEventListener,remove:s.removeEventListener},eventsToRewrite:[]},s.addEventListener=function(){arguments[0]=i(arguments[0],s),e[s].originalFunctions.add.apply(s,arguments)},s.removeEventListener=function(){arguments[0]=i(arguments[0],s),e[s].originalFunctions.remove.apply(s,arguments)}),e[t].eventsToRewrite.push(r)}function s(e,i){let r=e[i];e[i]=null,Object.defineProperty(e,i,{get:()=>r||function(){},set(s){t.everythingLoaded?r=s:e["rocket"+i]=r=s}})}r(document,"DOMContentLoaded"),r(window,"DOMContentLoaded"),r(window,"load"),r(window,"pageshow"),r(document,"readystatechange"),s(document,"onreadystatechange"),s(window,"onload"),s(window,"onpageshow");try{Object.defineProperty(document,"readyState",{get:()=>t.rocketReadyState,set(e){t.rocketReadyState=e},configurable:!0}),document.readyState="loading"}catch(n){console.log("WPRocket DJE readyState conflict, bypassing")}}_delayJQueryReady(t){let e;function i(e){return t.everythingLoaded?e:e.split(" ").map(t=>"load"===t||0===t.indexOf("load.")?"rocket-jquery-load":t).join(" ")}function r(r){function s(t){let e=r.fn[t];r.fn[t]=r.fn.init.prototype[t]=function(){return this[0]===window&&("string"==typeof arguments[0]||arguments[0]instanceof String?arguments[0]=i(arguments[0]):"object"==typeof arguments[0]&&Object.keys(arguments[0]).forEach(t=>{let e=arguments[0][t];delete arguments[0][t],arguments[0][i(t)]=e})),e.apply(this,arguments),this}}r&&r.fn&&!t.allJQueries.includes(r)&&(r.fn.ready=r.fn.init.prototype.ready=function(e){return t.domReadyFired?e.bind(document)(r):document.addEventListener("rocket-DOMContentLoaded",()=>e.bind(document)(r)),r([])},s("on"),s("one"),t.allJQueries.push(r)),e=r}r(window.jQuery),Object.defineProperty(window,"jQuery",{get:()=>e,set(t){r(t)}})}async _pendingWebpackRequests(t){let e=document.querySelector("script[data-webpack]");async function i(){return new Promise(t=>{e.addEventListener("load",t),e.addEventListener("error",t)})}e&&(await i(),await t._requestAnimFrame(),await t._pendingWebpackRequests(t))}async _triggerDOMContentLoaded(){this.domReadyFired=!0;try{document.readyState="interactive"}catch(t){}await this._littleBreath(),document.dispatchEvent(new Event("rocket-readystatechange")),await this._littleBreath(),document.rocketonreadystatechange&&document.rocketonreadystatechange(),await this._littleBreath(),document.dispatchEvent(new Event("rocket-DOMContentLoaded")),await this._littleBreath(),window.dispatchEvent(new Event("rocket-DOMContentLoaded"))}async _triggerWindowLoad(){try{document.readyState="complete"}catch(t){}await this._littleBreath(),document.dispatchEvent(new Event("rocket-readystatechange")),await this._littleBreath(),document.rocketonreadystatechange&&document.rocketonreadystatechange(),await this._littleBreath(),window.dispatchEvent(new Event("rocket-load")),await this._littleBreath(),window.rocketonload&&window.rocketonload(),await this._littleBreath(),this.allJQueries.forEach(t=>t(window).trigger("rocket-jquery-load")),await this._littleBreath();let e=new Event("rocket-pageshow");e.persisted=this.persisted,window.dispatchEvent(e),await this._littleBreath(),window.rocketonpageshow&&window.rocketonpageshow({persisted:this.persisted}),this.windowLoaded=!0}_triggerLastFunctions(){document.onreadystatechange&&document.onreadystatechange(),window.onload&&window.onload(),window.onpageshow&&window.onpageshow({persisted:this.persisted})}_handleDocumentWrite(){let t=new Map;document.write=document.writeln=function(e){let i=document.currentScript;i||console.error("WPRocket unable to document.write this: "+e);let r=document.createRange(),s=i.parentElement,n=t.get(i);void 0===n&&(n=i.nextSibling,t.set(i,n));let a=document.createDocumentFragment();r.setStart(a,0),a.appendChild(r.createContextualFragment(e)),s.insertBefore(a,n)}}async _littleBreath(){Date.now()-this.lastBreath>45&&(await this._requestAnimFrame(),this.lastBreath=Date.now())}async _requestAnimFrame(){return document.hidden?new Promise(t=>setTimeout(t)):new Promise(t=>requestAnimationFrame(t))}_emptyTrash(){this.trash.forEach(t=>t.remove())}static run(){let t=new RocketLazyLoadScripts;t._addUserInteractionListener(t)}}RocketLazyLoadScripts.run();</script>
+    
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="profile" href="https://gmpg.org/xfn/11">
+
+        <link rel="alternate" hreflang="uk-ua" href="https://ces.org.ua/ukrainian-refugees-fifth-wave/" />
+<link rel="alternate" hreflang="en-us" href="https://ces.org.ua/en/ukrainian-refugees-fifth-wave/" />
+<link rel="alternate" hreflang="x-default" href="https://ces.org.ua/ukrainian-refugees-fifth-wave/" />
+
+<!-- Search Engine Optimization by Rank Math - https://rankmath.com/ -->
+<title>Ukrainian refugees after four years abroad. Fifth wave of research - Centre for Economic Strategy</title>
+<link data-rocket-prefetch href="https://www.youtube.com" rel="dns-prefetch">
+<link data-rocket-prefetch href="https://scripts.clarity.ms" rel="dns-prefetch">
+<link data-rocket-prefetch href="https://www.clarity.ms" rel="dns-prefetch">
+<link data-rocket-prefetch href="https://connect.facebook.net" rel="dns-prefetch">
+<link data-rocket-prefetch href="https://www.googletagmanager.com" rel="dns-prefetch"><link rel="preload" data-rocket-preload as="image" imagesrcset="https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-03-04-152011.png.webp 554w, https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-03-04-152011-207x300.png.webp 207w, https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-03-04-152011-104x150.png.webp 104w" imagesizes="(max-width: 554px) 100vw, 554px" fetchpriority="high">
+<meta name="description" content="Discover the latest economic news and expert commentary from the Centre for Economic Strategy. Stay updated on Ukraine’s economy with our key updates."/>
+<meta name="robots" content="follow, index, max-snippet:-1, max-video-preview:-1, max-image-preview:large"/>
+<link rel="canonical" href="https://ces.org.ua/en/ukrainian-refugees-fifth-wave/" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Ukrainian refugees after four years abroad. Fifth wave of research - Centre for Economic Strategy" />
+<meta property="og:description" content="Discover the latest economic news and expert commentary from the Centre for Economic Strategy. Stay updated on Ukraine’s economy with our key updates." />
+<meta property="og:url" content="https://ces.org.ua/en/ukrainian-refugees-fifth-wave/" />
+<meta property="og:site_name" content="Центр економічної стратегії" />
+<meta property="article:tag" content="human capital" />
+<meta property="article:tag" content="refugees" />
+<meta property="article:section" content="Research" />
+<meta property="og:updated_time" content="2026-06-23T13:47:42+03:00" />
+<meta property="og:image" content="https://ces.org.ua/wp-content/uploads/2026/02/depositphotos_551467562_xl-1024x458.jpg" />
+<meta property="og:image:secure_url" content="https://ces.org.ua/wp-content/uploads/2026/02/depositphotos_551467562_xl-1024x458.jpg" />
+<meta property="og:image:width" content="1024" />
+<meta property="og:image:height" content="458" />
+<meta property="og:image:alt" content="Ukrainian refugees after four years abroad. Fifth wave of research" />
+<meta property="og:image:type" content="image/jpeg" />
+<meta property="article:published_time" content="2026-02-24T17:10:24+03:00" />
+<meta property="article:modified_time" content="2026-06-23T13:47:42+03:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Ukrainian refugees after four years abroad. Fifth wave of research - Centre for Economic Strategy" />
+<meta name="twitter:description" content="Discover the latest economic news and expert commentary from the Centre for Economic Strategy. Stay updated on Ukraine’s economy with our key updates." />
+<meta name="twitter:image" content="https://ces.org.ua/wp-content/uploads/2026/02/depositphotos_551467562_xl-1024x458.jpg" />
+<meta name="twitter:label1" content="Written by" />
+<meta name="twitter:data1" content="Angelina Zavadetska" />
+<meta name="twitter:label2" content="Time to read" />
+<meta name="twitter:data2" content="6 minutes" />
+<script type="application/ld+json" class="rank-math-schema">{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://ces.org.ua/en/#organization/","name":"\u0426\u0435\u043d\u0442\u0440 \u0435\u043a\u043e\u043d\u043e\u043c\u0456\u0447\u043d\u043e\u0457 \u0441\u0442\u0440\u0430\u0442\u0435\u0433\u0456\u0457","logo":{"@type":"ImageObject","@id":"https://ces.org.ua/en/#logo/","url":"https://ces.org.ua/wp-content/uploads/2025/06/ces-logo-uk-2.svg","contentUrl":"https://ces.org.ua/wp-content/uploads/2025/06/ces-logo-uk-2.svg","caption":"\u0426\u0435\u043d\u0442\u0440 \u0435\u043a\u043e\u043d\u043e\u043c\u0456\u0447\u043d\u043e\u0457 \u0441\u0442\u0440\u0430\u0442\u0435\u0433\u0456\u0457","inLanguage":"en-US","width":"280","height":"73"}},{"@type":"WebSite","@id":"https://ces.org.ua/en/#website/","url":"https://ces.org.ua/en/","name":"\u0426\u0435\u043d\u0442\u0440 \u0435\u043a\u043e\u043d\u043e\u043c\u0456\u0447\u043d\u043e\u0457 \u0441\u0442\u0440\u0430\u0442\u0435\u0433\u0456\u0457","publisher":{"@id":"https://ces.org.ua/en/#organization/"},"inLanguage":"en-US"},{"@type":"ImageObject","@id":"https://ces.org.ua/wp-content/uploads/2026/02/depositphotos_551467562_xl-scaled.jpg","url":"https://ces.org.ua/wp-content/uploads/2026/02/depositphotos_551467562_xl-scaled.jpg","width":"2560","height":"1144","inLanguage":"en-US"},{"@type":"BreadcrumbList","@id":"https://ces.org.ua/en/ukrainian-refugees-fifth-wave/#breadcrumb","itemListElement":[{"@type":"ListItem","position":"1","item":{"@id":"https://ces.org.ua","name":"\u0413\u043e\u043b\u043e\u0432\u043d\u0430"}},{"@type":"ListItem","position":"2","item":{"@id":"https://ces.org.ua/en/category/research-list-en/","name":"Research"}},{"@type":"ListItem","position":"3","item":{"@id":"https://ces.org.ua/en/ukrainian-refugees-fifth-wave/","name":"Ukrainian refugees after four years abroad. Fifth wave of research"}}]},{"@type":"WebPage","@id":"https://ces.org.ua/en/ukrainian-refugees-fifth-wave/#webpage","url":"https://ces.org.ua/en/ukrainian-refugees-fifth-wave/","name":"Ukrainian refugees after four years abroad. Fifth wave of research - Centre for Economic Strategy","datePublished":"2026-02-24T17:10:24+03:00","dateModified":"2026-06-23T13:47:42+03:00","isPartOf":{"@id":"https://ces.org.ua/en/#website/"},"primaryImageOfPage":{"@id":"https://ces.org.ua/wp-content/uploads/2026/02/depositphotos_551467562_xl-scaled.jpg"},"inLanguage":"en-US","breadcrumb":{"@id":"https://ces.org.ua/en/ukrainian-refugees-fifth-wave/#breadcrumb"}},{"@type":"Person","@id":"https://ces.org.ua/en/ukrainian-refugees-fifth-wave/#author","name":"Angelina Zavadetska","image":{"@type":"ImageObject","@id":"https://secure.gravatar.com/avatar/8a89bdcf3a41945c39ba0f1581bc145bbc83ad773349efedfac3f7b700b71a29?s=96&amp;d=mm&amp;r=g","url":"https://secure.gravatar.com/avatar/8a89bdcf3a41945c39ba0f1581bc145bbc83ad773349efedfac3f7b700b71a29?s=96&amp;d=mm&amp;r=g","caption":"Angelina Zavadetska","inLanguage":"en-US"},"worksFor":{"@id":"https://ces.org.ua/en/#organization/"}},{"@type":"NewsArticle","headline":"Ukrainian refugees after four years abroad. Fifth wave of research - Centre for Economic Strategy","datePublished":"2026-02-24T17:10:24+03:00","dateModified":"2026-06-23T13:47:42+03:00","articleSection":"Human capital, Research","author":{"@id":"https://ces.org.ua/en/ukrainian-refugees-fifth-wave/#author","name":"Angelina Zavadetska"},"publisher":{"@id":"https://ces.org.ua/en/#organization/"},"description":"Discover the latest economic news and expert commentary from the Centre for Economic Strategy. Stay updated on Ukraine\u2019s economy with our key updates.","name":"Ukrainian refugees after four years abroad. Fifth wave of research - Centre for Economic Strategy","@id":"https://ces.org.ua/en/ukrainian-refugees-fifth-wave/#richSnippet","isPartOf":{"@id":"https://ces.org.ua/en/ukrainian-refugees-fifth-wave/#webpage"},"image":{"@id":"https://ces.org.ua/wp-content/uploads/2026/02/depositphotos_551467562_xl-scaled.jpg"},"inLanguage":"en-US","mainEntityOfPage":{"@id":"https://ces.org.ua/en/ukrainian-refugees-fifth-wave/#webpage"}}]}</script>
+<!-- /Rank Math WordPress SEO plugin -->
+
+
+<style id="wp-img-auto-sizes-contain-inline-css">
+img:is([sizes=auto i],[sizes^="auto," i]){contain-intrinsic-size:3000px 1500px}
+/*# sourceURL=wp-img-auto-sizes-contain-inline-css */
+</style>
+<style id="safe-svg-svg-icon-style-inline-css">
+.safe-svg-cover{text-align:center}.safe-svg-cover .safe-svg-inside{display:inline-block;max-width:100%}.safe-svg-cover svg{fill:currentColor;height:100%;max-height:100%;max-width:100%;width:100%}
+
+/*# sourceURL=https://ces.org.ua/wp-content/plugins/safe-svg/dist/safe-svg-block-frontend.css */
+</style>
+<link rel='stylesheet' id='cookie-notice-front-css' href='https://ces.org.ua/wp-content/plugins/cookie-notice/css/front.min.css?ver=3.1.3' media='all' />
+<link rel='stylesheet' id='wpml-legacy-dropdown-0-css' href='https://ces.org.ua/wp-content/plugins/sitepress-multilingual-cms/templates/language-switchers/legacy-dropdown/style.min.css?ver=1' media='all' />
+<style id="wpml-legacy-dropdown-0-inline-css">
+.wpml-ls-statics-shortcode_actions, .wpml-ls-statics-shortcode_actions .wpml-ls-sub-menu, .wpml-ls-statics-shortcode_actions a {border-color:#cdcdcd;}.wpml-ls-statics-shortcode_actions a, .wpml-ls-statics-shortcode_actions .wpml-ls-sub-menu a, .wpml-ls-statics-shortcode_actions .wpml-ls-sub-menu a:link, .wpml-ls-statics-shortcode_actions li:not(.wpml-ls-current-language) .wpml-ls-link, .wpml-ls-statics-shortcode_actions li:not(.wpml-ls-current-language) .wpml-ls-link:link {color:#444444;background-color:#ffffff;}.wpml-ls-statics-shortcode_actions .wpml-ls-sub-menu a:hover,.wpml-ls-statics-shortcode_actions .wpml-ls-sub-menu a:focus, .wpml-ls-statics-shortcode_actions .wpml-ls-sub-menu a:link:hover, .wpml-ls-statics-shortcode_actions .wpml-ls-sub-menu a:link:focus {color:#000000;background-color:#eeeeee;}.wpml-ls-statics-shortcode_actions .wpml-ls-current-language > a {color:#444444;background-color:#ffffff;}.wpml-ls-statics-shortcode_actions .wpml-ls-current-language:hover>a, .wpml-ls-statics-shortcode_actions .wpml-ls-current-language>a:focus {color:#000000;background-color:#eeeeee;}
+/*# sourceURL=wpml-legacy-dropdown-0-inline-css */
+</style>
+<link rel='stylesheet' id='dearpdf-style-css' href='https://ces.org.ua/wp-content/plugins/dearpdf-pro/assets/css/dearpdf.min.css?ver=2.0.71' media='all' />
+<link rel='stylesheet' id='tablepress-default-css' href='https://ces.org.ua/wp-content/plugins/tablepress/css/build/default.css?ver=3.3.3' media='all' />
+<link rel='stylesheet' id='ces_styles-css' href='https://ces.org.ua/wp-content/themes/ces/build/css/app.css?ver=7b980387b2eb5a6918ce' media='all' />
+<link rel='stylesheet' id='single-post-css-css' href='https://ces.org.ua/wp-content/themes/ces/build/css/page-templates/single-post/style.css?ver=ebf56d775442fd52cc7d' media='all' />
+<script id="wpml-cookie-js-extra">
+var wpml_cookies = {"wp-wpml_current_language":{"value":"en","expires":1,"path":"/"}};
+var wpml_cookies = {"wp-wpml_current_language":{"value":"en","expires":1,"path":"/"}};
+//# sourceURL=wpml-cookie-js-extra
+</script>
+<script data-wp-strategy="defer" defer id="wpml-cookie-js" src="https://ces.org.ua/wp-content/plugins/sitepress-multilingual-cms/res/js/cookies/language-cookie.js?ver=493000"></script>
+<script type="rocketlazyloadscript" id="wpml-legacy-dropdown-0-js" data-rocket-src="https://ces.org.ua/wp-content/plugins/sitepress-multilingual-cms/templates/language-switchers/legacy-dropdown/script.min.js?ver=1" data-rocket-defer defer></script>
+<script id="jquery-core-js" src="https://ces.org.ua/wp-includes/js/jquery/jquery.min.js?ver=3.7.1"></script>
+<link rel="https://api.w.org/" href="https://ces.org.ua/en/wp-json/" /><link rel="alternate" title="JSON" type="application/json" href="https://ces.org.ua/en/wp-json/wp/v2/posts/40576" /><!-- Analytics by WP Statistics - https://wp-statistics.com -->
+  <script nowprocket>
+    var appLocations = {
+    "admin_ajax": "https:\/\/ces.org.ua\/wp-admin\/admin-ajax.php",
+    "siteUrl": "https:\/\/ces.org.ua\/en\/"
+};
+  </script>
+<script type="rocketlazyloadscript" data-cfasync="false"> var dearPdfLocation = "https://ces.org.ua/wp-content/plugins/dearpdf-pro/assets/"; var dearpdfWPGlobal = {"text":{"blank":""},"viewerType":"reader","is3D":true,"pageScale":"auto","height":"auto","mobileViewerType":"auto","backgroundColor":"transparent","backgroundImage":"","showDownloadControl":true,"sideMenuOverlay":true,"readDirection":"ltr","disableRange":false,"has3DCover":true,"enableSound":true,"color3DCover":"#777","controlsPosition":"bottom","rangeChunkSize":"524288","maxTextureSize":"3200","pageMode":"auto","singlePageMode":"auto","pdfVersion":"default","autoPDFLinktoViewer":false,"attachmentLightbox":"true","duration":"800","paddingLeft":"15","paddingRight":"15","paddingTop":"20","paddingBottom":"20","moreControls":"download,pageMode,startPage,endPage,sound","hideControls":"share"};</script><style class="wp-fonts-local">
+@font-face{font-family:Roboto;font-style:normal;font-weight:300;font-display:fallback;src:url('https://ces.org.ua/wp-content/themes/ces/fonts/Roboto/Roboto-Light.woff2') format('woff2');}
+@font-face{font-family:Roboto;font-style:normal;font-weight:400;font-display:fallback;src:url('https://ces.org.ua/wp-content/themes/ces/fonts/Roboto/Roboto-Regular.woff2') format('woff2');}
+@font-face{font-family:Roboto;font-style:normal;font-weight:500;font-display:fallback;src:url('https://ces.org.ua/wp-content/themes/ces/fonts/Roboto/Roboto-Medium.woff2') format('woff2');}
+@font-face{font-family:Roboto;font-style:normal;font-weight:700;font-display:fallback;src:url('https://ces.org.ua/wp-content/themes/ces/fonts/Roboto/Roboto-Bold.woff2') format('woff2');}
+@font-face{font-family:CharisSIL;font-style:normal;font-weight:400;font-display:fallback;src:url('https://ces.org.ua/wp-content/themes/ces/fonts/CharisSIL/CharisSIL.woff2') format('woff2');}
+@font-face{font-family:CharisSIL;font-style:normal;font-weight:700;font-display:fallback;src:url('https://ces.org.ua/wp-content/themes/ces/fonts/CharisSIL/CharisSIL-Bold.woff2') format('woff2');}
+@font-face{font-family:Aptos;font-style:normal;font-weight:300;font-display:fallback;src:url('https://ces.org.ua/wp-content/themes/ces/fonts/Aptos/Aptos-Light.woff2') format('woff2');}
+@font-face{font-family:Aptos;font-style:normal;font-weight:400;font-display:fallback;src:url('https://ces.org.ua/wp-content/themes/ces/fonts/Aptos/Aptos.woff2') format('woff2');}
+@font-face{font-family:Aptos;font-style:normal;font-weight:600;font-display:fallback;src:url('https://ces.org.ua/wp-content/themes/ces/fonts/Aptos/Aptos-SemiBold.woff2') format('woff2');}
+@font-face{font-family:Aptos;font-style:normal;font-weight:700;font-display:fallback;src:url('https://ces.org.ua/wp-content/themes/ces/fonts/Aptos/Aptos-Bold.woff2') format('woff2');}
+</style>
+<link rel="icon" href="https://ces.org.ua/wp-content/uploads/2025/07/cropped-favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="https://ces.org.ua/wp-content/uploads/2025/07/cropped-favicon-192x192.png" sizes="192x192" />
+<link rel="apple-touch-icon" href="https://ces.org.ua/wp-content/uploads/2025/07/cropped-favicon-180x180.png" />
+<meta name="msapplication-TileImage" content="https://ces.org.ua/wp-content/uploads/2025/07/cropped-favicon-270x270.png" />
+<style id="wp-custom-css">
+.wp-block-acf-brand-resources__cards  .wp-block-acf-brand-resources__card:nth-child(2) .wp-block-acf-brand-resources__card-image-box{
+	background-color: #00509b;
+}
+</style>
+<noscript><style id="rocket-lazyload-nojs-css">.rll-youtube-player, [data-lazy-src]{display:none !important;}</style></noscript>
+    <!-- Google Tag Manager -->
+    <script nowprocket>(function (w, d, s, l, i) {
+            w[l] = w[l] || [];
+            w[l].push({
+                'gtm.start':
+                    new Date().getTime(), event: 'gtm.js'
+            });
+            var f = d.getElementsByTagName(s)[0],
+                j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : '';
+            j.async = true;
+            j.src =
+                'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
+            f.parentNode.insertBefore(j, f);
+        })(window, document, 'script', 'dataLayer', 'GTM-KZ5CPKH6');</script>
+    <!-- End Google Tag Manager -->
+
+<meta name="generator" content="WP Rocket 3.23" data-wpr-features="wpr_delay_js wpr_defer_js wpr_lazyload_images wpr_preconnect_external_domains wpr_oci wpr_cdn wpr_desktop" /></head>
+
+<body class="wp-singular post-template-default single single-post postid-40576 single-format-standard wp-custom-logo wp-theme-ces cookies-not-set">
+<!-- Google Tag Manager (noscript) -->
+<noscript>
+    <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KZ5CPKH6"
+            height="0" width="0" style="display:none;visibility:hidden"></iframe>
+</noscript>
+<!-- End Google Tag Manager (noscript) -->
+
+<div id="page" class="site">
+
+    <header class="o-header js--header">
+    <div class="container">
+
+        <div class="o-header__flex">
+            <div class="o-header__logo">
+                                    <a href="https://ces.org.ua/en/" class="custom-logo-link" rel="home"><img width="280" height="73" src="https://ces.org.ua/wp-content/uploads/2025/06/ces-logo-en.svg" class="custom-logo" alt="Centre for Economic Strategy" decoding="async" /></a>                            </div>
+
+            <div class="o-header__navigations">
+                <div class="o-header__top">
+                    <div class="o-header__desktop-menu">
+                            <div class="c-top-menu c--header-menu">
+        <nav class="c-top-menu__container"><ul id="ces-top-menu" class="c-top-menu__list"><li id="menu-item-32129" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-has-children menu-item-32129"><a href="https://ces.org.ua/en/about/">About us</a>
+<ul class="sub-menu">
+	<li id="menu-item-32133" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-32133"><a href="https://ces.org.ua/en/about/team/">Our team</a></li>
+	<li id="menu-item-32132" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-32132"><a href="https://ces.org.ua/en/about/founders/">Supervisory Board</a></li>
+	<li id="menu-item-32131" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-32131"><a href="https://ces.org.ua/en/about/advisers/">Organization members</a></li>
+	<li id="menu-item-37365" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-37365"><a href="https://ces.org.ua/en/our-sources-of-funding/">Sources of funding</a></li>
+	<li id="menu-item-32130" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-32130"><a href="https://ces.org.ua/en/our-achievements/">Our achievements</a></li>
+	<li id="menu-item-35809" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-35809"><a href="/en/ces-media/">For media</a></li>
+	<li id="menu-item-32134" class="menu-item--all menu-item menu-item-type-post_type menu-item-object-page menu-item-32134"><a href="https://ces.org.ua/en/about/">About us</a></li>
+</ul>
+</li>
+<li id="menu-item-32109" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-32109"><a href="https://ces.org.ua/en/contacts/">Contacts</a></li>
+<li id="menu-item-32145" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-32145"><a href="https://ces.org.ua/en/about/careers/">Vacancies</a></li>
+</ul></nav>    </div>
+                    </div>
+                    <div class="c-header-lang-menu">
+    
+<div
+	 role="navigation" aria-label="Language Switcher" class="wpml-ls-statics-shortcode_actions wpml-ls wpml-ls-legacy-dropdown js-wpml-ls-legacy-dropdown" id="lang_sel">
+	<ul>
+		<li class="wpml-ls-slot-shortcode_actions wpml-ls-item wpml-ls-item-en wpml-ls-current-language wpml-ls-last-item wpml-ls-item-legacy-dropdown">
+									<a href="#" hreflang="en" lang="en" class="js-wpml-ls-item-toggle wpml-ls-item-toggle lang_sel_sel icl-en" aria-current="page" aria-expanded="false" aria-controls="wpml-ls-submenu-lang_sel" aria-label="En – Language switcher, press tab to navigate to other languages" title="Switch to En (En)">
+				<span class="wpml-ls-native icl_lang_sel_native">En</span></a>
+
+			<ul id="wpml-ls-submenu-lang_sel" class="wpml-ls-sub-menu">
+				
+					<li class="icl-uk wpml-ls-slot-shortcode_actions wpml-ls-item wpml-ls-item-uk wpml-ls-first-item">
+						<a href="https://ces.org.ua/ukrainian-refugees-fifth-wave/" hreflang="uk" lang="uk" class="wpml-ls-link" aria-label="Switch to Ua (Ua)" title="Switch to Ua (Ua)">
+							<span class="wpml-ls-native icl_lang_sel_native">Ua</span></a>
+					</li>
+
+							</ul>
+
+		</li>
+
+	</ul>
+</div>
+</div>
+                    <div class="c-header-search-wr">
+    <div class="c-header-search">
+        <form role="search" method="get" action="https://ces.org.ua/en/" class="c-header-search__form"
+            id="header-search-form">
+            <input type="search"
+                class="c-header-search__input"
+                value="" name="s"
+                placeholder="Search">
+            <button type="submit" class="c-header-search__btn"><svg class="c-icon c-icon-search " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#search"></use></svg></button>
+        </form>
+    </div>
+    <button class="c-mobile-search-btn js--mobile-search-btn">
+        <svg class="c-icon c-icon-search " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#search"></use></svg>    </button>
+</div>                    <button class="c-burger js--burger">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+                </div>
+                <div class="o-header__bottom">
+                    <div class="o-header__mobile-menu">
+                            <div class="c-main-menu c--header-menu">
+        <nav class="c-main-menu__container"><ul id="ces-main-menu" class="c-main-menu__list"><li id="menu-item-30558" class="menu-item menu-item-type-taxonomy menu-item-object-category current-post-ancestor current-menu-parent current-post-parent menu-item-has-children menu-item-30558"><a href="https://ces.org.ua/en/category/research-list-en/">Research</a>
+<ul class="sub-menu">
+	<li id="menu-item-30559" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-30559"><a href="https://ces.org.ua/en/category/research-list-en/economy-during-the-war-en/">Economy during the war</a></li>
+	<li id="menu-item-30561" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-30561"><a href="https://ces.org.ua/en/category/research-list-en/macroeconomics-en/">Macroeconomics</a></li>
+	<li id="menu-item-30562" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-30562"><a href="https://ces.org.ua/en/category/research-list-en/business-en/">Business</a></li>
+	<li id="menu-item-30563" class="menu-item menu-item-type-taxonomy menu-item-object-category current-post-ancestor current-menu-parent current-post-parent menu-item-30563"><a href="https://ces.org.ua/en/category/research-list-en/human-capital/">Human capital</a></li>
+	<li id="menu-item-30560" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-30560"><a href="https://ces.org.ua/en/category/research-list-en/eurointegration-en/">Eurointegration</a></li>
+	<li id="menu-item-30564" class="menu-item--all menu-item menu-item-type-taxonomy menu-item-object-category current-post-ancestor current-menu-parent current-post-parent menu-item-30564"><a href="https://ces.org.ua/en/category/research-list-en/">Research</a></li>
+</ul>
+</li>
+<li id="menu-item-30565" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-has-children menu-item-30565"><a href="https://ces.org.ua/en/category/news-list-en/">News</a>
+<ul class="sub-menu">
+	<li id="menu-item-30566" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-30566"><a href="https://ces.org.ua/en/category/blogs-en/">Blogs</a></li>
+	<li id="menu-item-30567" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-30567"><a href="https://ces.org.ua/en/upcoming-events/">Events</a></li>
+	<li id="menu-item-30568" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-30568"><a href="https://ces.org.ua/en/category/experts-in-the-media-en/">Experts in the media</a></li>
+	<li id="menu-item-30569" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-30569"><a href="https://ces.org.ua/en/category/news-list-en/tenders-en/">Tenders</a></li>
+	<li id="menu-item-30570" class="menu-item--all menu-item menu-item-type-taxonomy menu-item-object-category menu-item-30570"><a href="https://ces.org.ua/en/category/news-list-en/">News</a></li>
+</ul>
+</li>
+<li id="menu-item-36842" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-36842"><a href="https://ces.org.ua/en/category/podcasts/">Podcasts</a></li>
+</ul></nav>    </div>
+                            <div class="c-top-menu c--header-menu">
+        <nav class="c-top-menu__container"><ul id="ces-top-menu" class="c-top-menu__list"><li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-has-children menu-item-32129"><a href="https://ces.org.ua/en/about/">About us</a>
+<ul class="sub-menu">
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-32133"><a href="https://ces.org.ua/en/about/team/">Our team</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-32132"><a href="https://ces.org.ua/en/about/founders/">Supervisory Board</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-32131"><a href="https://ces.org.ua/en/about/advisers/">Organization members</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-37365"><a href="https://ces.org.ua/en/our-sources-of-funding/">Sources of funding</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-32130"><a href="https://ces.org.ua/en/our-achievements/">Our achievements</a></li>
+	<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-35809"><a href="/en/ces-media/">For media</a></li>
+	<li class="menu-item--all menu-item menu-item-type-post_type menu-item-object-page menu-item-32134"><a href="https://ces.org.ua/en/about/">About us</a></li>
+</ul>
+</li>
+<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-32109"><a href="https://ces.org.ua/en/contacts/">Contacts</a></li>
+<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-32145"><a href="https://ces.org.ua/en/about/careers/">Vacancies</a></li>
+</ul></nav>    </div>
+                    </div>
+                    <div class="o-header__mobile-bottom-nav">
+                        <button class="js--nl-popup-open c-button c-button--secondary">
+                            Subscribe                        </button>
+                            <nav class="c-socials-links">
+                                    <a href="https://www.facebook.com/cesukraine/" target="_blank" class="c-socials-links__link link--facebook">
+                    <svg class="c-icon c-icon-social-facebook " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#social-facebook"></use></svg>                </a>
+                                                <a href="https://www.instagram.com/cesukraine/?igsh=MWswbHdmbzgwYmYydQ%3D%3D" target="_blank" class="c-socials-links__link link--instagram">
+                    <svg class="c-icon c-icon-social-instagram " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#social-instagram"></use></svg>                </a>
+                                                <a href="https://www.youtube.com/channel/UCaEniy7pYgAwDLc-u9ZH1HQ" target="_blank" class="c-socials-links__link link--youtube">
+                    <svg class="c-icon c-icon-social-youtube " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#social-youtube"></use></svg>                </a>
+                                                <a href="https://t.me/thinktankces" target="_blank" class="c-socials-links__link link--telegram">
+                    <svg class="c-icon c-icon-social-telegram " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#social-telegram"></use></svg>                </a>
+                                                <a href="https://www.linkedin.com/company/centre-for-economic-strategy/" target="_blank" class="c-socials-links__link link--linkedin">
+                    <svg class="c-icon c-icon-social-linkedin " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#social-linkedin"></use></svg>                </a>
+                                                <a href="https://twitter.com/ces_ukraine" target="_blank" class="c-socials-links__link link--twitter">
+                    <svg class="c-icon c-icon-social-twitter " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#social-twitter"></use></svg>                </a>
+                        </nav>
+
+                    </div>
+                    <div class="c-header-lang-menu">
+    
+<div
+	 role="navigation" aria-label="Language Switcher" class="wpml-ls-statics-shortcode_actions wpml-ls wpml-ls-legacy-dropdown js-wpml-ls-legacy-dropdown" id="lang_sel">
+	<ul>
+		<li class="wpml-ls-slot-shortcode_actions wpml-ls-item wpml-ls-item-en wpml-ls-current-language wpml-ls-last-item wpml-ls-item-legacy-dropdown">
+									<a href="#" hreflang="en" lang="en" class="js-wpml-ls-item-toggle wpml-ls-item-toggle lang_sel_sel icl-en" aria-current="page" aria-expanded="false" aria-controls="wpml-ls-submenu-lang_sel" aria-label="En – Language switcher, press tab to navigate to other languages" title="Switch to En (En)">
+				<span class="wpml-ls-native icl_lang_sel_native">En</span></a>
+
+			<ul id="wpml-ls-submenu-lang_sel" class="wpml-ls-sub-menu">
+				
+					<li class="icl-uk wpml-ls-slot-shortcode_actions wpml-ls-item wpml-ls-item-uk wpml-ls-first-item">
+						<a href="https://ces.org.ua/ukrainian-refugees-fifth-wave/" hreflang="uk" lang="uk" class="wpml-ls-link" aria-label="Switch to Ua (Ua)" title="Switch to Ua (Ua)">
+							<span class="wpml-ls-native icl_lang_sel_native">Ua</span></a>
+					</li>
+
+							</ul>
+
+		</li>
+
+	</ul>
+</div>
+</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>    <main id="main" role="main" tabindex="-1">
+        <section class="s-post-hero">
+            <div class="container">
+                <div class="s-post-hero__box">
+                    
+        <div class="c-post-tags c-tags-list">
+                    <a href="https://ces.org.ua/en/tag/human-capital-en/"
+               class="c-tags-list__link">human capital</a>
+                    <a href="https://ces.org.ua/en/tag/refugees/"
+               class="c-tags-list__link">refugees</a>
+            </div>
+                    <h1 class="s-post-hero__title c-intro-title">Ukrainian refugees after four years abroad. Fifth wave of research</h1>
+                    <div class="c-post-category-date">
+                    <a class="c-post-experts-cats__link"
+           href="https://ces.org.ua/en/category/research-list-en/">Research</a>
+         |                 <span class="c-post-category-date__date">24 February 2026</span>
+</div>                                    </div>
+            </div>
+        </section>
+        <div class="container">
+            <div class="s-post-layout">
+                <div class="s-post-layout__content c-wysiwyg">
+                                            <p><iframe title="YouTube video player" src="https://www.youtube.com/embed/y5I-JYPzCC0?si=Ww_QLvyewBJR3LDI" width="760" height="415" frameborder="0" allowfullscreen="allowfullscreen"></iframe></p>
+<p>In the fifth wave of our study, we update our estimate of the number of Ukrainian refugees abroad, analyse the departure of young people aged 18–22, and examine the factors that shape their willingness to return to Ukraine.</p>
+<p>We also analyse the employment and income levels of Ukrainian refugees, as well as their preparedness for a possible withdrawal of temporary protection in their host countries.</p>
+<p>The study draws on data from a nationally representative sociological survey conducted in December 2025–January 2026 by the research agency Info Sapiens, commissioned by CES.</p>
+<p>Below you will find a short digest with the most important and interesting findings from our study. Have further questions? You may find the answers in the study presentation and the full report — they contain much more detail.</p>
+<p data-start="497" data-end="674"><em><i>We conducted this research with support of <a href="https://www.irf.ua/en/" target="_blank" rel="nofollow noopener">the International Rennaissance Foundation.</a></i></em></p>
+<p data-start="497" data-end="674"><a href="http://irf.ua/en/" rel="nofollow noopener" target="_blank"><img decoding="async" class="alignnone wp-image-40641" src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20223%2092'%3E%3C/svg%3E" alt="" width="223" height="92" data-lazy-srcset="https://ces.org.ua/wp-content/uploads/2026/02/logotype_horizontal-color-eng.png 1454w, https://ces.org.ua/wp-content/uploads/2026/02/logotype_horizontal-color-eng-300x124.png 300w, https://ces.org.ua/wp-content/uploads/2026/02/logotype_horizontal-color-eng-1024x423.png 1024w, https://ces.org.ua/wp-content/uploads/2026/02/logotype_horizontal-color-eng-150x62.png 150w, https://ces.org.ua/wp-content/uploads/2026/02/logotype_horizontal-color-eng-768x317.png 768w" data-lazy-sizes="(max-width: 223px) 100vw, 223px" data-lazy-src="https://ces.org.ua/wp-content/uploads/2026/02/logotype_horizontal-color-eng.png" /><noscript><img decoding="async" class="alignnone wp-image-40641" src="https://ces.org.ua/wp-content/uploads/2026/02/logotype_horizontal-color-eng.png" alt="" width="223" height="92" srcset="https://ces.org.ua/wp-content/uploads/2026/02/logotype_horizontal-color-eng.png 1454w, https://ces.org.ua/wp-content/uploads/2026/02/logotype_horizontal-color-eng-300x124.png 300w, https://ces.org.ua/wp-content/uploads/2026/02/logotype_horizontal-color-eng-1024x423.png 1024w, https://ces.org.ua/wp-content/uploads/2026/02/logotype_horizontal-color-eng-150x62.png 150w, https://ces.org.ua/wp-content/uploads/2026/02/logotype_horizontal-color-eng-768x317.png 768w" sizes="(max-width: 223px) 100vw, 223px" /></noscript></a></p>
+<hr />
+<h3><strong>In 2026, 5.6 million Ukrainian refugees remain abroad</strong></h3>
+<p>According to estimates by the Centre for Economic Strategy, as of January 2026, 5.6 million Ukrainian refugees remain abroad.</p>
+<p>Of these, 4 million left Ukraine through the western borders. From the start of the full-scale war until the end of 2025, Ukraine’s border was crossed 60.4 million times for exit and 56.3 million times for entry; the difference between these figures reflects the number of people who left and did not return. This does not include Ukrainians who were forced to travel to European countries via Russia or Belarus.</p>
+<p>We estimate that around 277 thousand Ukrainians (0.3 million) left for Europe through the territory of the Russian Federation or Belarus.</p>
+<p>Another 1.3 million Ukrainians, according to the UN, became refugees in Russia or Belarus.</p>
+<div class="flourish-embed flourish-chart" data-src="visualisation/27615903"><script type="rocketlazyloadscript" data-rocket-src="https://public.flourish.studio/resources/embed.js" data-rocket-defer defer></script><noscript><img decoding="async" src="https://public.flourish.studio/visualisation/27615903/thumbnail" width="100%" alt="visualization" /></noscript></div>
+<p>In 2025, 303 thousand more Ukrainian citizens left the country through the western and south-western borders than entered. This is 34% less than in 2024 (when 459 thousand more Ukrainian citizens left than returned home).</p>
+<div class="flourish-embed flourish-chart" data-src="visualisation/27616130"><script type="rocketlazyloadscript" data-rocket-src="https://public.flourish.studio/resources/embed.js" data-rocket-defer defer></script><noscript><img decoding="async" src="https://public.flourish.studio/visualisation/27616130/thumbnail" width="100%" alt="visualization" /></noscript></div>
+<hr />
+<h3><strong>Young people are leaving, older people are returning to Ukraine</strong></h3>
+<p>Most Ukrainian refugees abroad are adult women. They account for 40% of refugees.</p>
+<p>The share of adult men among refugees increased slightly over the year, from 27% to 29%.</p>
+<p>Children under 18 make up 31% of refugees.</p>
+<p>A notable change over the year is the decline in the share of refugees aged over 45. This aligns with the broader trend of older Ukrainians being more inclined to return and may indicate a partial return of people in this age group.</p>
+<p>Two thirds — 66% — of Ukrainian refugees are of working age (18–65). Young people — those under 35 — account for more than half of all Ukrainian refugees (56%).</p>
+<div class="flourish-embed flourish-chart" data-src="visualisation/27693408"><script type="rocketlazyloadscript" data-rocket-src="https://public.flourish.studio/resources/embed.js" data-rocket-defer defer></script><noscript><img decoding="async" src="https://public.flourish.studio/visualisation/27693408/thumbnail" width="100%" alt="visualization" /></noscript></div>
+<hr />
+<h3><strong>More than half of refugees come from the east and south</strong></h3>
+<p>Before leaving Ukraine, most refugees lived in Kyiv and Kyiv region (24%), as well as in the eastern and southern regions of Ukraine (52%).</p>
+<p>People left cities more often than villages. Only one in ten Ukrainian refugees came from a rural area. 64% of refugees had lived in large cities and regional centres: 20% in Kyiv, 11% in Kharkiv, 7% in Dnipro, and 6% in Odesa.</p>
+<div class="flourish-embed flourish-chart" data-src="visualisation/27772072"><script type="rocketlazyloadscript" data-rocket-src="https://public.flourish.studio/resources/embed.js" data-rocket-defer defer></script><noscript><img decoding="async" src="https://public.flourish.studio/visualisation/27772072/thumbnail" width="100%" alt="visualization" /></noscript></div>
+<hr />
+<h3><strong>One in four Ukrainian refugees lives in Germany</strong></h3>
+<p>The largest numbers of Ukrainian refugees currently live in Germany (23%) and Poland (19.5%).</p>
+<p>Germany is chosen slightly more often by young people under 35. It hosts 28% of refugees under 35 and 20% of those aged 35 and over.</p>
+<p>Poland is more attractive for refugees aged 35–49: 24% of this age group live there. By comparison, only 15% of refugees under 35 and 18% of those aged over 49 live in Poland.</p>
+<div class="flourish-embed flourish-chart" data-src="visualisation/27621789"><script type="rocketlazyloadscript" data-rocket-src="https://public.flourish.studio/resources/embed.js" data-rocket-defer defer></script><noscript><img decoding="async" src="https://public.flourish.studio/visualisation/27621789/thumbnail" width="100%" alt="visualization" /></noscript></div>
+<hr />
+<h3><strong>Ukrainian refugees are not a homogeneous group</strong></h3>
+<p>Ukrainians who left due to the full-scale invasion do not form a homogeneous group. They differ in their motivations, life and socio-economic circumstances, and plans for return.</p>
+<p>A detailed description of the cluster analysis we conducted is available in the full version of the study. The key question for us is: “Will refugees return home?”</p>
+<p>The cluster analysis identified two groups more inclined to return — which we call “Classic war-related” and “With a strong connection”. Two other groups are more likely to remain abroad — the “New life trajectory” and “Economically vulnerable” clusters.</p>
+<p>The group most inclined to return is the “Classic war-related”. This group more often left due to hostilities in their settlement (26%) or nearby (27%), and less often due to economic reasons, job loss, fear of mobilisation, or disillusionment with Ukraine.</p>
+<p>“Classic war-related” refugees have the highest positive balance of return intentions — 63% of this group say they definitely or probably plan to return. The average across all refugees is 43%.</p>
+<div class="flourish-embed flourish-chart" data-src="visualisation/27705948"><script type="rocketlazyloadscript" data-rocket-src="https://public.flourish.studio/resources/embed.js" data-rocket-defer defer></script><noscript><img decoding="async" src="https://public.flourish.studio/visualisation/27705948/thumbnail" width="100%" alt="visualization" /></noscript></div>
+<hr />
+<h3><strong>Return intentions stabilised in 2025</strong></h3>
+<p>Around 43% of refugees intend to return to Ukraine, while 36% do not or are unlikely to do so.</p>
+<p>In this wave of the study, the share of refugees intending to return did not change compared with the previous wave. Before that, we observed a clear downward trend in return intentions.</p>
+<p>Among those willing to return to Ukraine, almost 80% are ready to do so only after the final end of the war, marked by a signed agreement that would allow the resumption of civilian flights over Ukraine.</p>
+<div class="flourish-embed flourish-chart" data-src="visualisation/27662700"><script type="rocketlazyloadscript" data-rocket-src="https://public.flourish.studio/resources/embed.js" data-rocket-defer defer></script><noscript><img decoding="async" src="https://public.flourish.studio/visualisation/27662700/thumbnail" width="100%" alt="visualization" /></noscript></div>
+<hr />
+<h3><strong>1.3–2.2 million refugees may return home</strong></h3>
+<p>According to our calculations, under the baseline scenario, 1.6 million refugees will return to Ukraine after the war ends. Under this scenario, 2.7 million will remain abroad (excluding Russia and Belarus).</p>
+<p>Under a pessimistic scenario, only 1.3 million Ukrainians will return, and 3.0 million will remain abroad. The optimistic scenario assumes that 2.2 million Ukrainians will return, leaving only 2.1 million refugees abroad.</p>
+<p>Our scenarios are based on assumptions about how sincere respondents are in expressing their intention to return. For example, under the optimistic scenario, those who “definitely plan” to return will do so with a 100% probability. Under the baseline scenario, this probability falls to 80%, and under the pessimistic scenario to 60%.</p>
+<div class="flourish-embed flourish-chart" data-src="visualisation/27761719"><script type="rocketlazyloadscript" data-rocket-src="https://public.flourish.studio/resources/embed.js" data-rocket-defer defer></script><noscript><img decoding="async" src="https://public.flourish.studio/visualisation/27761719/thumbnail" width="100%" alt="visualization" /></noscript></div>
+<hr />
+<h3><strong>In 2027, most refugees will try to settle abroad</strong></h3>
+<p>Temporary protection for Ukrainians in the EU is in force until 4 March 2027.</p>
+<p>After that date, Ukrainians’ automatic right to stay in EU countries will end. The EU plans a managed transition either to alternative legal statuses (based on education, employment, etc.) or to voluntary return to Ukraine.</p>
+<p>In response to a question about preparedness for the withdrawal of temporary protection status, 21% of Ukrainian refugees said they already have other documents allowing them to stay in the country. Another 26% plan to obtain such alternative documents in the near future.</p>
+<p>If temporary protection is withdrawn, 27% of refugees plan to seek residence permits in another country (not Ukraine). Only 23% plan to return to Ukraine. Another 11% would return temporarily but then seek ways to leave again. 11% would remain in their current country without proper authorisation.</p>
+<div class="flourish-embed flourish-chart" data-src="visualisation/27756764"><script type="rocketlazyloadscript" data-rocket-src="https://public.flourish.studio/resources/embed.js" data-rocket-defer defer></script><noscript><img decoding="async" src="https://public.flourish.studio/visualisation/27756764/thumbnail" width="100%" alt="visualization" /></noscript></div>
+<hr />
+<h3><strong>Regression analysis of factors associated with the desire to return</strong></h3>
+<p>Here we analyse which factors are associated with Ukrainians’ desire to return, based on the survey.</p>
+<p>These results should not be interpreted as causal relationships. For example, if the regression shows that refugees in Poland are 65% more likely to return than refugees in Germany, this does not necessarily mean that moving from Germany to Poland would increase a person’s desire to return to Ukraine. Other unobserved factors may influence both country of residence and return intentions (omitted variable bias), or return plans may determine the choice of host country (reverse causality).</p>
+<p>Nevertheless, the regression results help us better understand which refugees are more or less inclined to return and which factors are likely associated with these intentions.</p>
+<p>As in previous waves of the survey, we use an ordered logit model (ordered logit regression). The dependent variable is stated plans to return. Independent variables include gender, age, presence of children, education, region of origin, host country, employment status, income, and so on. This analysis allows us to better understand which factors are associated with stronger or weaker intentions to return to Ukraine.</p>
+<div class="flourish-embed flourish-chart" data-src="visualisation/27760073"><script type="rocketlazyloadscript" data-rocket-src="https://public.flourish.studio/resources/embed.js" data-rocket-defer defer></script><noscript><img decoding="async" src="https://public.flourish.studio/visualisation/27760073/thumbnail" width="100%" alt="visualization" /></noscript></div>
+                                    </div>
+                <div class="s-post-layout__sidebar">
+                    <div class="s-post-layout__sidebar-sticky">
+                        
+<div class="c-post-share-icons">
+    <span class="c-post-share-icons__title">Share</span>
+    <div class="c-post-share-icons__list">
+        <a href="https://www.facebook.com/sharer/sharer.php?u=https://ces.org.ua/en/ukrainian-refugees-fifth-wave/"
+           target="_blank">
+            <svg class="c-icon c-icon-facebook " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#facebook"></use></svg>        </a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fces.org.ua%2Fen%2Fukrainian-refugees-fifth-wave%2F" target="_blank" rel="nofollow">
+            <svg class="c-icon c-icon-linkedin " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#linkedin"></use></svg>        </a>
+        <a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fces.org.ua%2Fen%2Fukrainian-refugees-fifth-wave%2F" target="_blank">
+            <svg class="c-icon c-icon-social-twitter " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#social-twitter"></use></svg>        </a>
+    </div>
+
+</div>
+                                                    <div class="s-post-layout__sidebar-sticky-box">
+                                    <div class="c-download-files-list">
+                                                                                            <div class="c-download-files-list__card">
+                                                    
+                            <div class="c-download-files-list__card-img">
+                                <h5 class="c-download-files-list__card-title">The research</h5>
+                                	                                <div class="df-element dvcss dvcss_e_eyJzb3VyY2UiOiJodHRwczpcL1wvY2VzLm9yZy51YVwvd3AtY29udGVudFwvdXBsb2Fkc1wvMjAyNlwvMDJcL2VuZy1maW5hbC1kcmFmdF91a3JfcmVwb3J0X3ZpZHJvX3VkZjUtZW4tZ2ItMS5wZGYiLCJzbHVnIjoiZW5nLWZpbmFsLWRyYWZ0X3Vrcl9yZXBvcnRfdmlkcm9fdWRmNS1lbi1nYi0xIiwiaWQiOjQwOTI3LCJsaWdodGJveCI6ImN1c3RvbSJ9  "><picture class="attachment-full size-full" decoding="async">
+<source type="image/webp" srcset="https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-03-04-152011.png.webp 554w, https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-03-04-152011-207x300.png.webp 207w, https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-03-04-152011-104x150.png.webp 104w" sizes="(max-width: 554px) 100vw, 554px"/>
+<img data-no-lazy="" fetchpriority="high" width="554" height="802" src="https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-03-04-152011.png" alt="" decoding="async" srcset="https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-03-04-152011.png 554w, https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-03-04-152011-207x300.png 207w, https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-03-04-152011-104x150.png 104w" sizes="(max-width: 554px) 100vw, 554px"/>
+</picture>
+</div><script type="rocketlazyloadscript" class="df-shortcode-script" data-rocket-type="application/javascript">if(window.DEARPDF && window.DEARPDF.parseElements){window.DEARPDF.parseElements();}</script>                                                            </div>
+                                                <div class="c-download-files-list__card-content">
+                            	                            <a class="df-element dvcss dvcss_e_eyJzb3VyY2UiOiJodHRwczpcL1wvY2VzLm9yZy51YVwvd3AtY29udGVudFwvdXBsb2Fkc1wvMjAyNlwvMDJcL2VuZy1maW5hbC1kcmFmdF91a3JfcmVwb3J0X3ZpZHJvX3VkZjUtZW4tZ2ItMS5wZGYiLCJzbHVnIjoiZW5nLWZpbmFsLWRyYWZ0X3Vrcl9yZXBvcnRfdmlkcm9fdWRmNS1lbi1nYi0xIiwiaWQiOjQwOTI3LCJsaWdodGJveCI6ImxpbmsifQ== c-download-files-list__link c-button c-button--secondary " href="#">View<svg class="c-icon c-icon-view " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#view"></use></svg></a><script type="rocketlazyloadscript" class="df-shortcode-script" data-rocket-type="application/javascript">if(window.DEARPDF && window.DEARPDF.parseElements){window.DEARPDF.parseElements();}</script>                                                        <a href="https://ces.org.ua/wp-content/uploads/2026/02/eng-final-draft_ukr_report_vidro_udf5-en-gb-1.pdf" download="eng-final-draft_ukr_report_vidro_udf5-en-gb-1.pdf"
+                                class="c-download-files-list__link c-button c-button--primary-outline c-download-files-list__link--transparent">Download<svg class="c-icon c-icon-arrow-right " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#arrow-right"></use></svg></a>
+                        </div>
+                    </div>
+                                                                                                                        <div class="c-download-files-list__card">
+                                                    
+                            <div class="c-download-files-list__card-img">
+                                <h5 class="c-download-files-list__card-title">The presentation</h5>
+                                	                                <div class="df-element dvcss dvcss_e_eyJzb3VyY2UiOiJodHRwczpcL1wvY2VzLm9yZy51YVwvd3AtY29udGVudFwvdXBsb2Fkc1wvMjAyNlwvMDJcL2VuZ19wcmV6ZW50YWN6aXlhX2JpemhlbmN6aV9weWF0YS1odmlseWEtMS5wZGYiLCJzbHVnIjoiZW5nX3ByZXplbnRhY3ppeWFfYml6aGVuY3ppX3B5YXRhLWh2aWx5YS0yIiwiaWQiOjQxMjA3LCJsaWdodGJveCI6ImN1c3RvbSJ9  "><picture class="attachment-full size-full" decoding="async">
+<source type="image/webp" data-lazy-srcset="https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-02-27-175250.png.webp 1351w, https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-02-27-175250-300x160.png.webp 300w, https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-02-27-175250-1024x546.png.webp 1024w, https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-02-27-175250-150x80.png.webp 150w, https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-02-27-175250-768x409.png.webp 768w" sizes="(max-width: 1351px) 100vw, 1351px"/>
+<img width="1351" height="720" src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201351%20720'%3E%3C/svg%3E" alt="" decoding="async" data-lazy-srcset="https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-02-27-175250.png 1351w, https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-02-27-175250-300x160.png 300w, https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-02-27-175250-1024x546.png 1024w, https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-02-27-175250-150x80.png 150w, https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-02-27-175250-768x409.png 768w" data-lazy-sizes="(max-width: 1351px) 100vw, 1351px" data-lazy-src="https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-02-27-175250.png"/><noscript><img width="1351" height="720" src="https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-02-27-175250.png" alt="" decoding="async" srcset="https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-02-27-175250.png 1351w, https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-02-27-175250-300x160.png 300w, https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-02-27-175250-1024x546.png 1024w, https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-02-27-175250-150x80.png 150w, https://ces.org.ua/wp-content/uploads/2026/02/screenshot-2026-02-27-175250-768x409.png 768w" sizes="(max-width: 1351px) 100vw, 1351px"/></noscript>
+</picture>
+</div><script type="rocketlazyloadscript" class="df-shortcode-script" data-rocket-type="application/javascript">if(window.DEARPDF && window.DEARPDF.parseElements){window.DEARPDF.parseElements();}</script>                                                            </div>
+                                                <div class="c-download-files-list__card-content">
+                            	                            <a class="df-element dvcss dvcss_e_eyJzb3VyY2UiOiJodHRwczpcL1wvY2VzLm9yZy51YVwvd3AtY29udGVudFwvdXBsb2Fkc1wvMjAyNlwvMDJcL2VuZ19wcmV6ZW50YWN6aXlhX2JpemhlbmN6aV9weWF0YS1odmlseWEtMS5wZGYiLCJzbHVnIjoiZW5nX3ByZXplbnRhY3ppeWFfYml6aGVuY3ppX3B5YXRhLWh2aWx5YS0yIiwiaWQiOjQxMjA3LCJsaWdodGJveCI6ImxpbmsifQ== c-download-files-list__link c-button c-button--secondary " href="#">View<svg class="c-icon c-icon-view " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#view"></use></svg></a><script type="rocketlazyloadscript" class="df-shortcode-script" data-rocket-type="application/javascript">if(window.DEARPDF && window.DEARPDF.parseElements){window.DEARPDF.parseElements();}</script>                                                        <a href="https://ces.org.ua/wp-content/uploads/2026/02/eng_prezentacziya_bizhenczi_pyata-hvilya-1.pdf" download="eng_prezentacziya_bizhenczi_pyata-hvilya-1.pdf"
+                                class="c-download-files-list__link c-button c-button--primary-outline c-download-files-list__link--transparent">Download<svg class="c-icon c-icon-arrow-right " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#arrow-right"></use></svg></a>
+                        </div>
+                    </div>
+                                                                                                                        <div class="c-download-files-list__card">
+                                                    
+                            <div class="c-download-files-list__card-img">
+                                <h5 class="c-download-files-list__card-title">data</h5>
+                                                                    <a href="https://ces.org.ua/wp-content/uploads/2026/02/data-2.zip"
+                                        download="data-2.zip">
+                                        <img width="1325" height="844" src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201325%20844'%3E%3C/svg%3E" class="attachment-full size-full" alt="" decoding="async" data-lazy-srcset="https://ces.org.ua/wp-content/uploads/2026/02/image-3.png 1325w, https://ces.org.ua/wp-content/uploads/2026/02/image-3-300x191.png 300w, https://ces.org.ua/wp-content/uploads/2026/02/image-3-1024x652.png 1024w, https://ces.org.ua/wp-content/uploads/2026/02/image-3-150x96.png 150w, https://ces.org.ua/wp-content/uploads/2026/02/image-3-768x489.png 768w" data-lazy-sizes="(max-width: 1325px) 100vw, 1325px" data-lazy-src="https://ces.org.ua/wp-content/uploads/2026/02/image-3.png" /><noscript><img width="1325" height="844" src="https://ces.org.ua/wp-content/uploads/2026/02/image-3.png" class="attachment-full size-full" alt="" decoding="async" srcset="https://ces.org.ua/wp-content/uploads/2026/02/image-3.png 1325w, https://ces.org.ua/wp-content/uploads/2026/02/image-3-300x191.png 300w, https://ces.org.ua/wp-content/uploads/2026/02/image-3-1024x652.png 1024w, https://ces.org.ua/wp-content/uploads/2026/02/image-3-150x96.png 150w, https://ces.org.ua/wp-content/uploads/2026/02/image-3-768x489.png 768w" sizes="(max-width: 1325px) 100vw, 1325px" /></noscript>                                    </a>
+                                                            </div>
+                                                <div class="c-download-files-list__card-content">
+                                                        <a href="https://ces.org.ua/wp-content/uploads/2026/02/data-2.zip" download="data-2.zip"
+                                class="c-download-files-list__link c-button c-button--primary-outline c-download-files-list__link--transparent">Download<svg class="c-icon c-icon-arrow-right " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#arrow-right"></use></svg></a>
+                        </div>
+                    </div>
+                                        </div>
+                                
+                            </div>
+                                            </div>
+                </div>
+            </div>
+            <div class="s-post-content__footer">
+                
+<div class="c-post-experts-cats">
+            <a class="c-post-experts-cats__link" href="https://ces.org.ua/en/experts/iryna-ippolitova-en/">Iryna Ippolitova</a>, <a class="c-post-experts-cats__link" href="https://ces.org.ua/en/experts/nataliia_kolesnichenko-en/">Nataliia Kolesnichenko</a>, <a class="c-post-experts-cats__link" href="https://ces.org.ua/en/experts/yana-ohrimenko/">Iana Okhrimenko</a>, <a class="c-post-experts-cats__link" href="https://ces.org.ua/en/experts/yeleazar-levchenko/">Yeleazar Levchenko</a>, <a class="c-post-experts-cats__link" href="https://ces.org.ua/en/experts/maryna-koshutska/">Maryna Koshutska</a>, <a class="c-post-experts-cats__link" href="https://ces.org.ua/en/experts/oleksandra-khovrak/">Oleksandra Khovrak</a>        <!--                 <a class="c-post-experts-cats__link"
+           href="https://ces.org.ua/en/category/research-list-en/">Research</a>
+         |          -->
+    <!-- <span class="c-post-experts-cats__date">24 February 2026</span> -->
+</div>
+            </div>
+        </div>
+        
+    <section class="s-related-posts">
+        <div class="container">
+            <h2 class="s-related-posts__title c-intro-title">Explore more</h2>
+            <div class="s-related-posts__grid">
+                                   <div class="c-related-post-card">
+            <div class="c-related-post-card__thumb">
+            <a href="https://ces.org.ua/en/labour-productivity-in-ukraine-trends-challenges-and-skills/">
+                <picture class="attachment-full size-full wp-post-image" decoding="async">
+<source type="image/webp" data-lazy-srcset="https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1.jpg.webp 2560w, https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1-300x169.jpg.webp 300w, https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1-1024x576.jpg.webp 1024w, https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1-150x84.jpg.webp 150w, https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1-768x432.jpg.webp 768w, https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1-1536x864.jpg.webp 1536w, https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1-2048x1152.jpg.webp 2048w" sizes="(max-width: 2560px) 100vw, 2560px"/>
+<img width="2560" height="1440" src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%202560%201440'%3E%3C/svg%3E" alt="" decoding="async" data-lazy-srcset="https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1.jpg 2560w, https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1-300x169.jpg 300w, https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1-1024x576.jpg 1024w, https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1-150x84.jpg 150w, https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1-768x432.jpg 768w, https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1-1536x864.jpg 1536w, https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1-2048x1152.jpg 2048w" data-lazy-sizes="(max-width: 2560px) 100vw, 2560px" data-lazy-src="https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1.jpg"/><noscript><img width="2560" height="1440" src="https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1.jpg" alt="" decoding="async" srcset="https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1.jpg 2560w, https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1-300x169.jpg 300w, https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1-1024x576.jpg 1024w, https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1-150x84.jpg 150w, https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1-768x432.jpg 768w, https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1-1536x864.jpg 1536w, https://ces.org.ua/wp-content/uploads/2026/08/adjk3q-c16x9x50px50p-wt-4d32e01d7145ed508a31b788e5d5bbd1-2048x1152.jpg 2048w" sizes="(max-width: 2560px) 100vw, 2560px"/></noscript>
+</picture>
+            </a>
+        </div>
+        <div class="c-related-post-card__content">
+                    <div class="c-related-post-card__cat">
+                <a href="https://ces.org.ua/en/tag/human-capital-en/">human capital</a>
+            </div>
+                <h5 class="c-related-post-card__title">
+            <a href="https://ces.org.ua/en/labour-productivity-in-ukraine-trends-challenges-and-skills/">Labour productivity in Ukraine: trends, challenges and skills </a>
+        </h5>
+        <div class="c-related-post-card__date">27 August 2026</div>
+    </div>
+</div>
+                                   <div class="c-related-post-card">
+            <div class="c-related-post-card__thumb">
+            <a href="https://ces.org.ua/en/in-depth-review-of-the-non-military-budget-healthcare/">
+                <picture class="attachment-full size-full wp-post-image" decoding="async">
+<source type="image/webp" data-lazy-srcset="https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-scaled.jpg.webp 2560w, https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-300x200.jpg.webp 300w, https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-1024x683.jpg.webp 1024w, https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-150x100.jpg.webp 150w, https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-768x512.jpg.webp 768w, https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-1536x1024.jpg.webp 1536w, https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-2048x1365.jpg.webp 2048w" sizes="(max-width: 2560px) 100vw, 2560px"/>
+<img width="2560" height="1707" src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%202560%201707'%3E%3C/svg%3E" alt="" decoding="async" data-lazy-srcset="https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-scaled.jpg 2560w, https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-300x200.jpg 300w, https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-1024x683.jpg 1024w, https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-150x100.jpg 150w, https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-768x512.jpg 768w, https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-1536x1024.jpg 1536w, https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-2048x1365.jpg 2048w" data-lazy-sizes="(max-width: 2560px) 100vw, 2560px" data-lazy-src="https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-scaled.jpg"/><noscript><img width="2560" height="1707" src="https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-scaled.jpg" alt="" decoding="async" srcset="https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-scaled.jpg 2560w, https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-300x200.jpg 300w, https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-1024x683.jpg 1024w, https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-150x100.jpg 150w, https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-768x512.jpg 768w, https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-1536x1024.jpg 1536w, https://ces.org.ua/wp-content/uploads/2026/07/depositphotos_626844128_xl-2048x1365.jpg 2048w" sizes="(max-width: 2560px) 100vw, 2560px"/></noscript>
+</picture>
+            </a>
+        </div>
+        <div class="c-related-post-card__content">
+                    <div class="c-related-post-card__cat">
+                <a href="https://ces.org.ua/en/tag/human-capital-en/">human capital</a>
+            </div>
+                <h5 class="c-related-post-card__title">
+            <a href="https://ces.org.ua/en/in-depth-review-of-the-non-military-budget-healthcare/">In-depth review of the non-military budget: Healthcare </a>
+        </h5>
+        <div class="c-related-post-card__date">3 August 2026</div>
+    </div>
+</div>
+                                   <div class="c-related-post-card">
+            <div class="c-related-post-card__thumb">
+            <a href="https://ces.org.ua/en/almost-60-of-ukrainian-refugees-in-the-eu-are-working-outside-their-field-of-expertise/">
+                <picture class="attachment-full size-full wp-post-image" decoding="async">
+<source type="image/webp" data-lazy-srcset="https://ces.org.ua/wp-content/uploads/2026/07/group.png.webp 1329w, https://ces.org.ua/wp-content/uploads/2026/07/group-300x87.png.webp 300w, https://ces.org.ua/wp-content/uploads/2026/07/group-1024x297.png.webp 1024w, https://ces.org.ua/wp-content/uploads/2026/07/group-150x44.png.webp 150w, https://ces.org.ua/wp-content/uploads/2026/07/group-768x223.png.webp 768w" sizes="(max-width: 1329px) 100vw, 1329px"/>
+<img width="1329" height="386" src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201329%20386'%3E%3C/svg%3E" alt="" decoding="async" data-lazy-srcset="https://ces.org.ua/wp-content/uploads/2026/07/group.png 1329w, https://ces.org.ua/wp-content/uploads/2026/07/group-300x87.png 300w, https://ces.org.ua/wp-content/uploads/2026/07/group-1024x297.png 1024w, https://ces.org.ua/wp-content/uploads/2026/07/group-150x44.png 150w, https://ces.org.ua/wp-content/uploads/2026/07/group-768x223.png 768w" data-lazy-sizes="(max-width: 1329px) 100vw, 1329px" data-lazy-src="https://ces.org.ua/wp-content/uploads/2026/07/group.png"/><noscript><img width="1329" height="386" src="https://ces.org.ua/wp-content/uploads/2026/07/group.png" alt="" decoding="async" srcset="https://ces.org.ua/wp-content/uploads/2026/07/group.png 1329w, https://ces.org.ua/wp-content/uploads/2026/07/group-300x87.png 300w, https://ces.org.ua/wp-content/uploads/2026/07/group-1024x297.png 1024w, https://ces.org.ua/wp-content/uploads/2026/07/group-150x44.png 150w, https://ces.org.ua/wp-content/uploads/2026/07/group-768x223.png 768w" sizes="(max-width: 1329px) 100vw, 1329px"/></noscript>
+</picture>
+            </a>
+        </div>
+        <div class="c-related-post-card__content">
+                    <div class="c-related-post-card__cat">
+                <a href="https://ces.org.ua/en/tag/human-capital-en/">human capital</a>
+            </div>
+                <h5 class="c-related-post-card__title">
+            <a href="https://ces.org.ua/en/almost-60-of-ukrainian-refugees-in-the-eu-are-working-outside-their-field-of-expertise/">Almost 60% of Ukrainian refugees in the EU are working outside their field of expertise. </a>
+        </h5>
+        <div class="c-related-post-card__date">21 July 2026</div>
+    </div>
+</div>
+                                   <div class="c-related-post-card">
+            <div class="c-related-post-card__thumb">
+            <a href="https://ces.org.ua/en/in-depth-review-of-the-non-military-budget-education/">
+                <picture class="attachment-full size-full wp-post-image" decoding="async">
+<source type="image/webp" data-lazy-srcset="https://ces.org.ua/wp-content/uploads/2026/06/group-78.png.webp 1586w, https://ces.org.ua/wp-content/uploads/2026/06/group-78-300x188.png.webp 300w, https://ces.org.ua/wp-content/uploads/2026/06/group-78-1024x640.png.webp 1024w, https://ces.org.ua/wp-content/uploads/2026/06/group-78-150x94.png.webp 150w, https://ces.org.ua/wp-content/uploads/2026/06/group-78-768x480.png.webp 768w, https://ces.org.ua/wp-content/uploads/2026/06/group-78-1536x961.png.webp 1536w" sizes="(max-width: 1586px) 100vw, 1586px"/>
+<img width="1586" height="992" src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201586%20992'%3E%3C/svg%3E" alt="" decoding="async" data-lazy-srcset="https://ces.org.ua/wp-content/uploads/2026/06/group-78.png 1586w, https://ces.org.ua/wp-content/uploads/2026/06/group-78-300x188.png 300w, https://ces.org.ua/wp-content/uploads/2026/06/group-78-1024x640.png 1024w, https://ces.org.ua/wp-content/uploads/2026/06/group-78-150x94.png 150w, https://ces.org.ua/wp-content/uploads/2026/06/group-78-768x480.png 768w, https://ces.org.ua/wp-content/uploads/2026/06/group-78-1536x961.png 1536w" data-lazy-sizes="(max-width: 1586px) 100vw, 1586px" data-lazy-src="https://ces.org.ua/wp-content/uploads/2026/06/group-78.png"/><noscript><img width="1586" height="992" src="https://ces.org.ua/wp-content/uploads/2026/06/group-78.png" alt="" decoding="async" srcset="https://ces.org.ua/wp-content/uploads/2026/06/group-78.png 1586w, https://ces.org.ua/wp-content/uploads/2026/06/group-78-300x188.png 300w, https://ces.org.ua/wp-content/uploads/2026/06/group-78-1024x640.png 1024w, https://ces.org.ua/wp-content/uploads/2026/06/group-78-150x94.png 150w, https://ces.org.ua/wp-content/uploads/2026/06/group-78-768x480.png 768w, https://ces.org.ua/wp-content/uploads/2026/06/group-78-1536x961.png 1536w" sizes="(max-width: 1586px) 100vw, 1586px"/></noscript>
+</picture>
+            </a>
+        </div>
+        <div class="c-related-post-card__content">
+                    <div class="c-related-post-card__cat">
+                <a href="https://ces.org.ua/en/tag/human-capital-en/">human capital</a>
+            </div>
+                <h5 class="c-related-post-card__title">
+            <a href="https://ces.org.ua/en/in-depth-review-of-the-non-military-budget-education/">In-depth review of the non-military budget: Education </a>
+        </h5>
+        <div class="c-related-post-card__date">4 June 2026</div>
+    </div>
+</div>
+                                   <div class="c-related-post-card">
+            <div class="c-related-post-card__thumb">
+            <a href="https://ces.org.ua/en/demographics-in-wartime-a-major-threat-to-ukraine/">
+                <picture class="attachment-full size-full wp-post-image" decoding="async">
+<source type="image/webp" data-lazy-srcset="https://ces.org.ua/wp-content/uploads/2026/05/st.png.webp 782w, https://ces.org.ua/wp-content/uploads/2026/05/st-300x280.png.webp 300w, https://ces.org.ua/wp-content/uploads/2026/05/st-150x140.png.webp 150w, https://ces.org.ua/wp-content/uploads/2026/05/st-768x716.png.webp 768w" sizes="(max-width: 782px) 100vw, 782px"/>
+<img width="782" height="729" src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20782%20729'%3E%3C/svg%3E" alt="" decoding="async" data-lazy-srcset="https://ces.org.ua/wp-content/uploads/2026/05/st.png 782w, https://ces.org.ua/wp-content/uploads/2026/05/st-300x280.png 300w, https://ces.org.ua/wp-content/uploads/2026/05/st-150x140.png 150w, https://ces.org.ua/wp-content/uploads/2026/05/st-768x716.png 768w" data-lazy-sizes="(max-width: 782px) 100vw, 782px" data-lazy-src="https://ces.org.ua/wp-content/uploads/2026/05/st.png"/><noscript><img width="782" height="729" src="https://ces.org.ua/wp-content/uploads/2026/05/st.png" alt="" decoding="async" srcset="https://ces.org.ua/wp-content/uploads/2026/05/st.png 782w, https://ces.org.ua/wp-content/uploads/2026/05/st-300x280.png 300w, https://ces.org.ua/wp-content/uploads/2026/05/st-150x140.png 150w, https://ces.org.ua/wp-content/uploads/2026/05/st-768x716.png 768w" sizes="(max-width: 782px) 100vw, 782px"/></noscript>
+</picture>
+            </a>
+        </div>
+        <div class="c-related-post-card__content">
+                    <div class="c-related-post-card__cat">
+                <a href="https://ces.org.ua/en/tag/refugees/">refugees</a>
+            </div>
+                <h5 class="c-related-post-card__title">
+            <a href="https://ces.org.ua/en/demographics-in-wartime-a-major-threat-to-ukraine/">Demographics in Wartime: A Major Threat to Ukraine </a>
+        </h5>
+        <div class="c-related-post-card__date">19 May 2026</div>
+    </div>
+</div>
+                                   <div class="c-related-post-card">
+            <div class="c-related-post-card__thumb">
+            <a href="https://ces.org.ua/en/migrants-and-poverty-in-ukraine/">
+                <picture class="attachment-full size-full wp-post-image" decoding="async">
+<source type="image/webp" data-lazy-srcset="https://ces.org.ua/wp-content/uploads/2026/04/photo_2026-04-06_13-57-51.jpg.webp 1280w, https://ces.org.ua/wp-content/uploads/2026/04/photo_2026-04-06_13-57-51-300x169.jpg.webp 300w, https://ces.org.ua/wp-content/uploads/2026/04/photo_2026-04-06_13-57-51-1024x575.jpg.webp 1024w, https://ces.org.ua/wp-content/uploads/2026/04/photo_2026-04-06_13-57-51-150x84.jpg.webp 150w, https://ces.org.ua/wp-content/uploads/2026/04/photo_2026-04-06_13-57-51-768x431.jpg.webp 768w" sizes="(max-width: 1280px) 100vw, 1280px"/>
+<img width="1280" height="719" src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201280%20719'%3E%3C/svg%3E" alt="" decoding="async" data-lazy-srcset="https://ces.org.ua/wp-content/uploads/2026/04/photo_2026-04-06_13-57-51.jpg 1280w, https://ces.org.ua/wp-content/uploads/2026/04/photo_2026-04-06_13-57-51-300x169.jpg 300w, https://ces.org.ua/wp-content/uploads/2026/04/photo_2026-04-06_13-57-51-1024x575.jpg 1024w, https://ces.org.ua/wp-content/uploads/2026/04/photo_2026-04-06_13-57-51-150x84.jpg 150w, https://ces.org.ua/wp-content/uploads/2026/04/photo_2026-04-06_13-57-51-768x431.jpg 768w" data-lazy-sizes="(max-width: 1280px) 100vw, 1280px" data-lazy-src="https://ces.org.ua/wp-content/uploads/2026/04/photo_2026-04-06_13-57-51.jpg"/><noscript><img width="1280" height="719" src="https://ces.org.ua/wp-content/uploads/2026/04/photo_2026-04-06_13-57-51.jpg" alt="" decoding="async" srcset="https://ces.org.ua/wp-content/uploads/2026/04/photo_2026-04-06_13-57-51.jpg 1280w, https://ces.org.ua/wp-content/uploads/2026/04/photo_2026-04-06_13-57-51-300x169.jpg 300w, https://ces.org.ua/wp-content/uploads/2026/04/photo_2026-04-06_13-57-51-1024x575.jpg 1024w, https://ces.org.ua/wp-content/uploads/2026/04/photo_2026-04-06_13-57-51-150x84.jpg 150w, https://ces.org.ua/wp-content/uploads/2026/04/photo_2026-04-06_13-57-51-768x431.jpg 768w" sizes="(max-width: 1280px) 100vw, 1280px"/></noscript>
+</picture>
+            </a>
+        </div>
+        <div class="c-related-post-card__content">
+                    <div class="c-related-post-card__cat">
+                <a href="https://ces.org.ua/en/tag/human-capital-en/">human capital</a>
+            </div>
+                <h5 class="c-related-post-card__title">
+            <a href="https://ces.org.ua/en/migrants-and-poverty-in-ukraine/">Migrants and poverty in Ukraine: demographics, labour market and social challenges </a>
+        </h5>
+        <div class="c-related-post-card__date">6 April 2026</div>
+    </div>
+</div>
+                            </div>
+        </div>
+    </section>
+    </main>
+
+<footer class="o-footer">
+    <div class="o-footer__top">
+    <div class="container">
+        <div class="o-footer__top-grid">
+            <div class="o-footer__top-grid-col">
+                
+    <div class="o-footer__logo">
+        <a href="https://ces.org.ua/en/" class="custom-logo-link" rel="home"><img width="280" height="73" src="https://ces.org.ua/wp-content/uploads/2025/06/ces-logo-en.svg" class="custom-logo" alt="Centre for Economic Strategy" decoding="async" /></a>    </div>
+    <div class="o-footer__logo-description"><p>Subscribe to the latest news and be up to date with events:</p>
+</div>
+<a href="javascript:void(0);" class="c-link-arrow js--nl-popup-open">
+    Subscribe to news</a>
+            </div>
+            <div class="o-footer__top-grid-col">
+                    <div class="o-footer__address"><p>+38 (044) 492-7970<br />
+office@ces.org.ua</p>
+<p>Zhylianska Street, 48, 50А<br />
+Kyiv, 01033, Ukraine</p>
+</div>
+            <a href="https://goo.gl/maps/cR66rs8JoBjtpm7z7" target="_blank"
+           class="c-link-arrow">See the map</a>
+    <div class="o-footer__socials o-footer__socials--desktop">
+        <nav class="c-socials-links">
+                                    <a href="https://www.facebook.com/cesukraine/" target="_blank" class="c-socials-links__link link--facebook">
+                    <svg class="c-icon c-icon-social-facebook " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#social-facebook"></use></svg>                </a>
+                                                <a href="https://www.instagram.com/cesukraine/?igsh=MWswbHdmbzgwYmYydQ%3D%3D" target="_blank" class="c-socials-links__link link--instagram">
+                    <svg class="c-icon c-icon-social-instagram " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#social-instagram"></use></svg>                </a>
+                                                <a href="https://www.youtube.com/channel/UCaEniy7pYgAwDLc-u9ZH1HQ" target="_blank" class="c-socials-links__link link--youtube">
+                    <svg class="c-icon c-icon-social-youtube " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#social-youtube"></use></svg>                </a>
+                                                <a href="https://t.me/thinktankces" target="_blank" class="c-socials-links__link link--telegram">
+                    <svg class="c-icon c-icon-social-telegram " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#social-telegram"></use></svg>                </a>
+                                                <a href="https://www.linkedin.com/company/centre-for-economic-strategy/" target="_blank" class="c-socials-links__link link--linkedin">
+                    <svg class="c-icon c-icon-social-linkedin " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#social-linkedin"></use></svg>                </a>
+                                                <a href="https://twitter.com/ces_ukraine" target="_blank" class="c-socials-links__link link--twitter">
+                    <svg class="c-icon c-icon-social-twitter " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#social-twitter"></use></svg>                </a>
+                        </nav>
+
+</div>
+
+            </div>
+            <div class="o-footer__top-grid-col">
+                    <div class="c-footer-menu">
+        <nav class="c-footer-menu__container"><ul id="ces-footer-menu" class="c-footer-menu__list"><li id="menu-item-32146" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-32146"><a href="https://ces.org.ua/en/about/">About us</a></li>
+<li id="menu-item-30572" class="menu-item menu-item-type-taxonomy menu-item-object-category current-post-ancestor current-menu-parent current-post-parent menu-item-30572"><a href="https://ces.org.ua/en/category/research-list-en/">Research</a></li>
+<li id="menu-item-30573" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-30573"><a href="https://ces.org.ua/en/category/news-list-en/">News</a></li>
+<li id="menu-item-36844" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-36844"><a href="https://ces.org.ua/en/category/podcasts/">Podcasts</a></li>
+<li id="menu-item-32110" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-32110"><a href="https://ces.org.ua/en/contacts/">Contacts</a></li>
+<li id="menu-item-35811" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-35811"><a href="/en/ces-media/">For media</a></li>
+<li id="menu-item-30576" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-30576"><a href="https://ces.org.ua/en/privacy-policy/">Privacy Policy</a></li>
+</ul></nav>    </div>
+                <div class="o-footer__socials o-footer__socials--mobile">
+                        <nav class="c-socials-links">
+                                    <a href="https://www.facebook.com/cesukraine/" target="_blank" class="c-socials-links__link link--facebook">
+                    <svg class="c-icon c-icon-social-facebook " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#social-facebook"></use></svg>                </a>
+                                                <a href="https://www.instagram.com/cesukraine/?igsh=MWswbHdmbzgwYmYydQ%3D%3D" target="_blank" class="c-socials-links__link link--instagram">
+                    <svg class="c-icon c-icon-social-instagram " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#social-instagram"></use></svg>                </a>
+                                                <a href="https://www.youtube.com/channel/UCaEniy7pYgAwDLc-u9ZH1HQ" target="_blank" class="c-socials-links__link link--youtube">
+                    <svg class="c-icon c-icon-social-youtube " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#social-youtube"></use></svg>                </a>
+                                                <a href="https://t.me/thinktankces" target="_blank" class="c-socials-links__link link--telegram">
+                    <svg class="c-icon c-icon-social-telegram " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#social-telegram"></use></svg>                </a>
+                                                <a href="https://www.linkedin.com/company/centre-for-economic-strategy/" target="_blank" class="c-socials-links__link link--linkedin">
+                    <svg class="c-icon c-icon-social-linkedin " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#social-linkedin"></use></svg>                </a>
+                                                <a href="https://twitter.com/ces_ukraine" target="_blank" class="c-socials-links__link link--twitter">
+                    <svg class="c-icon c-icon-social-twitter " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#social-twitter"></use></svg>                </a>
+                        </nav>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>    <div class="o-footer__bottom">
+    <div class="container">
+        <div class="o-footer__bottom-grid">
+            <div class="o-footer__bottom-grid-col">
+                    <div class="o-footer__bottom-logos">
+                                    <div class="o-footer__bottom-logo">
+                    <img width="103" height="30" src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20103%2030'%3E%3C/svg%3E" class="attachment-full size-full" alt="" decoding="async" data-lazy-src="https://ces.org.ua/wp-content/uploads/2024/11/footer-swedish-logo-en.svg" /><noscript><img width="103" height="30" src="https://ces.org.ua/wp-content/uploads/2024/11/footer-swedish-logo-en.svg" class="attachment-full size-full" alt="" decoding="async" /></noscript>                </div>
+                                                <div class="o-footer__bottom-logo">
+                    <img width="117" height="40" src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20117%2040'%3E%3C/svg%3E" class="attachment-full size-full" alt="" decoding="async" data-lazy-src="https://ces.org.ua/wp-content/uploads/2024/11/footer-international-en.svg" /><noscript><img width="117" height="40" src="https://ces.org.ua/wp-content/uploads/2024/11/footer-international-en.svg" class="attachment-full size-full" alt="" decoding="async" /></noscript>                </div>
+                        </div>
+            </div>
+                            <div class="o-footer__bottom-grid-col">
+                    <div class="o-footer__bottom-description"><p>The website was developed within the framework of the project &#8220;Institutional strengthening of the organization according to the strategic development plan till 2021&#8221;, supported by the International Renaissance Foundation (IRF), in partnership with TTF with the financial support of the Think Tank Development Initiative of the Embassy of Sweden in Ukraine.</p>
+<p><a href="https://www.wwwest.solutions/" target="_blank" rel="noopener">website support west solutions</a></p>
+</div>
+                </div>
+                    </div>
+    </div>
+</div>
+</footer>
+
+    	<div class="c-scroll-to-files js--scroll-to-files" style="display: none">
+		Scroll to presentation		<svg class="c-icon c-icon-arrow-down " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#arrow-down"></use></svg>	</div>
+<div class="c-scroll-top js--scroll-top" style="display: none;">
+    <svg class="c-icon c-icon-sliders-arrow " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#sliders-arrow"></use></svg></div>
+<div class="c-nl-popup js--nl-popup" style="display: none;">
+    <div class="c-nl-popup__inner">
+        <button class="c-nl-popup__close js--nl-popup-close" type="button">
+            <svg class="c-icon c-icon-close-icon " role="img"><use xlink:href="https://ces.org.ua/wp-content/themes/ces/build/img/sprites.svg?v=1787844830#close-icon"></use></svg>        </button>
+        <div class="c-nl-popup__form">
+            
+<div class="c-form">
+    <div class="c-form__intro js--ces-subscribe-form-intro">
+                    <h2 class="c-form__title">Explore where the Ukrainian economy is headed</h2>
+                    </div>
+    <form method="post" class="js--ces-subscribe-form">
+        <div class="c-form__field">
+            <input type="text" name="Last_Name" placeholder="First and last name*" required>
+            <span class="c-form__err js--ces-nl-form-error"></span>
+        </div>
+        <div class="c-form__field">
+            <input type="email" name="Email" placeholder="Email*" required>
+            <span class="c-form__err js--ces-nl-form-error"></span>
+        </div>
+                    <div class="c-form__checkbox">
+                <input type="checkbox" name="tracker_subscribe" id="popup-tracker-subscribe" class="c-form__checkbox-input">
+                <label for="popup-tracker-subscribe" class="c-form__checkbox-label">
+                    Also, subscribe to the <a href="https://ces.org.ua/en/tracker-economy-during-the-war/">Ukraine War Economy Tracker</a>                </label>
+            </div>
+        
+                                                                                                                    <input type="hidden" name="lang" value="en">
+        <input type="hidden" id="ces-nl-nonce" name="ces-nl-nonce" value="93daf0b2c5" /><input type="hidden" name="_wp_http_referer" value="/en/ukrainian-refugees-fifth-wave/" />        <div class="c-form__btn">
+            <input type="submit" value="Subscribe">
+        </div>
+    </form>
+    <div class="js--nl-response-message"></div>
+</div>        </div>
+    </div>
+</div>
+</div><!-- #page -->
+
+<script type="speculationrules">
+{"prefetch":[{"source":"document","where":{"and":[{"href_matches":"/en/*"},{"not":{"href_matches":["/wp-*.php","/wp-admin/*","/wp-content/uploads/*","/wp-content/*","/wp-content/plugins/*","/wp-content/themes/ces/*","/en/*\\?(.+)"]}},{"not":{"selector_matches":"a[rel~=\"nofollow\"]"}},{"not":{"selector_matches":".no-prefetch, .no-prefetch a"}}]},"eagerness":"conservative"}]}
+</script>
+<script type="rocketlazyloadscript" id="cookie-notice-front-js-before">
+var cnArgs = {"ajaxUrl":"https:\/\/ces.org.ua\/wp-admin\/admin-ajax.php","nonce":"e3aa0a7875","hideEffect":"fade","position":"bottom","onScroll":false,"onScrollOffset":100,"onClick":false,"cookieName":"cookie_notice_accepted","cookieTime":2592000,"cookieTimeRejected":2592000,"globalCookie":false,"redirection":false,"cache":true,"revokeCookies":false,"revokeCookiesOpt":"automatic"};
+
+//# sourceURL=cookie-notice-front-js-before
+</script>
+<script type="rocketlazyloadscript" id="cookie-notice-front-js" data-rocket-src="https://ces.org.ua/wp-content/plugins/cookie-notice/js/front.min.js?ver=3.1.3" data-rocket-defer defer></script>
+<script type="rocketlazyloadscript" id="dearpdf-script-js" data-rocket-src="https://ces.org.ua/wp-content/plugins/dearpdf-pro/assets/js/dearpdf-pro.min.js?ver=2.0.71" data-rocket-defer defer></script>
+<script type="rocketlazyloadscript" id="page-links-to-js" data-rocket-src="https://ces.org.ua/wp-content/plugins/page-links-to/dist/new-tab.js?ver=3.4.1" data-rocket-defer defer></script>
+<script id="wp-statistics-tracker-js-extra">
+var WP_Statistics_Tracker_Object = {"requestUrl":"https://ces.org.ua/en/wp-json/wp-statistics/v2","ajaxUrl":"https://ces.org.ua/wp-admin/admin-ajax.php","hitParams":{"wp_statistics_hit":1,"source_type":"post","source_id":40576,"search_query":"","signature":"d780b5e5c729e14c7087bffbb3ce11c1","endpoint":"hit"},"option":{"dntEnabled":"","bypassAdBlockers":"","consentIntegration":{"name":null,"status":[]},"isPreview":false,"userOnline":false,"isWpConsentApiActive":false},"isLegacyEventLoaded":"","customEventAjaxUrl":"https://ces.org.ua/wp-admin/admin-ajax.php?action=wp_statistics_custom_event&nonce=4673d4f0a1","onlineParams":{"wp_statistics_hit":1,"source_type":"post","source_id":40576,"search_query":"","signature":"d780b5e5c729e14c7087bffbb3ce11c1","action":"wp_statistics_online_check"},"jsCheckTime":"60000"};
+//# sourceURL=wp-statistics-tracker-js-extra
+</script>
+<script id="wp-statistics-tracker-js" src="https://ces.org.ua/wp-content/plugins/wp-statistics/assets/js/tracker.js?ver=14.16.8" data-rocket-defer defer></script>
+<script id="ces_js-js-extra">
+var ces_ajax_object = {"errors":{"required":"This field is required","email":"Enter a valid email"}};
+//# sourceURL=ces_js-js-extra
+</script>
+<script type="rocketlazyloadscript" id="ces_js-js" data-rocket-src="https://ces.org.ua/wp-content/themes/ces/build/js/app.js?ver=7ad3271144e07ed4bda2" data-rocket-defer defer></script>
+
+		<!-- Compliance by Hu-manity.co plugin v3.1.3 https://hu-manity.co/ -->
+		<div  id="cookie-notice" role="dialog" class="cookie-notice-hidden cookie-revoke-hidden cn-position-bottom" aria-label="Compliance by Hu-manity.co" style="background-color: rgba(255,255,255,1);"><div  class="cookie-notice-container" style="color: #34384d"><span id="cn-notice-text" class="cn-text-container">The site uses cookies to store data. By using the site, you agree to work with this data</span><span id="cn-notice-buttons" class="cn-buttons-container"><button id="cn-accept-cookie" data-cookie-set="accept" class="cn-set-cookie cn-button cn-button-custom c-button c-button--primary" aria-label="Accept and close">Accept and close</button></span><button type="button" id="cn-close-notice" data-cookie-set="accept" class="cn-close-icon" aria-label="No"></button></div>
+			
+		</div>
+		<!-- / Compliance by Hu-manity.co plugin --><script>window.lazyLoadOptions=[{elements_selector:"img[data-lazy-src],.rocket-lazyload",data_src:"lazy-src",data_srcset:"lazy-srcset",data_sizes:"lazy-sizes",class_loading:"lazyloading",class_loaded:"lazyloaded",threshold:300,callback_loaded:function(element){if(element.tagName==="IFRAME"&&element.dataset.rocketLazyload=="fitvidscompatible"){if(element.classList.contains("lazyloaded")){if(typeof window.jQuery!="undefined"){if(jQuery.fn.fitVids){jQuery(element).parent().fitVids()}}}}}},{elements_selector:".rocket-lazyload",data_src:"lazy-src",data_srcset:"lazy-srcset",data_sizes:"lazy-sizes",class_loading:"lazyloading",class_loaded:"lazyloaded",threshold:300,}];window.addEventListener('LazyLoad::Initialized',function(e){var lazyLoadInstance=e.detail.instance;if(window.MutationObserver){var observer=new MutationObserver(function(mutations){var image_count=0;var iframe_count=0;var rocketlazy_count=0;mutations.forEach(function(mutation){for(var i=0;i<mutation.addedNodes.length;i++){if(typeof mutation.addedNodes[i].getElementsByTagName!=='function'){continue}
+if(typeof mutation.addedNodes[i].getElementsByClassName!=='function'){continue}
+images=mutation.addedNodes[i].getElementsByTagName('img');is_image=mutation.addedNodes[i].tagName=="IMG";iframes=mutation.addedNodes[i].getElementsByTagName('iframe');is_iframe=mutation.addedNodes[i].tagName=="IFRAME";rocket_lazy=mutation.addedNodes[i].getElementsByClassName('rocket-lazyload');image_count+=images.length;iframe_count+=iframes.length;rocketlazy_count+=rocket_lazy.length;if(is_image){image_count+=1}
+if(is_iframe){iframe_count+=1}}});if(image_count>0||iframe_count>0||rocketlazy_count>0){lazyLoadInstance.update()}});var b=document.getElementsByTagName("body")[0];var config={childList:!0,subtree:!0};observer.observe(b,config)}},!1)</script><script data-no-minify="1" async src="https://ces.org.ua/wp-content/plugins/wp-rocket/assets/js/lazyload/17.8.3/lazyload.min.js"></script>
+    <script type="rocketlazyloadscript">
+        jQuery(document).ready(function ($) {
+            const site_host = 'ces.org.ua';
+
+            $('*').find('a').each(function (i, item) {
+                const href = $(item).attr('href');
+
+                if (href && href.indexOf('http') === 0) {
+                    const host = new URL(href).host;
+
+                    if (host !== site_host) {
+                        $(item).attr('rel', 'nofollow');
+                    }
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>
+
+<!-- This website is like a Rocket, isn't it? Performance optimized by WP Rocket. Learn more: https://wp-rocket.me - Debug: cached@1789549599 -->

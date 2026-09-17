@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-US" prefix="og: https://ogp.me/ns#">
+
+<head><meta charset="UTF-8" /><script>if(navigator.userAgent.match(/MSIE|Internet Explorer/i)||navigator.userAgent.match(/Trident\/7\..*?rv:11/i)){var href=document.location.href;if(!href.match(/[?&]nowprocket/)){if(href.indexOf("?")==-1){if(href.indexOf("#")==-1){document.location.href=href+"?nowprocket=1"}else{document.location.href=href.replace("#","?nowprocket=1#")}}else{if(href.indexOf("#")==-1){document.location.href=href+"&nowprocket=1"}else{document.location.href=href.replace("#","&nowprocket=1#")}}}}</script><script>(()=>{class RocketLazyLoadScripts{constructor(){this.v="2.0.5",this.userEvents=["keydown","keyup","mousedown","mouseup","mousemove","mouseover","mouseout","touchmove","touchstart","touchend","touchcancel","wheel","click","dblclick","input"],this.attributeEvents=["onblur","onclick","oncontextmenu","ondblclick","onfocus","onmousedown","onmouseenter","onmouseleave","onmousemove","onmouseout","onmouseover","onmouseup","onmousewheel","onscroll","onsubmit"]}async t(){this.i(),this.o(),/iP(ad|hone)/.test(navigator.userAgent)&&this.h(),this.u(),this.l(this),this.m(),this.k(this),this.p(this),this._(),await Promise.all([this.R(),this.L()]),this.lastBreath=Date.now(),this.S(this),this.P(),this.D(),this.O(),this.M(),await this.C(this.delayedScripts.normal),await this.C(this.delayedScripts.defer),await this.C(this.delayedScripts.async),await this.T(),await this.F(),await this.j(),await this.A(),window.dispatchEvent(new Event("rocket-allScriptsLoaded")),this.everythingLoaded=!0,this.lastTouchEnd&&await new Promise(t=>setTimeout(t,500-Date.now()+this.lastTouchEnd)),this.I(),this.H(),this.U(),this.W()}i(){this.CSPIssue=sessionStorage.getItem("rocketCSPIssue"),document.addEventListener("securitypolicyviolation",t=>{this.CSPIssue||"script-src-elem"!==t.violatedDirective||"data"!==t.blockedURI||(this.CSPIssue=!0,sessionStorage.setItem("rocketCSPIssue",!0))},{isRocket:!0})}o(){window.addEventListener("pageshow",t=>{this.persisted=t.persisted,this.realWindowLoadedFired=!0},{isRocket:!0}),window.addEventListener("pagehide",()=>{this.onFirstUserAction=null},{isRocket:!0})}h(){let t;function e(e){t=e}window.addEventListener("touchstart",e,{isRocket:!0}),window.addEventListener("touchend",function i(o){o.changedTouches[0]&&t.changedTouches[0]&&Math.abs(o.changedTouches[0].pageX-t.changedTouches[0].pageX)<10&&Math.abs(o.changedTouches[0].pageY-t.changedTouches[0].pageY)<10&&o.timeStamp-t.timeStamp<200&&(window.removeEventListener("touchstart",e,{isRocket:!0}),window.removeEventListener("touchend",i,{isRocket:!0}),"INPUT"===o.target.tagName&&"text"===o.target.type||(o.target.dispatchEvent(new TouchEvent("touchend",{target:o.target,bubbles:!0})),o.target.dispatchEvent(new MouseEvent("mouseover",{target:o.target,bubbles:!0})),o.target.dispatchEvent(new PointerEvent("click",{target:o.target,bubbles:!0,cancelable:!0,detail:1,clientX:o.changedTouches[0].clientX,clientY:o.changedTouches[0].clientY})),event.preventDefault()))},{isRocket:!0})}q(t){this.userActionTriggered||("mousemove"!==t.type||this.firstMousemoveIgnored?"keyup"===t.type||"mouseover"===t.type||"mouseout"===t.type||(this.userActionTriggered=!0,this.onFirstUserAction&&this.onFirstUserAction()):this.firstMousemoveIgnored=!0),"click"===t.type&&t.preventDefault(),t.stopPropagation(),t.stopImmediatePropagation(),"touchstart"===this.lastEvent&&"touchend"===t.type&&(this.lastTouchEnd=Date.now()),"click"===t.type&&(this.lastTouchEnd=0),this.lastEvent=t.type,t.composedPath&&t.composedPath()[0].getRootNode()instanceof ShadowRoot&&(t.rocketTarget=t.composedPath()[0]),this.savedUserEvents.push(t)}u(){this.savedUserEvents=[],this.userEventHandler=this.q.bind(this),this.userEvents.forEach(t=>window.addEventListener(t,this.userEventHandler,{passive:!1,isRocket:!0})),document.addEventListener("visibilitychange",this.userEventHandler,{isRocket:!0})}U(){this.userEvents.forEach(t=>window.removeEventListener(t,this.userEventHandler,{passive:!1,isRocket:!0})),document.removeEventListener("visibilitychange",this.userEventHandler,{isRocket:!0}),this.savedUserEvents.forEach(t=>{(t.rocketTarget||t.target).dispatchEvent(new window[t.constructor.name](t.type,t))})}m(){const t="return false",e=Array.from(this.attributeEvents,t=>"data-rocket-"+t),i="["+this.attributeEvents.join("],[")+"]",o="[data-rocket-"+this.attributeEvents.join("],[data-rocket-")+"]",s=(e,i,o)=>{o&&o!==t&&(e.setAttribute("data-rocket-"+i,o),e["rocket"+i]=new Function("event",o),e.setAttribute(i,t))};new MutationObserver(t=>{for(const n of t)"attributes"===n.type&&(n.attributeName.startsWith("data-rocket-")||this.everythingLoaded?n.attributeName.startsWith("data-rocket-")&&this.everythingLoaded&&this.N(n.target,n.attributeName.substring(12)):s(n.target,n.attributeName,n.target.getAttribute(n.attributeName))),"childList"===n.type&&n.addedNodes.forEach(t=>{if(t.nodeType===Node.ELEMENT_NODE)if(this.everythingLoaded)for(const i of[t,...t.querySelectorAll(o)])for(const t of i.getAttributeNames())e.includes(t)&&this.N(i,t.substring(12));else for(const e of[t,...t.querySelectorAll(i)])for(const t of e.getAttributeNames())this.attributeEvents.includes(t)&&s(e,t,e.getAttribute(t))})}).observe(document,{subtree:!0,childList:!0,attributeFilter:[...this.attributeEvents,...e]})}I(){this.attributeEvents.forEach(t=>{document.querySelectorAll("[data-rocket-"+t+"]").forEach(e=>{this.N(e,t)})})}N(t,e){const i=t.getAttribute("data-rocket-"+e);i&&(t.setAttribute(e,i),t.removeAttribute("data-rocket-"+e))}k(t){Object.defineProperty(HTMLElement.prototype,"onclick",{get(){return this.rocketonclick||null},set(e){this.rocketonclick=e,this.setAttribute(t.everythingLoaded?"onclick":"data-rocket-onclick","this.rocketonclick(event)")}})}S(t){function e(e,i){let o=e[i];e[i]=null,Object.defineProperty(e,i,{get:()=>o,set(s){t.everythingLoaded?o=s:e["rocket"+i]=o=s}})}e(document,"onreadystatechange"),e(window,"onload"),e(window,"onpageshow");try{Object.defineProperty(document,"readyState",{get:()=>t.rocketReadyState,set(e){t.rocketReadyState=e},configurable:!0}),document.readyState="loading"}catch(t){console.log("WPRocket DJE readyState conflict, bypassing")}}l(t){this.originalAddEventListener=EventTarget.prototype.addEventListener,this.originalRemoveEventListener=EventTarget.prototype.removeEventListener,this.savedEventListeners=[],EventTarget.prototype.addEventListener=function(e,i,o){o&&o.isRocket||!t.B(e,this)&&!t.userEvents.includes(e)||t.B(e,this)&&!t.userActionTriggered||e.startsWith("rocket-")||t.everythingLoaded?t.originalAddEventListener.call(this,e,i,o):(t.savedEventListeners.push({target:this,remove:!1,type:e,func:i,options:o}),"mouseenter"!==e&&"mouseleave"!==e||t.originalAddEventListener.call(this,e,t.savedUserEvents.push,o))},EventTarget.prototype.removeEventListener=function(e,i,o){o&&o.isRocket||!t.B(e,this)&&!t.userEvents.includes(e)||t.B(e,this)&&!t.userActionTriggered||e.startsWith("rocket-")||t.everythingLoaded?t.originalRemoveEventListener.call(this,e,i,o):t.savedEventListeners.push({target:this,remove:!0,type:e,func:i,options:o})}}J(t,e){this.savedEventListeners=this.savedEventListeners.filter(i=>{let o=i.type,s=i.target||window;return e!==o||t!==s||(this.B(o,s)&&(i.type="rocket-"+o),this.$(i),!1)})}H(){EventTarget.prototype.addEventListener=this.originalAddEventListener,EventTarget.prototype.removeEventListener=this.originalRemoveEventListener,this.savedEventListeners.forEach(t=>this.$(t))}$(t){t.remove?this.originalRemoveEventListener.call(t.target,t.type,t.func,t.options):this.originalAddEventListener.call(t.target,t.type,t.func,t.options)}p(t){let e;function i(e){return t.everythingLoaded?e:e.split(" ").map(t=>"load"===t||t.startsWith("load.")?"rocket-jquery-load":t).join(" ")}function o(o){function s(e){const s=o.fn[e];o.fn[e]=o.fn.init.prototype[e]=function(){return this[0]===window&&t.userActionTriggered&&("string"==typeof arguments[0]||arguments[0]instanceof String?arguments[0]=i(arguments[0]):"object"==typeof arguments[0]&&Object.keys(arguments[0]).forEach(t=>{const e=arguments[0][t];delete arguments[0][t],arguments[0][i(t)]=e})),s.apply(this,arguments),this}}if(o&&o.fn&&!t.allJQueries.includes(o)){const e={DOMContentLoaded:[],"rocket-DOMContentLoaded":[]};for(const t in e)document.addEventListener(t,()=>{e[t].forEach(t=>t())},{isRocket:!0});o.fn.ready=o.fn.init.prototype.ready=function(i){function s(){parseInt(o.fn.jquery)>2?setTimeout(()=>i.bind(document)(o)):i.bind(document)(o)}return"function"==typeof i&&(t.realDomReadyFired?!t.userActionTriggered||t.fauxDomReadyFired?s():e["rocket-DOMContentLoaded"].push(s):e.DOMContentLoaded.push(s)),this},s("on"),s("one"),s("off"),t.allJQueries.push(o)}e=o}t.allJQueries=[],o(window.jQuery),Object.defineProperty(window,"jQuery",{get:()=>e,set(t){o(t)}})}P(){const t=new Map;document.write=document.writeln=function(e){const i=document.currentScript,o=document.createRange(),s=i.parentElement;let n=t.get(i);void 0===n&&(n=i.nextSibling,t.set(i,n));const c=document.createDocumentFragment();o.setStart(c,0),c.appendChild(o.createContextualFragment(e)),s.insertBefore(c,n)}}async R(){return new Promise(t=>{this.userActionTriggered?t():this.onFirstUserAction=t})}async L(){return new Promise(t=>{document.addEventListener("DOMContentLoaded",()=>{this.realDomReadyFired=!0,t()},{isRocket:!0})})}async j(){return this.realWindowLoadedFired?Promise.resolve():new Promise(t=>{window.addEventListener("load",t,{isRocket:!0})})}M(){this.pendingScripts=[];this.scriptsMutationObserver=new MutationObserver(t=>{for(const e of t)e.addedNodes.forEach(t=>{"SCRIPT"!==t.tagName||!t.src||t.noModule||t.isWPRocket||this.pendingScripts.push({script:t,promise:new Promise(e=>{const i=()=>{const i=this.pendingScripts.findIndex(e=>e.script===t);i>=0&&this.pendingScripts.splice(i,1),e()};t.addEventListener("load",i,{isRocket:!0}),t.addEventListener("error",i,{isRocket:!0}),setTimeout(i,1e3)})})})}),this.scriptsMutationObserver.observe(document,{childList:!0,subtree:!0})}async F(){await this.X(),this.pendingScripts.length?(await this.pendingScripts[0].promise,await this.F()):this.scriptsMutationObserver.disconnect()}D(){this.delayedScripts={normal:[],async:[],defer:[]},document.querySelectorAll("script[type$=rocketlazyloadscript]").forEach(t=>{t.hasAttribute("data-rocket-src")?t.hasAttribute("async")&&!1!==t.async?this.delayedScripts.async.push(t):t.hasAttribute("defer")&&!1!==t.defer||"module"===t.getAttribute("data-rocket-type")?this.delayedScripts.defer.push(t):this.delayedScripts.normal.push(t):this.delayedScripts.normal.push(t)})}async _(){await this.L();let t=[];document.querySelectorAll("script[type$=rocketlazyloadscript][data-rocket-src]").forEach(e=>{let i=e.getAttribute("data-rocket-src");if(i&&!i.startsWith("data:")){i.startsWith("//")&&(i=location.protocol+i);try{const o=new URL(i).origin;o!==location.origin&&t.push({src:o,crossOrigin:e.crossOrigin||"module"===e.getAttribute("data-rocket-type")})}catch(t){}}}),t=[...new Map(t.map(t=>[JSON.stringify(t),t])).values()],this.Y(t,"preconnect")}async G(t){if(await this.K(),!0!==t.noModule||!("noModule"in HTMLScriptElement.prototype))return new Promise(e=>{let i;function o(){(i||t).setAttribute("data-rocket-status","executed"),e()}try{if(navigator.userAgent.includes("Firefox/")||""===navigator.vendor||this.CSPIssue)i=document.createElement("script"),[...t.attributes].forEach(t=>{let e=t.nodeName;"type"!==e&&("data-rocket-type"===e&&(e="type"),"data-rocket-src"===e&&(e="src"),i.setAttribute(e,t.nodeValue))}),t.text&&(i.text=t.text),t.nonce&&(i.nonce=t.nonce),i.hasAttribute("src")?(i.addEventListener("load",o,{isRocket:!0}),i.addEventListener("error",()=>{i.setAttribute("data-rocket-status","failed-network"),e()},{isRocket:!0}),setTimeout(()=>{i.isConnected||e()},1)):(i.text=t.text,o()),i.isWPRocket=!0,t.parentNode.replaceChild(i,t);else{const i=t.getAttribute("data-rocket-type"),s=t.getAttribute("data-rocket-src");i?(t.type=i,t.removeAttribute("data-rocket-type")):t.removeAttribute("type"),t.addEventListener("load",o,{isRocket:!0}),t.addEventListener("error",i=>{this.CSPIssue&&i.target.src.startsWith("data:")?(console.log("WPRocket: CSP fallback activated"),t.removeAttribute("src"),this.G(t).then(e)):(t.setAttribute("data-rocket-status","failed-network"),e())},{isRocket:!0}),s?(t.fetchPriority="high",t.removeAttribute("data-rocket-src"),t.src=s):t.src="data:text/javascript;base64,"+window.btoa(unescape(encodeURIComponent(t.text)))}}catch(i){t.setAttribute("data-rocket-status","failed-transform"),e()}});t.setAttribute("data-rocket-status","skipped")}async C(t){const e=t.shift();return e?(e.isConnected&&await this.G(e),this.C(t)):Promise.resolve()}O(){this.Y([...this.delayedScripts.normal,...this.delayedScripts.defer,...this.delayedScripts.async],"preload")}Y(t,e){this.trash=this.trash||[];let i=!0;var o=document.createDocumentFragment();t.forEach(t=>{const s=t.getAttribute&&t.getAttribute("data-rocket-src")||t.src;if(s&&!s.startsWith("data:")){const n=document.createElement("link");n.href=s,n.rel=e,"preconnect"!==e&&(n.as="script",n.fetchPriority=i?"high":"low"),t.getAttribute&&"module"===t.getAttribute("data-rocket-type")&&(n.crossOrigin=!0),t.crossOrigin&&(n.crossOrigin=t.crossOrigin),t.integrity&&(n.integrity=t.integrity),t.nonce&&(n.nonce=t.nonce),o.appendChild(n),this.trash.push(n),i=!1}}),document.head.appendChild(o)}W(){this.trash.forEach(t=>t.remove())}async T(){try{document.readyState="interactive"}catch(t){}this.fauxDomReadyFired=!0;try{await this.K(),this.J(document,"readystatechange"),document.dispatchEvent(new Event("rocket-readystatechange")),await this.K(),document.rocketonreadystatechange&&document.rocketonreadystatechange(),await this.K(),this.J(document,"DOMContentLoaded"),document.dispatchEvent(new Event("rocket-DOMContentLoaded")),await this.K(),this.J(window,"DOMContentLoaded"),window.dispatchEvent(new Event("rocket-DOMContentLoaded"))}catch(t){console.error(t)}}async A(){try{document.readyState="complete"}catch(t){}try{await this.K(),this.J(document,"readystatechange"),document.dispatchEvent(new Event("rocket-readystatechange")),await this.K(),document.rocketonreadystatechange&&document.rocketonreadystatechange(),await this.K(),this.J(window,"load"),window.dispatchEvent(new Event("rocket-load")),await this.K(),window.rocketonload&&window.rocketonload(),await this.K(),this.allJQueries.forEach(t=>t(window).trigger("rocket-jquery-load")),await this.K(),this.J(window,"pageshow");const t=new Event("rocket-pageshow");t.persisted=this.persisted,window.dispatchEvent(t),await this.K(),window.rocketonpageshow&&window.rocketonpageshow({persisted:this.persisted})}catch(t){console.error(t)}}async K(){Date.now()-this.lastBreath>45&&(await this.X(),this.lastBreath=Date.now())}async X(){return document.hidden?new Promise(t=>setTimeout(t)):new Promise(t=>requestAnimationFrame(t))}B(t,e=window){return e===document&&"readystatechange"===t||(e===document&&"DOMContentLoaded"===t||(e===window&&"DOMContentLoaded"===t||(e===window&&"load"===t||e===window&&"pageshow"===t)))}static run(){(new RocketLazyLoadScripts).t()}}RocketLazyLoadScripts.run()})();
+</script>
+	
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<!--[if lt IE 9]><script src="https://cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv.min.js"></script><![endif]-->
+	<title>IRCC and Canada’s provinces continue working together to welcome Ukrainians | CIC News</title>
+<link data-rocket-prefetch href="https://ajax.googleapis.com" rel="dns-prefetch"><link rel="preload" data-rocket-preload as="image" href="https://www.cicnews.com/wp-content/uploads/2023/07/logo-3.svg" fetchpriority="high">
+
+		<!-- All in One SEO 4.9.10 - aioseo.com -->
+	<meta name="robots" content="max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+	<meta name="author" content="Edana Robitaille"/>
+	<link rel="canonical" href="https://www.cicnews.com/2023/02/ircc-and-canadas-provinces-continue-working-together-to-welcome-ukrainians-0233324.html" />
+	<meta name="generator" content="All in One SEO (AIOSEO) 4.9.10" />
+		<meta property="og:locale" content="en_US" />
+		<meta property="og:site_name" content="CIC News" />
+		<meta property="og:type" content="article" />
+		<meta property="og:title" content="IRCC and Canada’s provinces continue working together to welcome Ukrainians | CIC News" />
+		<meta property="og:url" content="https://www.cicnews.com/2023/02/ircc-and-canadas-provinces-continue-working-together-to-welcome-ukrainians-0233324.html" />
+		<meta property="og:image" content="https://www.cicnews.com/wp-content/uploads/2023/02/20230224ukraine-min-1.jpg" />
+		<meta property="og:image:secure_url" content="https://www.cicnews.com/wp-content/uploads/2023/02/20230224ukraine-min-1.jpg" />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="800" />
+		<meta property="article:published_time" content="2023-02-24T12:00:31+00:00" />
+		<meta property="article:modified_time" content="2023-09-27T16:01:22+00:00" />
+		<meta property="article:publisher" content="https://www.facebook.com/canadavisa" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:site" content="@canadavisa_com" />
+		<meta name="twitter:title" content="IRCC and Canada’s provinces continue working together to welcome Ukrainians | CIC News" />
+		<meta name="twitter:image" content="https://www.cicnews.com/wp-content/uploads/2023/02/20230224ukraine-min-1.jpg" />
+		<!-- All in One SEO -->
+
+<link rel='preload' as='style' href='https://www.cicnews.com/wp-content/themes/cic/style.css?ver=6.9.4'  data-wpacu-preload-css-basic='1' />
+<link rel='dns-prefetch' href='//www.cicnews.com' />
+<link rel='dns-prefetch' href='//ajax.googleapis.com' />
+<link rel="alternate" title="oEmbed (JSON)" type="application/json+oembed" href="https://www.cicnews.com/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fwww.cicnews.com%2F2023%2F02%2Fircc-and-canadas-provinces-continue-working-together-to-welcome-ukrainians-0233324.html" />
+<link rel="alternate" title="oEmbed (XML)" type="text/xml+oembed" href="https://www.cicnews.com/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fwww.cicnews.com%2F2023%2F02%2Fircc-and-canadas-provinces-continue-working-together-to-welcome-ukrainians-0233324.html&#038;format=xml" />
+<!-- www.cicnews.com is managing ads with Advanced Ads 2.0.18 – https://wpadvancedads.com/ --><!--noptimize--><script id="cicnewsads-ready">
+			window.advanced_ads_ready=function(e,a){a=a||"complete";var d=function(e){return"interactive"===a?"loading"!==e:"complete"===e};d(document.readyState)?e():document.addEventListener("readystatechange",(function(a){d(a.target.readyState)&&e()}),{once:"interactive"===a})},window.advanced_ads_ready_queue=window.advanced_ads_ready_queue||[];		</script>
+		<!--/noptimize--><style id='wp-img-auto-sizes-contain-inline-css'>
+img:is([sizes=auto i],[sizes^="auto," i]){contain-intrinsic-size:3000px 1500px}
+/*# sourceURL=wp-img-auto-sizes-contain-inline-css */
+</style>
+<style id='wp-emoji-styles-inline-css'>
+
+	img.wp-smiley, img.emoji {
+		display: inline !important;
+		border: none !important;
+		box-shadow: none !important;
+		height: 1em !important;
+		width: 1em !important;
+		margin: 0 0.07em !important;
+		vertical-align: -0.1em !important;
+		background: none !important;
+		padding: 0 !important;
+	}
+/*# sourceURL=wp-emoji-styles-inline-css */
+</style>
+<style id='classic-theme-styles-inline-css'>
+/*! This file is auto-generated */
+.wp-block-button__link{color:#fff;background-color:#32373c;border-radius:9999px;box-shadow:none;text-decoration:none;padding:calc(.667em + 2px) calc(1.333em + 2px);font-size:1.125em}.wp-block-file__button{background:#32373c;color:#fff;text-decoration:none}
+/*# sourceURL=/wp-includes/css/classic-themes.min.css */
+</style>
+<link rel='stylesheet' id='latest-post-shortcode-lps-block-style-css' href='https://www.cicnews.com/wp-content/plugins/latest-post-shortcode/lps-block/build/style-view.css?ver=lpsv14.232107157afba035c5d791614ef2e3e418' media='all' />
+<link rel='preload' as='style' data-wpacu-preload-it-async='1' onload="this.onload=null;this.rel='stylesheet'" id='wpacu-preload-ppress-frontend-css' href='https://www.cicnews.com/wp-content/plugins/wp-user-avatar/assets/css/frontend.min.css?ver=4.17.2' media='all' />
+<link rel='preload' as='style' data-wpacu-preload-it-async='1' onload="this.onload=null;this.rel='stylesheet'" id='wpacu-preload-ppress-flatpickr-css' href='https://www.cicnews.com/wp-content/plugins/wp-user-avatar/assets/flatpickr/flatpickr.min.css?ver=4.17.2' media='all' />
+<link rel='preload' as='style' data-wpacu-preload-it-async='1' onload="this.onload=null;this.rel='stylesheet'" id='wpacu-preload-ppress-select2-css' href='https://www.cicnews.com/wp-content/plugins/wp-user-avatar/assets/select2/select2.min.css?ver=6.9.4' media='all' />
+<link data-wpacu-to-be-preloaded-basic='1' rel='stylesheet' id='style-css' href='https://www.cicnews.com/wp-content/themes/cic/style.css?ver=6.9.4' media='all' />
+<link rel='preload' as='style' data-wpacu-preload-it-async='1' onload="this.onload=null;this.rel='stylesheet'" id='wpacu-preload-tablepress-default-css' href='https://www.cicnews.com/wp-content/tablepress-combined.min.css?ver=16' media='all' />
+<link rel='stylesheet' id='tablepress-datatables-buttons-css' href='https://www.cicnews.com/wp-content/plugins/tablepress-premium/modules/css/build/datatables.buttons.css?ver=3.3.3' media='all' />
+<link rel='stylesheet' id='tablepress-datatables-fixedheader-css' href='https://www.cicnews.com/wp-content/plugins/tablepress-premium/modules/css/build/datatables.fixedheader.css?ver=3.3.3' media='all' />
+<link rel='stylesheet' id='tablepress-datatables-fixedcolumns-css' href='https://www.cicnews.com/wp-content/plugins/tablepress-premium/modules/css/build/datatables.fixedcolumns.css?ver=3.3.3' media='all' />
+<link rel='stylesheet' id='tablepress-datatables-scroll-buttons-css' href='https://www.cicnews.com/wp-content/plugins/tablepress-premium/modules/css/build/datatables.scroll-buttons.css?ver=3.3.3' media='all' />
+<link rel='preload' as='style' data-wpacu-preload-it-async='1' onload="this.onload=null;this.rel='stylesheet'" id='wpacu-preload-tablepress-responsive-tables-css' href='https://www.cicnews.com/wp-content/plugins/tablepress-premium/modules/css/build/responsive-tables.css?ver=3.3.3' media='all' />
+<link rel='stylesheet' id='tablepress-datatables-columnfilterwidgets-css' href='https://www.cicnews.com/wp-content/plugins/tablepress-premium/modules/css/build/datatables.columnfilterwidgets.css?ver=3.3.3' media='all' />
+<script id="lps-vars-js-after">
+const lpsSettings = {"ajaxUrl": "https://www.cicnews.com/wp-admin/admin-ajax.php"};
+//# sourceURL=lps-vars-js-after
+</script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js?ver=6.9.4" id="jquery-core-js"></script>
+<script src="https://www.cicnews.com/wp-includes/js/jquery/jquery-migrate.min.js?ver=3.4.1" id="jquery-migrate-js"></script>
+<script defer='defer' src="https://www.cicnews.com/wp-content/plugins/wp-user-avatar/assets/flatpickr/flatpickr.min.js?ver=4.17.2" id="ppress-flatpickr-js"></script>
+<script defer='defer' src="https://www.cicnews.com/wp-content/plugins/wp-user-avatar/assets/select2/select2.min.js?ver=4.17.2" id="ppress-select2-js"></script>
+<script id="advanced-ads-advanced-js-js-extra">
+var advads_options = {"blog_id":"1","privacy":{"enabled":false,"state":"not_needed"}};
+//# sourceURL=advanced-ads-advanced-js-js-extra
+</script>
+<script defer='defer' src="https://www.cicnews.com/wp-content/plugins/advanced-ads/assets/dist/advanced.js?ver=4e4c7549b1472da4abe5" id="advanced-ads-advanced-js-js"></script>
+<script id="utils-js-extra">
+var userSettings = {"url":"/","uid":"0","time":"1789538952","secure":"1"};
+//# sourceURL=utils-js-extra
+</script>
+<script src="https://www.cicnews.com/wp-includes/js/utils.min.js?ver=6.9.4" id="utils-js"></script>
+<link rel="https://api.w.org/" href="https://www.cicnews.com/wp-json/" /><link rel="alternate" title="JSON" type="application/json" href="https://www.cicnews.com/wp-json/wp/v2/posts/33324" /><link rel="EditURI" type="application/rsd+xml" title="RSD" href="https://www.cicnews.com/xmlrpc.php?rsd" />
+<meta name="generator" content="WordPress 6.9.4" />
+<link rel='shortlink' href='https://www.cicnews.com/?p=33324' />
+<script type="application/ld+json" data-source="DataFeed:WordPress" data-schema="33324-post-Default">{"@context":"https:\/\/schema.org\/","@type":"NewsArticle","@id":"https:\/\/www.cicnews.com\/2023\/02\/ircc-and-canadas-provinces-continue-working-together-to-welcome-ukrainians-0233324.html#NewsArticle","mainEntityOfPage":"https:\/\/www.cicnews.com\/2023\/02\/ircc-and-canadas-provinces-continue-working-together-to-welcome-ukrainians-0233324.html","headline":"IRCC and Canada\u2019s provinces continue working together to welcome Ukrainians","name":"IRCC and Canada\u2019s provinces continue working together to welcome Ukrainians","description":"Today marks one year since the beginning Russia\u2019s invasion of Ukraine. UNHCR reports more than 7 million people in Ukraine have been displaced since February 2022. Many of them have fled to neighbouring countries such as Poland and Moldova, but others decide to go further abroad, including Canada. What is Canada doing for displaced Ukrainians? [&hellip;]","datePublished":"2023-02-24","dateModified":"2023-09-27","author":{"@type":"Person","@id":"https:\/\/www.cicnews.com\/author\/edana#Person","name":"Edana Robitaille","url":"https:\/\/www.cicnews.com\/author\/edana","identifier":48,"image":{"@type":"ImageObject","@id":"https:\/\/www.cicnews.com\/wp-content\/uploads\/2023\/07\/photo2-150x150.png","url":"https:\/\/www.cicnews.com\/wp-content\/uploads\/2023\/07\/photo2-150x150.png","height":96,"width":96}},"publisher":{"@type":"Organization","name":"Canada Immigration News","logo":{"@type":"ImageObject","@id":"https:\/\/www.cicnews.com\/wp-content\/uploads\/2020\/08\/logo.svg","url":"https:\/\/www.cicnews.com\/wp-content\/uploads\/2020\/08\/logo.svg","width":310,"height":67}},"image":{"@type":"ImageObject","@id":"https:\/\/www.cicnews.com\/wp-content\/uploads\/2023\/02\/20230224ukraine-min-1.jpg","url":"https:\/\/www.cicnews.com\/wp-content\/uploads\/2023\/02\/20230224ukraine-min-1.jpg","height":800,"width":1200},"url":"https:\/\/www.cicnews.com\/2023\/02\/ircc-and-canadas-provinces-continue-working-together-to-welcome-ukrainians-0233324.html","about":["Canada"],"wordCount":1103,"keywords":["Canada immigration news","Canadian immigration news","Credit History","IRCC","ukraine","visitor visa","work permits"]}</script>
+		<script type="text/javascript">
+			var advadsCfpQueue = [];
+			var advadsCfpAd = function( adID ) {
+				if ( 'undefined' === typeof advadsProCfp ) {
+					advadsCfpQueue.push( adID )
+				} else {
+					advadsProCfp.addElement( adID )
+				}
+			}
+		</script>
+		<link rel="amphtml" href="https://www.cicnews.com/2023/02/ircc-and-canadas-provinces-continue-working-together-to-welcome-ukrainians-0233324.html/amp"><link rel="icon" href="https://www.cicnews.com/wp-content/uploads/2020/08/favicon-1.png" sizes="32x32" />
+<link rel="icon" href="https://www.cicnews.com/wp-content/uploads/2020/08/favicon-1.png" sizes="192x192" />
+<link rel="apple-touch-icon" href="https://www.cicnews.com/wp-content/uploads/2020/08/favicon-1.png" />
+<meta name="msapplication-TileImage" content="https://www.cicnews.com/wp-content/uploads/2020/08/favicon-1.png" />
+<script type="text/rocketlazyloadscript" id="wpacu-preload-async-css-fallback">
+/*! LoadCSS. [c]2020 Filament Group, Inc. MIT License */
+/* This file is meant as a standalone workflow for
+- testing support for link[rel=preload]
+- enabling async CSS loading in browsers that do not support rel=preload
+- applying rel preload css once loaded, whether supported or not.
+*/
+(function(w){"use strict";var wpacuLoadCSS=function(href,before,media,attributes){var doc=w.document;var ss=doc.createElement('link');var ref;if(before){ref=before}else{var refs=(doc.body||doc.getElementsByTagName('head')[0]).childNodes;ref=refs[refs.length-1]}
+var sheets=doc.styleSheets;if(attributes){for(var attributeName in attributes){if(attributes.hasOwnProperty(attributeName)){ss.setAttribute(attributeName,attributes[attributeName])}}}
+ss.rel="stylesheet";ss.href=href;ss.media="only x";function ready(cb){if(doc.body){return cb()}
+setTimeout(function(){ready(cb)})}
+ready(function(){ref.parentNode.insertBefore(ss,(before?ref:ref.nextSibling))});var onwpaculoadcssdefined=function(cb){var resolvedHref=ss.href;var i=sheets.length;while(i--){if(sheets[i].href===resolvedHref){return cb()}}
+setTimeout(function(){onwpaculoadcssdefined(cb)})};function wpacuLoadCB(){if(ss.addEventListener){ss.removeEventListener("load",wpacuLoadCB)}
+ss.media=media||"all"}
+if(ss.addEventListener){ss.addEventListener("load",wpacuLoadCB)}
+ss.onwpaculoadcssdefined=onwpaculoadcssdefined;onwpaculoadcssdefined(wpacuLoadCB);return ss};if(typeof exports!=="undefined"){exports.wpacuLoadCSS=wpacuLoadCSS}else{w.wpacuLoadCSS=wpacuLoadCSS}}(typeof global!=="undefined"?global:this))
+</script>	<meta name="google-site-verification" content="vkvj8VB1LGui_F00u3Ksn5GECopeHOFSi8Nf04CipSs" />
+
+<!-- Google tag (gtag.js) -->
+<script type="text/rocketlazyloadscript" async data-rocket-src="https://www.googletagmanager.com/gtag/js?id=G-EKNH049Q8Z"></script>
+<script type="text/rocketlazyloadscript">
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-EKNH049Q8Z');
+  gtag('config', 'UA-37395469-1');
+</script>
+
+<!-- Google Tag Manager -->
+<noscript><iframe src="//www.googletagmanager.com/ns.html?id=GTM-MQ89DP"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<script type="text/rocketlazyloadscript">(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'//www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-MQ89DP');</script>
+<!-- End Google Tag Manager -->
+
+<!-- Facebook Pixel Code -->
+<script type="text/rocketlazyloadscript">
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+
+fbq('init', '666244486864559');
+fbq('track', "PageView");</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=666244486864559&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Facebook Pixel Code --><style id='global-styles-inline-css'>
+:root{--wp--preset--aspect-ratio--square: 1;--wp--preset--aspect-ratio--4-3: 4/3;--wp--preset--aspect-ratio--3-4: 3/4;--wp--preset--aspect-ratio--3-2: 3/2;--wp--preset--aspect-ratio--2-3: 2/3;--wp--preset--aspect-ratio--16-9: 16/9;--wp--preset--aspect-ratio--9-16: 9/16;--wp--preset--color--black: #000000;--wp--preset--color--cyan-bluish-gray: #abb8c3;--wp--preset--color--white: #ffffff;--wp--preset--color--pale-pink: #f78da7;--wp--preset--color--vivid-red: #cf2e2e;--wp--preset--color--luminous-vivid-orange: #ff6900;--wp--preset--color--luminous-vivid-amber: #fcb900;--wp--preset--color--light-green-cyan: #7bdcb5;--wp--preset--color--vivid-green-cyan: #00d084;--wp--preset--color--pale-cyan-blue: #8ed1fc;--wp--preset--color--vivid-cyan-blue: #0693e3;--wp--preset--color--vivid-purple: #9b51e0;--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple: linear-gradient(135deg,rgb(6,147,227) 0%,rgb(155,81,224) 100%);--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan: linear-gradient(135deg,rgb(122,220,180) 0%,rgb(0,208,130) 100%);--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange: linear-gradient(135deg,rgb(252,185,0) 0%,rgb(255,105,0) 100%);--wp--preset--gradient--luminous-vivid-orange-to-vivid-red: linear-gradient(135deg,rgb(255,105,0) 0%,rgb(207,46,46) 100%);--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray: linear-gradient(135deg,rgb(238,238,238) 0%,rgb(169,184,195) 100%);--wp--preset--gradient--cool-to-warm-spectrum: linear-gradient(135deg,rgb(74,234,220) 0%,rgb(151,120,209) 20%,rgb(207,42,186) 40%,rgb(238,44,130) 60%,rgb(251,105,98) 80%,rgb(254,248,76) 100%);--wp--preset--gradient--blush-light-purple: linear-gradient(135deg,rgb(255,206,236) 0%,rgb(152,150,240) 100%);--wp--preset--gradient--blush-bordeaux: linear-gradient(135deg,rgb(254,205,165) 0%,rgb(254,45,45) 50%,rgb(107,0,62) 100%);--wp--preset--gradient--luminous-dusk: linear-gradient(135deg,rgb(255,203,112) 0%,rgb(199,81,192) 50%,rgb(65,88,208) 100%);--wp--preset--gradient--pale-ocean: linear-gradient(135deg,rgb(255,245,203) 0%,rgb(182,227,212) 50%,rgb(51,167,181) 100%);--wp--preset--gradient--electric-grass: linear-gradient(135deg,rgb(202,248,128) 0%,rgb(113,206,126) 100%);--wp--preset--gradient--midnight: linear-gradient(135deg,rgb(2,3,129) 0%,rgb(40,116,252) 100%);--wp--preset--font-size--small: 13px;--wp--preset--font-size--medium: 20px;--wp--preset--font-size--large: 36px;--wp--preset--font-size--x-large: 42px;--wp--preset--spacing--20: 0.44rem;--wp--preset--spacing--30: 0.67rem;--wp--preset--spacing--40: 1rem;--wp--preset--spacing--50: 1.5rem;--wp--preset--spacing--60: 2.25rem;--wp--preset--spacing--70: 3.38rem;--wp--preset--spacing--80: 5.06rem;--wp--preset--shadow--natural: 6px 6px 9px rgba(0, 0, 0, 0.2);--wp--preset--shadow--deep: 12px 12px 50px rgba(0, 0, 0, 0.4);--wp--preset--shadow--sharp: 6px 6px 0px rgba(0, 0, 0, 0.2);--wp--preset--shadow--outlined: 6px 6px 0px -3px rgb(255, 255, 255), 6px 6px rgb(0, 0, 0);--wp--preset--shadow--crisp: 6px 6px 0px rgb(0, 0, 0);}:where(.is-layout-flex){gap: 0.5em;}:where(.is-layout-grid){gap: 0.5em;}body .is-layout-flex{display: flex;}.is-layout-flex{flex-wrap: wrap;align-items: center;}.is-layout-flex > :is(*, div){margin: 0;}body .is-layout-grid{display: grid;}.is-layout-grid > :is(*, div){margin: 0;}:where(.wp-block-columns.is-layout-flex){gap: 2em;}:where(.wp-block-columns.is-layout-grid){gap: 2em;}:where(.wp-block-post-template.is-layout-flex){gap: 1.25em;}:where(.wp-block-post-template.is-layout-grid){gap: 1.25em;}.has-black-color{color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-color{color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-color{color: var(--wp--preset--color--white) !important;}.has-pale-pink-color{color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-color{color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-color{color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-color{color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-color{color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-color{color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-color{color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-color{color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-color{color: var(--wp--preset--color--vivid-purple) !important;}.has-black-background-color{background-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-background-color{background-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-background-color{background-color: var(--wp--preset--color--white) !important;}.has-pale-pink-background-color{background-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-background-color{background-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-background-color{background-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-background-color{background-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-background-color{background-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-background-color{background-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-background-color{background-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-background-color{background-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-background-color{background-color: var(--wp--preset--color--vivid-purple) !important;}.has-black-border-color{border-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-border-color{border-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-border-color{border-color: var(--wp--preset--color--white) !important;}.has-pale-pink-border-color{border-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-border-color{border-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-border-color{border-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-border-color{border-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-border-color{border-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-border-color{border-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-border-color{border-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-border-color{border-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-border-color{border-color: var(--wp--preset--color--vivid-purple) !important;}.has-vivid-cyan-blue-to-vivid-purple-gradient-background{background: var(--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple) !important;}.has-light-green-cyan-to-vivid-green-cyan-gradient-background{background: var(--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan) !important;}.has-luminous-vivid-amber-to-luminous-vivid-orange-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange) !important;}.has-luminous-vivid-orange-to-vivid-red-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-orange-to-vivid-red) !important;}.has-very-light-gray-to-cyan-bluish-gray-gradient-background{background: var(--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray) !important;}.has-cool-to-warm-spectrum-gradient-background{background: var(--wp--preset--gradient--cool-to-warm-spectrum) !important;}.has-blush-light-purple-gradient-background{background: var(--wp--preset--gradient--blush-light-purple) !important;}.has-blush-bordeaux-gradient-background{background: var(--wp--preset--gradient--blush-bordeaux) !important;}.has-luminous-dusk-gradient-background{background: var(--wp--preset--gradient--luminous-dusk) !important;}.has-pale-ocean-gradient-background{background: var(--wp--preset--gradient--pale-ocean) !important;}.has-electric-grass-gradient-background{background: var(--wp--preset--gradient--electric-grass) !important;}.has-midnight-gradient-background{background: var(--wp--preset--gradient--midnight) !important;}.has-small-font-size{font-size: var(--wp--preset--font-size--small) !important;}.has-medium-font-size{font-size: var(--wp--preset--font-size--medium) !important;}.has-large-font-size{font-size: var(--wp--preset--font-size--large) !important;}.has-x-large-font-size{font-size: var(--wp--preset--font-size--x-large) !important;}
+/*# sourceURL=global-styles-inline-css */
+</style>
+
+<meta name="generator" content="WP Rocket 3.23.3.3" data-wpr-features="wpr_delay_js wpr_preconnect_external_domains wpr_oci wpr_image_dimensions wpr_cdn wpr_desktop" /></head>
+
+<body data-rsssl=1 class="wp-singular post-template-default single single-post postid-33324 single-format-standard wp-theme-cic sp-easy-accordion-enabled">
+		<div class="site-wrapper">
+		<div class="site-container">
+			<a href="#main" class="skip-link" style="display: none;">Skip to main content</a>
+							<header class="site-header">
+					<div class="header-top">
+						<div class="inner">
+							<div class="header-top__container">
+								<div class="header-top__menu">
+																			<ul>
+																							<li><a href="/about.html" target="_self" ><span>About us</span></a></li>
+																					</ul>
+																	</div>
+								<div class="header-top__menu">
+																			<ul>
+											
+												<li><a href="/partners" target="_self" ><span>Meet our partners</span></a></li>
+																					</ul>
+																	</div>
+								<div class="header-top__menu">
+																			<ul>
+																							<li><a href="https://www.media.canadavisa.com/" target="_blank" aria-label="Opens in new tab" ><span>Advertise with us</span> <i><svg width="10" height="10" viewBox="0 0 10 10"><use xlink:href="#icon-external"></use></svg></i></a></li>
+																					</ul>
+																	</div>
+							</div>
+						</div>
+					</div>
+					<div class="header-main">
+						<div class="inner">
+							<div class="header-main__container">
+								<div class="header-main__left">
+									<div class="header-search">
+										<i><svg width="18" height="18" viewBox="0 0 18 18">
+												<use xlink:href="#icon-search"></use>
+											</svg></i>
+										<a class="header-search__handler" role="button" style="text-decoration: none;">Search</a>
+										<div class="header-search__form">
+											<form action="/"><input type="search" placeholder="Search" name="s" value=""></form>
+											<div class="header-search__close"><svg width="10" height="9" viewBox="0 0 10 9">
+													<use xlink:href="#icon-close"></use>
+												</svg></div>
+										</div>
+									</div>
+									<div class="touch-menu">
+										<div class="touch-menu__open"><i><svg width="20" height="16" viewBox="0 0 20 16">
+													<use xlink:href="#icon-burger"></use>
+												</svg></i>Menu</div>
+										<div class="touch-menu__close"><i><svg width="14" height="14" viewBox="0 0 10 9">
+													<use xlink:href="#icon-close"></use>
+												</svg></i>Close</div>
+									</div>
+								</div>
+								<div class="header-main__center">
+									<div class="header-logo"><a href="https://www.cicnews.com/"><img fetchpriority="high" width="143" height="31" src="https://www.cicnews.com/wp-content/uploads/2023/07/logo-3.svg" alt=""></a></div>
+								</div>
+								<div class="header-main__right">
+																		<div class="header-btn"><a href="/cicnews-subscribe.html" target="_self" class="button button_blue">Subscribe</a></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</header>
+				<nav class="header-nav">
+					<div class="header-nav__wrapper">
+						<div class="inner">
+							<ul id="menu-main-menu" class="menu"><li id="menu-item-35167" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-home menu-item-35167"><a href="https://www.cicnews.com/">Home</a></li>
+<li id="menu-item-35571" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-35571"><a href="https://www.cicnews.com/category/citizenship">Citizenship</a></li>
+<li id="menu-item-35168" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-35168"><a href="https://www.cicnews.com/category/express-entry">Express Entry</a></li>
+<li id="menu-item-38479" class="menu-item menu-item-type-taxonomy menu-item-object-category current-post-ancestor current-menu-parent current-post-parent menu-item-38479"><a href="https://www.cicnews.com/category/canada">Canada</a></li>
+<li id="menu-item-35942" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-35942"><a href="https://www.cicnews.com/category/provinces">Provinces</a></li>
+<li id="menu-item-35170" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-35170"><a href="https://www.cicnews.com/category/family">Family Sponsorship</a></li>
+<li id="menu-item-35173" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-35173"><a href="https://www.cicnews.com/category/study">Study</a></li>
+<li id="menu-item-35172" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-35172"><a href="https://www.cicnews.com/category/work">Work</a></li>
+<li id="menu-item-35174" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-35174"><a href="https://www.cicnews.com/category/visit">Visit</a></li>
+<li id="menu-item-35175" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-35175"><a href="https://www.cicnews.com/category/settle">Settling in Canada</a></li>
+</ul>						</div>
+					</div>
+				</nav>
+			
+<div class="page-content">
+	<div class="inner">
+		<div class="page-content__container">
+			<div class="page-content__main">
+				<div class="post-tophead">
+					<h1 class="page-title">IRCC and Canada’s provinces continue working together to welcome Ukrainians</h1>
+				</div>
+				<div class="post-head">
+										<div class="post-head__author">
+						<div class="post-head__authorimage"><i><img data-del="avatar" alt="author avatar" src='https://www.cicnews.com/wp-content/uploads/2023/07/photo2-150x150.png' class='avatar pp-user-avatar avatar-130 photo ' height='130' width='130'/></i></div>						<div class="post-head__authorcontent">
+							<div class="post-head__authorname"><a href="https://www.cicnews.com/author/edana">Edana Robitaille</a></div>
+							<div class="post-revision">
+								<div class="post-revision__last">
+									<span>Published:</span> February 24, 2023								</div>
+							</div>
+						</div>
+					</div>
+					<div class="post-head__share">
+												<input type="hidden" name="post_id" value="33324">
+<div class="share">
+	<div class="share__container">
+		<div class="shareon">
+			<a class="share__icon facebook"><svg width="18" height="18" viewBox="0 0 16 16"><use xlink:href="#icon-facebook"></use></svg></a>
+			<!-- FB App ID is required for the Messenger button to function -->
+			<a class="share__icon messenger" data-fb-app-id="0123456789012345"><svg width="18" height="18" viewBox="0 0 18 18"><use xlink:href="#icon-messenger"></use></svg></a>
+			<a class="share__icon email" href="mailto:?subject=IRCC and Canada’s provinces continue working together to welcome Ukrainians&amp;body=Check out this site https://www.cicnews.com/2023/02/ircc-and-canadas-provinces-continue-working-together-to-welcome-ukrainians-0233324.html."><svg width="18" height="18" viewBox="0 0 18 18"><use xlink:href="#icon-email"></use></svg></a>
+			<a class="share__icon copy-url"><svg width="18" height="18" viewBox="0 0 18 18"><use xlink:href="#icon-copy"></use></svg></a>
+			<div class="share_handler">
+				<div class="share__icon share__icon_popup"><svg width="12" height="13" viewBox="0 0 12 13"><use xlink:href="#icon-dots-5"></use></svg></div>
+				<div class="share__overlay">
+					<div class="share__close"><svg width="15" height="15" viewBox="0 0 10 9"><use xlink:href="#icon-close"></use></svg></div>
+					<div class="share__popup">
+						<div class="share__title">Share this article</div>
+						<div class="shareon">
+							<a class="share__item copy-url">
+								<div class="share__icon"><svg width="18" height="18" viewBox="0 0 18 18"><use xlink:href="#icon-copy"></use></svg></div>Copy link
+							</a>
+							<a class="share__item facebook">
+								<div class="share__icon"><svg width="18" height="18" viewBox="0 0 16 16"><use xlink:href="#icon-facebook"></use></svg></div>Facebook
+							</a>
+							<a class="share__item email" href="mailto:?subject=IRCC and Canada’s provinces continue working together to welcome Ukrainians&amp;body=Check out this site https://www.cicnews.com/2023/02/ircc-and-canadas-provinces-continue-working-together-to-welcome-ukrainians-0233324.html.">
+								<div class="share__icon"><svg width="18" height="18" viewBox="0 0 18 18"><use xlink:href="#icon-email"></use></svg></div>E-mail
+							</a>
+							<a class="share__item messenger" data-fb-app-id="0123456789012345">
+								<div class="share__icon"><svg width="18" height="18" viewBox="0 0 18 18"><use xlink:href="#icon-messenger"></use></svg></div>Messenger
+							</a>
+							<a class="share__item reddit">
+								<div class="share__icon"><svg width="16" height="16" viewBox="0 0 24 24"><use xlink:href="#icon-reddit"></use></svg></div>Reddit
+							</a>
+							<a class="share__item twitter">
+								<div class="share__icon"><svg width="18" height="18" viewBox="0 0 16 16"><use xlink:href="#icon-twitter"></use></svg></div>Twitter
+							</a>
+							<a class="share__item linkedin">
+								<div class="share__icon"><svg width="18" height="18" viewBox="0 0 16 16"><use xlink:href="#icon-linkedin"></use></svg></div>Linkedin
+							</a>
+							<a class="share__item whatsapp">
+								<div class="share__icon"><svg width="18" height="19" viewBox="0 0 18 19"><use xlink:href="#icon-whatsapp"></use></svg></div>WhatsApp
+							</a>
+							<a class="share__item telegram">
+								<div class="share__icon"><svg width="18" height="19" viewBox="0 0 18 19"><use xlink:href="#icon-telegram"></use></svg></div>Telegram
+							</a>
+						</div>
+					</div>
+				</div>
+			</div>
+			<!--div class="share__total"><span><!--?php if(get_field('post_shared')){the_field('post_shared');}else{echo '0';} ?></span>shares</div-->
+		</div>
+	</div>
+</div>					</div>
+				</div>
+
+				<main class="post-main" id="main">
+					<div class="post-body">
+												<p>Today marks one year since the beginning Russia’s invasion of Ukraine.</p>
+<p><!--more--></p>
+<p>UNHCR reports more than 7 million people in Ukraine have been displaced since February 2022. Many of them have fled to neighbouring countries such as Poland and Moldova, but others decide to go further abroad, including Canada.</p>
+<h3>What is Canada doing for displaced Ukrainians?</h3>
+<p>Canada has a long history of assisting refugees and other displaced people in times of crisis. For example, Canada resettled 25,000 Syrian refugees between November 2015 and February 2016 and has committed to assisting 40,000 Afghan refugees following the Taliban takeover. So far, the latest data from <a href="https://www.canadavisa.com/ircc.html">Immigration Refugees and Citizenship Canada</a> (IRCC) says 28,285 Afghans have arrived in Canada under all immigration streams.</p>
+<p class="bottom-btn" style="text-align: center;"><a style="color: #ffffff; background: #e52237;" href="https://www.canadavisa.com/assess/canada-immigration-assessment-form.htm?utm_source=CICNews&amp;utm_medium=Article&amp;utm_campaign=CIC-20230224ukraine" target="_blank" rel="noopener noreferrer">Discover if You Are Eligible for Canadian Immigration</a></p>
+<p>Canada has taken a slightly different approach with displaced Ukrainians. Instead of bringing them over as refugees, they are more often arriving in Canada under the <a href="https://www.canadavisa.com/canadas-special-immigration-measures-for-ukraine.html">Canada-Ukraine Authorization for Emergency Travel</a> (CUAET).</p>
+<p>Under CUAET Ukrainians and their immediate family members of any nationality may stay in Canada as <a href="https://www.canadavisa.com/labour-market-impact-assessment-exemptions-lmia.html">temporary residents</a> for up to three years. There are no fees to apply for a visitor visa, and they may apply for an open work permit simultaneously, at no cost. However, all travel to Canada is self-funded which creates significant barriers for many Ukrainians. So far, Canada has approved 559,868 applications out of the 862,386 received and just over 167,000 Ukrainians have arrived in Canada.</p>
+<p>Ukrainan Canadian Congress CEO Ihor Michalchyshyn spoke  to <em>CIC News</em> about IRCC's response to the Ukraine crisis.</p>
+<p><b>"</b>Its been a very adhoc but yet successful welcome thus far for most people," he says. He credits the success to the combination of the federal government income support, provincial governments with the housing, training and language supports and also community focus on integration and welcoming people.</p>
+<p>Michalchyshyn says there still some challenges and ways in which IRCC could better assist Ukrainian newcomers.</p>
+<p><span data-contrast="auto">"One of the challenges of course is data. It’s self funded travel and we don’t really know where people are going and when. It’s really relies on settlement agencies and volunteers sitting in airports trying to welcome people and find people. We're getting some data now about where people are registering for healthcare or income disbursement from the one-time income benefit. </span><span data-contrast="auto">We need more data about where people are arriving and what their needs are. "</span><span data-ccp-props="{&quot;201341983&quot;:0,&quot;335559739&quot;:160,&quot;335559740&quot;:259}"> </span></p><div  class="cicnewsads-b145b13dc1ed14e74693d5a42a3de942 cicnewsads-in-article-1" id="cicnewsads-b145b13dc1ed14e74693d5a42a3de942"></div>
+<p>He also says the temporary nature of the CUAET poses challenges for newcomers when it comes to accessing some government services.</p>
+<p>The program is set to stop accepting applications on March 31 this year although several settlement services, as well as the UCC, petitioned the government to extend the date because there is no way to know when the conflict will end.</p>
+<h3>Other support measures</h3>
+<p>IRCC has priority processing for all CUAET applications, with a service standard of 14 days.</p>
+<p>The federal government also offers a one-time non-taxable benefit of $3,000 each per adult and an additional $1,500 for each child under 17 for CUAET participants. This benefit program is set to expire on June 4, 2023.  Ukrainian newcomers do not receive any additional settlement funding beyond the benefit.</p>
+<p>Support measures exist on a provincial level too. For example, <a href="https://www.canadavisa.com/manitoba-provincial-nominee-program.html">Manitoba regularly invites candidates from Ukraine</a> to apply for provincial nomination, which is highly beneficial for Ukrainians who wish to become permanent residents through an <a href="https://www.canadavisa.com/express-entry.html">Express Entry</a> program.</p>
+<p class="bottom-btn" style="text-align: center;"><a style="color: #ffffff; background: #e52237;" href="https://www.canadavisa.com/assess/canada-immigration-assessment-form.htm?utm_source=CICNews&amp;utm_medium=Article&amp;utm_campaign=CIC-https://www.canadavisa.com/assess/canada-immigration-assessment-form.htm?utm_source=CICNews&amp;utm_medium=Article&amp;utm_campaign=CIC-20230224ukraine" target="_blank" rel="noopener noreferrer">Discover if You Are Eligible for Canadian Immigration</a></p>
+<p><a href="https://www.canadavisa.com/british-columbia-provincial-nominee-program.html">British Columbia</a> has cancelled the study health fee for students who are fleeing the war in Ukraine. The fee is $75 monthly for all individuals five and older enrolled in MSP (British Columbia’s healthcare program) with a study permit issued by IRCC. The province has also created a website to direct and assist newcomers from Ukraine when they first arrive.</p><div  class="cicnewsads-79b0acb2535880b7b95bfe0f1a7f46c9 cicnewsads-in-article-2" id="cicnewsads-79b0acb2535880b7b95bfe0f1a7f46c9"></div>
+<p>Last August, <a href="https://www.canadavisa.com/new-brunswick-provincial-nominee-program.html">New Brunswick</a> introduced significantly reduced costs for recently arrived Ukrainian nationals who already have a valid Ukrainian driver's license. They can obtain a provincial passenger vehicle license for $90 and do not need to complete a test if they have more than two years of driving experience. They must still provide identification documents and submit to a vision test.</p>
+<p><a href="https://www.canadavisa.com/ontario-provincial-nominee-program.html">Ontario</a> has a suite of support measures for Ukrainian newcomers such as:</p>
+<ul>
+<li>Access to Ontario Health Insurance Plan (OHIP) coverage which includes health care support and services they may need, including mental health services.</li>
+<li>Access to drug benefits for Ukrainians through OHIP eligibility or receiving emergency income assistance.</li>
+<li>Access to emergency housing through settlement service agencies and Ukrainian community organizations, including host homes and other temporary settings that Ukrainians may need until long-term arrangements are made.</li>
+<li>Ensuring Ukrainian elementary and secondary school students can attend publicly funded schools for free.</li>
+</ul>
+<p>Several Canadian charitable organizations are also working to bring Ukrainians to Canada and help them settle. One of them, 4Ukraine.ca, reports that they have flown over 500 people to Canada, helped create over 1,000 resumes and have raised over $275,000 in aid.</p>
+<h3>What can Canadians do to support Ukrainian newcomers</h3>
+<p>Canada’s government says all Canadians can donate and volunteer to assist Ukrainians both in Canada and abroad. One way is to offer housing to newcomers. There are organizations in each province that will match volunteers with the housing needs of Ukrainian newcomers.</p>
+<p>Employers using jobbank.ca can also indicate that they would like to hire a Ukrainian newcomer by following a few steps.</p>
+<ul>
+<li>Register as an employer on Job Bank</li>
+<li>Create a new job posting and save it as a draft.</li>
+<li>Contact Job Bank and include the reference number of the job posting to let them know that you want to recruit Ukrainian nationals.</li>
+</ul>
+<p>Michalchyshyn says <span data-contrast="auto">some companies have been doing tremendous work. "They have really used the opportunity to fill temporary labour shortages with Ukrainians, and to work with them to build their language skills."</span></p>
+<p>Language remains one of  the biggest obstacle many newcomers face when they arrive in Canada under CUAET alongside professional accreditation. "<span class="NormalTextRun SCXW101750708 BCX0">Generally </span><span class="NormalTextRun SpellingErrorV2Themed SCXW101750708 BCX0">I've</span><span class="NormalTextRun SCXW101750708 BCX0"> heard good things except for in the medical </span><span class="NormalTextRun SCXW101750708 BCX0">field." says Michalchyshyn. "Those</span><span class="NormalTextRun SCXW101750708 BCX0"> are a</span><span class="NormalTextRun SCXW101750708 BCX0"> lot of the people who have broken down </span><span class="NormalTextRun SCXW101750708 BCX0">crying because</span><span class="NormalTextRun SCXW101750708 BCX0"> they are </span><span class="NormalTextRun SpellingErrorV2Themed SCXW101750708 BCX0">doctors </span><span class="NormalTextRun SCXW101750708 BCX0">or nurses in U</span><span class="NormalTextRun SpellingErrorV2Themed SCXW101750708 BCX0">kraine</span><span class="NormalTextRun SCXW101750708 BCX0"> and here </span><span class="NormalTextRun ContextualSpellingAndGrammarErrorV2Themed SCXW101750708 BCX0">its</span><span class="NormalTextRun SCXW101750708 BCX0"> just impossible for them to understand how to begin the process of recertifying."</span></p><div  class="cicnewsads-2180a3e9ae3b6fa197589c6cd68023ee cicnewsads-in-article-3" id="cicnewsads-2180a3e9ae3b6fa197589c6cd68023ee"></div>
+<p>Still, he says newcomers remain hopeful as they arrive in Canada</p>
+<p><span class="TextRun SCXW157986118 BCX0" lang="EN-US" xml:lang="EN-US" data-contrast="auto"><span class="NormalTextRun SCXW157986118 BCX0"> "</span><span class="NormalTextRun AdvancedProofingIssueV2Themed SCXW157986118 BCX0">It’s</span><span class="NormalTextRun SCXW157986118 BCX0"> been </span><span class="NormalTextRun ContextualSpellingAndGrammarErrorV2Themed SCXW157986118 BCX0">a</span> yea<span class="NormalTextRun SpellingErrorV2Themed SCXW157986118 BCX0">r</span><span class="NormalTextRun SCXW157986118 BCX0"> of resilience for </span><span class="NormalTextRun SpellingErrorV2Themed SCXW157986118 BCX0">Ukrainian</span> people. As <span class="NormalTextRun SpellingErrorV2Themed SCXW157986118 BCX0">Canadians</span><span class="NormalTextRun SCXW157986118 BCX0">, we are </span><span class="NormalTextRun SpellingErrorV2Themed SCXW157986118 BCX0">committed</span><span class="NormalTextRun SCXW157986118 BCX0"> to </span><span class="NormalTextRun SCXW157986118 BCX0">supporting U</span><span class="NormalTextRun SpellingErrorV2Themed SCXW157986118 BCX0">kraine</span><span class="NormalTextRun SCXW157986118 BCX0"> as a democracy against tyranny. Our main message is that we are just thankful at this point that </span><span class="NormalTextRun AdvancedProofingIssueV2Themed SCXW157986118 BCX0">we’ve</span><span class="NormalTextRun SCXW157986118 BCX0"> had such a welcome for the people of </span><span class="NormalTextRun AdvancedProofingIssueV2Themed SCXW157986118 BCX0">the </span><span class="NormalTextRun SpellingErrorV2Themed AdvancedProofingIssueV2Themed SCXW157986118 BCX0">Ukraine</span><span class="NormalTextRun SCXW157986118 BCX0">."</span></span><span class="EOP SCXW157986118 BCX0" data-ccp-props="{&quot;201341983&quot;:0,&quot;335559739&quot;:160,&quot;335559740&quot;:259}"> </span></p>
+<p class="bottom-btn" style="text-align: center;"><a style="color: #ffffff; background: #e52237;" href="https://www.canadavisa.com/assess/canada-immigration-assessment-form.htm?utm_source=CICNews&amp;utm_medium=Article&amp;utm_campaign=CIC-https://www.canadavisa.com/assess/canada-immigration-assessment-form.htm?utm_source=CICNews&amp;utm_medium=Article&amp;utm_campaign=CIC-20230224ukraine" target="_blank" rel="noopener noreferrer">Discover if You Are Eligible for Canadian Immigration</a></p>
+<p><em>© Want to advertise on CIC News? <a href="https://www.media.canadavisa.com/contact?utm_source=cicnews&amp;utm_medium=footer&amp;utm_campaign=nativearticlefooter">Click here</a> to contact us.</em></p>
+					</div>
+				</main>
+				<div class="post-share">
+					<div class="post-share__title">Share this article</div>
+					<div class="post-share__block">
+						<input type="hidden" name="post_id" value="33324">
+<div class="share">
+	<div class="share__container">
+		<div class="shareon">
+			<a class="share__icon facebook"><svg width="18" height="18" viewBox="0 0 16 16"><use xlink:href="#icon-facebook"></use></svg></a>
+			<!-- FB App ID is required for the Messenger button to function -->
+			<a class="share__icon messenger" data-fb-app-id="0123456789012345"><svg width="18" height="18" viewBox="0 0 18 18"><use xlink:href="#icon-messenger"></use></svg></a>
+			<a class="share__icon email" href="mailto:?subject=IRCC and Canada’s provinces continue working together to welcome Ukrainians&amp;body=Check out this site https://www.cicnews.com/2023/02/ircc-and-canadas-provinces-continue-working-together-to-welcome-ukrainians-0233324.html."><svg width="18" height="18" viewBox="0 0 18 18"><use xlink:href="#icon-email"></use></svg></a>
+			<a class="share__icon copy-url"><svg width="18" height="18" viewBox="0 0 18 18"><use xlink:href="#icon-copy"></use></svg></a>
+			<div class="share_handler">
+				<div class="share__icon share__icon_popup"><svg width="12" height="13" viewBox="0 0 12 13"><use xlink:href="#icon-dots-5"></use></svg></div>
+				<div class="share__overlay">
+					<div class="share__close"><svg width="15" height="15" viewBox="0 0 10 9"><use xlink:href="#icon-close"></use></svg></div>
+					<div class="share__popup">
+						<div class="share__title">Share this article</div>
+						<div class="shareon">
+							<a class="share__item copy-url">
+								<div class="share__icon"><svg width="18" height="18" viewBox="0 0 18 18"><use xlink:href="#icon-copy"></use></svg></div>Copy link
+							</a>
+							<a class="share__item facebook">
+								<div class="share__icon"><svg width="18" height="18" viewBox="0 0 16 16"><use xlink:href="#icon-facebook"></use></svg></div>Facebook
+							</a>
+							<a class="share__item email" href="mailto:?subject=IRCC and Canada’s provinces continue working together to welcome Ukrainians&amp;body=Check out this site https://www.cicnews.com/2023/02/ircc-and-canadas-provinces-continue-working-together-to-welcome-ukrainians-0233324.html.">
+								<div class="share__icon"><svg width="18" height="18" viewBox="0 0 18 18"><use xlink:href="#icon-email"></use></svg></div>E-mail
+							</a>
+							<a class="share__item messenger" data-fb-app-id="0123456789012345">
+								<div class="share__icon"><svg width="18" height="18" viewBox="0 0 18 18"><use xlink:href="#icon-messenger"></use></svg></div>Messenger
+							</a>
+							<a class="share__item reddit">
+								<div class="share__icon"><svg width="16" height="16" viewBox="0 0 24 24"><use xlink:href="#icon-reddit"></use></svg></div>Reddit
+							</a>
+							<a class="share__item twitter">
+								<div class="share__icon"><svg width="18" height="18" viewBox="0 0 16 16"><use xlink:href="#icon-twitter"></use></svg></div>Twitter
+							</a>
+							<a class="share__item linkedin">
+								<div class="share__icon"><svg width="18" height="18" viewBox="0 0 16 16"><use xlink:href="#icon-linkedin"></use></svg></div>Linkedin
+							</a>
+							<a class="share__item whatsapp">
+								<div class="share__icon"><svg width="18" height="19" viewBox="0 0 18 19"><use xlink:href="#icon-whatsapp"></use></svg></div>WhatsApp
+							</a>
+							<a class="share__item telegram">
+								<div class="share__icon"><svg width="18" height="19" viewBox="0 0 18 19"><use xlink:href="#icon-telegram"></use></svg></div>Telegram
+							</a>
+						</div>
+					</div>
+				</div>
+			</div>
+			<!--div class="share__total"><span><!--?php if(get_field('post_shared')){the_field('post_shared');}else{echo '0';} ?></span>shares</div-->
+		</div>
+	</div>
+</div>					</div>
+				</div>
+									<div class="post-tags">
+						<div class="post-tags__title">Related topics</div>
+						<ul class="post-tags__list">
+							<li><a href="https://www.cicnews.com/tag/canada-immigration-news">Canada immigration news</a></li><li><a href="https://www.cicnews.com/tag/canadian-immigration-news">Canadian immigration news</a></li><li><a href="https://www.cicnews.com/tag/credit-history">Credit History</a></li><li><a href="https://www.cicnews.com/tag/ircc">IRCC</a></li><li><a href="https://www.cicnews.com/tag/ukraine">ukraine</a></li><li><a href="https://www.cicnews.com/tag/visitor-visa">visitor visa</a></li><li><a href="https://www.cicnews.com/tag/work-permits">work permits</a></li>						</ul>
+					</div>
+								<div class="post-useful">
+	<div class="post-useful__head"><i><svg width="14" height="14" viewBox="0 0 14 14">
+				<use xlink:href="#icon-dots-3"></use>
+			</svg></i>Share your voice</div>
+	<div class="post-useful__blocks">
+		<div class="post-useful__block post-useful__block_0 show">
+			<div class="post-useful__container">
+				<div class="post-useful__left">
+					<div class="post-useful__title">Did you find this article helpful?</div>
+				</div>
+				<div class="post-useful__right">
+					<div class="post-useful__btns">
+						<button data-step="1">Yes</button>
+						<button data-step="2-1">No</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="post-useful__block post-useful__block_1">
+			<div class="post-useful__container">
+				<div class="post-useful__left">
+					<div class="post-useful__title">Thank you for your feedback.</div>
+				</div>
+				<div class="post-useful__right">
+					<div class="post-useful__share-title">Share this article</div>
+					<div class="post-useful__share"><input type="hidden" name="post_id" value="33324">
+<div class="share">
+	<div class="share__container">
+		<div class="shareon">
+			<a class="share__icon facebook"><svg width="18" height="18" viewBox="0 0 16 16"><use xlink:href="#icon-facebook"></use></svg></a>
+			<!-- FB App ID is required for the Messenger button to function -->
+			<a class="share__icon messenger" data-fb-app-id="0123456789012345"><svg width="18" height="18" viewBox="0 0 18 18"><use xlink:href="#icon-messenger"></use></svg></a>
+			<a class="share__icon email" href="mailto:?subject=IRCC and Canada’s provinces continue working together to welcome Ukrainians&amp;body=Check out this site https://www.cicnews.com/2023/02/ircc-and-canadas-provinces-continue-working-together-to-welcome-ukrainians-0233324.html."><svg width="18" height="18" viewBox="0 0 18 18"><use xlink:href="#icon-email"></use></svg></a>
+			<a class="share__icon copy-url"><svg width="18" height="18" viewBox="0 0 18 18"><use xlink:href="#icon-copy"></use></svg></a>
+			<div class="share_handler">
+				<div class="share__icon share__icon_popup"><svg width="12" height="13" viewBox="0 0 12 13"><use xlink:href="#icon-dots-5"></use></svg></div>
+				<div class="share__overlay">
+					<div class="share__close"><svg width="15" height="15" viewBox="0 0 10 9"><use xlink:href="#icon-close"></use></svg></div>
+					<div class="share__popup">
+						<div class="share__title">Share this article</div>
+						<div class="shareon">
+							<a class="share__item copy-url">
+								<div class="share__icon"><svg width="18" height="18" viewBox="0 0 18 18"><use xlink:href="#icon-copy"></use></svg></div>Copy link
+							</a>
+							<a class="share__item facebook">
+								<div class="share__icon"><svg width="18" height="18" viewBox="0 0 16 16"><use xlink:href="#icon-facebook"></use></svg></div>Facebook
+							</a>
+							<a class="share__item email" href="mailto:?subject=IRCC and Canada’s provinces continue working together to welcome Ukrainians&amp;body=Check out this site https://www.cicnews.com/2023/02/ircc-and-canadas-provinces-continue-working-together-to-welcome-ukrainians-0233324.html.">
+								<div class="share__icon"><svg width="18" height="18" viewBox="0 0 18 18"><use xlink:href="#icon-email"></use></svg></div>E-mail
+							</a>
+							<a class="share__item messenger" data-fb-app-id="0123456789012345">
+								<div class="share__icon"><svg width="18" height="18" viewBox="0 0 18 18"><use xlink:href="#icon-messenger"></use></svg></div>Messenger
+							</a>
+							<a class="share__item reddit">
+								<div class="share__icon"><svg width="16" height="16" viewBox="0 0 24 24"><use xlink:href="#icon-reddit"></use></svg></div>Reddit
+							</a>
+							<a class="share__item twitter">
+								<div class="share__icon"><svg width="18" height="18" viewBox="0 0 16 16"><use xlink:href="#icon-twitter"></use></svg></div>Twitter
+							</a>
+							<a class="share__item linkedin">
+								<div class="share__icon"><svg width="18" height="18" viewBox="0 0 16 16"><use xlink:href="#icon-linkedin"></use></svg></div>Linkedin
+							</a>
+							<a class="share__item whatsapp">
+								<div class="share__icon"><svg width="18" height="19" viewBox="0 0 18 19"><use xlink:href="#icon-whatsapp"></use></svg></div>WhatsApp
+							</a>
+							<a class="share__item telegram">
+								<div class="share__icon"><svg width="18" height="19" viewBox="0 0 18 19"><use xlink:href="#icon-telegram"></use></svg></div>Telegram
+							</a>
+						</div>
+					</div>
+				</div>
+			</div>
+			<!--div class="share__total"><span><!--?php if(get_field('post_shared')){the_field('post_shared');}else{echo '0';} ?></span>shares</div-->
+		</div>
+	</div>
+</div></div>
+										<div class="post-useful__btn"><a href="/cicnews-subscribe.html" target="_self">Subscribe to our newsletter</a></div>
+				</div>
+			</div>
+		</div>
+		<div class="post-useful__block post-useful__block_2-1">
+			<div class="post-useful__container">
+				<div class="post-useful__left">
+					<div class="post-useful__title">Did you find this article helpful?</div>
+				</div>
+				<div class="post-useful__right">
+					<div class="post-useful__checkboxes">
+													<div class="post-useful__checkboxes">
+																	<div class="form-checkbox"><label><input type="checkbox" name="useful" value="textarea"><span>Please provide your feedback</span></label></div>
+																<div class="post-useful__textarea"><textarea placeholder="Report a problem"></textarea></div>
+							</div>
+												<div class="post-useful__btn"><button data-step="2-2">Submit</button></div>
+						<div class="post-useful__error">Please provide a response</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="post-useful__block post-useful__block_2-2">
+			<div class="post-useful__container">
+				<div class="post-useful__left">
+					<div class="post-useful__title">Thank you for your helpful feedback</div>
+				</div>
+				<div class="post-useful__right">
+					<div class="post-useful__subtitle">Please contact us if you would like to share additional feedback, have a question, or would like Canadian immigration assistance.</div>
+											<ul class="post-useful__list">
+															<li>Do you need Canadian immigration assistance? Contact the Contact Cohen Immigration Law firm by <a href="https://www.canadavisa.com/contact-us.html?utm_source=cicnews&utm_medium=article&utm_campaign=feedback" target="_blank">completing our form<i><svg width="13" height="13" viewBox="0 0 10 10"><use xlink:href="#icon-external"></use></svg></i></a></li>
+															<li>Send us your feedback or your non-legal assistance questions by emailing us at <a href="mailto:media@canadavisa.com">media@canadavisa.com</a></li>
+													</ul>
+									</div>
+			</div>
+		</div>
+	</div>
+	<form id="useful_request">
+		<input type="hidden" name="post_title" value="IRCC and Canada’s provinces continue working together to welcome Ukrainians">
+		<input type="hidden" name="post_type" value="post">
+		<input type="hidden" name="post_form_1" value="">
+		<input type="hidden" name="post_form_2" value="">
+	</form>
+</div>				<div class="post-related">
+							<div class="section-title">Related articles</div>
+							<div class="post-related__posts"><div class="post-item">
+	<div class="post-item__content">
+		<div class="post-item__title"><a href="https://www.cicnews.com/2026/09/canadas-proof-of-citizenship-finalizations-slowed-in-july-0980332.html">Canada&#8217;s proof of citizenship finalizations slowed in July</a></div>
+		<ul class="post-info">
+						<li><a href="https://www.cicnews.com/category/citizenship" class="post-info__tag category-item-2508">Citizenship</a></li>
+					</ul>
+	</div>
+	<div class="post-item__image"><a href="https://www.cicnews.com/2026/09/canadas-proof-of-citizenship-finalizations-slowed-in-july-0980332.html"><img width="216" height="164" src="https://www.cicnews.com/wp-content/uploads/2026/09/canadian-citizenship-application-backlog-1-1-216x164.jpg" class="attachment-post-thumb size-post-thumb wp-post-image" alt="Proof of Canadian citizenship includes applications covered by the expanded citizenship by descent rules" decoding="async" /></a></div>
+</div>
+<div class="post-item">
+	<div class="post-item__content">
+		<div class="post-item__title"><a href="https://www.cicnews.com/2026/09/wait-times-rise-for-employers-hiring-through-temporary-foreign-worker-program-0980177.html">Wait times rise for employers hiring through Temporary Foreign Worker Program</a></div>
+		<ul class="post-info">
+						<li><a href="https://www.cicnews.com/category/work" class="post-info__tag category-item-1126">Work</a></li>
+					</ul>
+	</div>
+	<div class="post-item__image"><a href="https://www.cicnews.com/2026/09/wait-times-rise-for-employers-hiring-through-temporary-foreign-worker-program-0980177.html"><img width="216" height="164" src="https://www.cicnews.com/wp-content/uploads/2026/09/LMIA-WAIT-TIMES-216x164.jpg" class="attachment-post-thumb size-post-thumb wp-post-image" alt="A businessman checking his watch." decoding="async" /></a></div>
+</div>
+<div class="post-item">
+	<div class="post-item__content">
+		<div class="post-item__title"><a href="https://www.cicnews.com/2026/09/first-september-update-shows-lower-processing-times-for-temporary-residence-applicants-0979921.html">First September update shows lower processing times for temporary residence applicants</a></div>
+		<ul class="post-info">
+						<li><a href="https://www.cicnews.com/category/canada" class="post-info__tag category-item-1">Canada</a></li>
+					</ul>
+	</div>
+	<div class="post-item__image"><a href="https://www.cicnews.com/2026/09/first-september-update-shows-lower-processing-times-for-temporary-residence-applicants-0979921.html"><img width="216" height="164" src="https://www.cicnews.com/wp-content/uploads/2026/09/First-september-update-temporary-processing-times-216x164.jpg" class="attachment-post-thumb size-post-thumb wp-post-image" alt="Two happy friends." decoding="async" /></a></div>
+</div>
+<div class="post-item">
+	<div class="post-item__content">
+		<div class="post-item__title"><a href="https://www.cicnews.com/2026/08/ircc-quietly-drops-requirement-for-grandparents-marriage-details-from-proof-of-citizenship-application-0879700.html">Canada quietly drops requirement for grandparents&#8217; marriage details from the proof of citizenship application form</a></div>
+		<ul class="post-info">
+						<li><a href="https://www.cicnews.com/category/citizenship" class="post-info__tag category-item-2508">Citizenship</a></li>
+					</ul>
+	</div>
+	<div class="post-item__image"><a href="https://www.cicnews.com/2026/08/ircc-quietly-drops-requirement-for-grandparents-marriage-details-from-proof-of-citizenship-application-0879700.html"><img width="216" height="164" src="https://www.cicnews.com/wp-content/uploads/2026/08/IRCC_updates_CIT_0001_again-216x164.jpg" class="attachment-post-thumb size-post-thumb wp-post-image" alt="A woman holds a picture of her grandparents on their marriage day, in anticipation of her citizenship by descent application." decoding="async" /></a></div>
+</div>
+</div>
+						</div>				<div class="post-stories only-mobile">
+					<div class="post-stories__title">Top Stories</div>
+					<div class="post-stories__posts">
+													<div class="post-stories__item">
+								<div class="post-stories__name"><a href="https://www.cicnews.com/2026/09/canadas-proof-of-citizenship-finalizations-slowed-in-july-0980332.html">Canada&#8217;s proof of citizenship finalizations slowed in July</a></div>
+								<ul class="post-info">
+									<li><a href="https://www.cicnews.com/category/citizenship" class="post-info__tag category-item-2508">Citizenship</a></li>
+								</ul>
+							</div>
+													<div class="post-stories__item">
+								<div class="post-stories__name"><a href="https://www.cicnews.com/2026/09/canada-releases-data-on-express-entry-candidate-scores-0980318.html">Canada releases data on Express Entry candidate scores</a></div>
+								<ul class="post-info">
+									<li><a href="https://www.cicnews.com/category/express-entry" class="post-info__tag category-item-196">Express Entry</a></li>
+								</ul>
+							</div>
+													<div class="post-stories__item">
+								<div class="post-stories__name"><a href="https://www.cicnews.com/2026/09/canada-invites-2000-skilled-workers-to-apply-for-permanent-residence-through-express-entry-0980288.html">Canada invites 2,000 skilled workers to apply for permanent residence through Express Entry</a></div>
+								<ul class="post-info">
+									<li><a href="https://www.cicnews.com/category/express-entry" class="post-info__tag category-item-196">Express Entry</a></li>
+								</ul>
+							</div>
+											</div>
+					<!-- Place hardcoded sidebar ad here -->
+				</div>
+				<div class="post-join" onclick="window.location.href='/cicnews-subscribe.html';" style="cursor: pointer;" aria-label="Subscribe to newsletter">
+	<div class="post-join__container">
+		<div class="post-join__icon">
+			<svg width="30" height="30" viewBox="0 0 30 30">
+				<circle cx="14.9995" cy="0.882357" r="0.882357"/>
+				<circle cx="11.4702" cy="4.41165" r="0.882357"/>
+				<circle cx="14.9995" cy="4.41165" r="0.882357"/>
+				<circle cx="18.5308" cy="4.41165" r="0.882357"/>
+				<circle cx="11.4702" cy="7.94095" r="0.882357"/>
+				<circle cx="14.9995" cy="7.94095" r="0.882357"/>
+				<circle cx="18.5308" cy="7.94095" r="0.882357"/>
+				<circle cx="4.41178" cy="11.4702" r="0.882357"/>
+				<circle cx="14.9995" cy="11.4702" r="0.882357"/>
+				<circle cx="25.5874" cy="11.4702" r="0.882357"/>
+				<circle cx="0.882357" cy="14.9995" r="0.882357"/>
+				<circle cx="4.41178" cy="14.9995" r="0.882357"/>
+				<circle cx="7.94095" cy="14.9995" r="0.882357"/>
+				<circle cx="11.4702" cy="14.9995" r="0.882357"/>
+				<circle cx="14.9995" cy="14.9995" r="0.882357"/>
+				<circle cx="18.5308" cy="14.9995" r="0.882357"/>
+				<circle cx="22.0581" cy="14.9995" r="0.882357"/>
+				<circle cx="25.5874" cy="14.9995" r="0.882357"/>
+				<circle cx="29.1187" cy="14.9995" r="0.882357"/>
+				<circle cx="4.41178" cy="18.5288" r="0.882357"/>
+				<circle cx="7.94095" cy="18.5288" r="0.882357"/>
+				<circle cx="11.4702" cy="18.5288" r="0.882357"/>
+				<circle cx="14.9995" cy="18.5288" r="0.882357"/>
+				<circle cx="18.5308" cy="18.5288" r="0.882357"/>
+				<circle cx="22.0581" cy="18.5288" r="0.882357"/>
+				<circle cx="25.5874" cy="18.5288" r="0.882357"/>
+				<circle cx="7.94095" cy="22.0601" r="0.882357"/>
+				<circle cx="11.4702" cy="22.0601" r="0.882357"/>
+				<circle cx="14.9995" cy="22.0601" r="0.882357"/>
+				<circle cx="18.5308" cy="22.0601" r="0.882357"/>
+				<circle cx="22.0581" cy="22.0601" r="0.882357"/>
+				<circle cx="14.9995" cy="25.5894" r="0.882357"/>
+				<circle cx="14.9995" cy="29.1187" r="0.882357"/>
+			</svg>
+		</div>
+		<div class="post-join__title">Join our free newsletter. Get Canada's top immigration stories delivered to your inbox.</div>
+				<div class="post-join__link"><a href="/cicnews-subscribe.html" class="button button_white" target="_self">Subscribe</a></div>
+	</div>
+</div>				<div class="post-related">
+							<div class="section-title">More in Express Entry</div>
+							<div class="post-related__posts"><div class="post-item">
+	<div class="post-item__content">
+		<div class="post-item__title"><a href="https://www.cicnews.com/2026/09/canada-releases-data-on-express-entry-candidate-scores-0980318.html">Canada releases data on Express Entry candidate scores</a></div>
+		<ul class="post-info">
+						<li><a href="https://www.cicnews.com/category/express-entry" class="post-info__tag category-item-196">Express Entry</a></li>
+					</ul>
+	</div>
+	<div class="post-item__image"><a href="https://www.cicnews.com/2026/09/canada-releases-data-on-express-entry-candidate-scores-0980318.html"><img width="216" height="164" src="https://www.cicnews.com/wp-content/uploads/2026/09/Candidate-scores-EE-pool-216x164.jpg" class="attachment-post-thumb size-post-thumb wp-post-image" alt="A crowd of people walking on the street." decoding="async" /></a></div>
+</div>
+<div class="post-item">
+	<div class="post-item__content">
+		<div class="post-item__title"><a href="https://www.cicnews.com/2026/09/canada-invites-2000-skilled-workers-to-apply-for-permanent-residence-through-express-entry-0980288.html">Canada invites 2,000 skilled workers to apply for permanent residence through Express Entry</a></div>
+		<ul class="post-info">
+						<li><a href="https://www.cicnews.com/category/express-entry" class="post-info__tag category-item-196">Express Entry</a></li>
+					</ul>
+	</div>
+	<div class="post-item__image"><a href="https://www.cicnews.com/2026/09/canada-invites-2000-skilled-workers-to-apply-for-permanent-residence-through-express-entry-0980288.html"><img width="216" height="164" src="https://www.cicnews.com/wp-content/uploads/2026/09/Express-Entry-draw-55-216x164.jpg" class="attachment-post-thumb size-post-thumb wp-post-image" alt="A hand holding up a Canadian flag against a blue sky." decoding="async" /></a></div>
+</div>
+<div class="post-item">
+	<div class="post-item__content">
+		<div class="post-item__title"><a href="https://www.cicnews.com/2026/09/canada-selects-576-provincial-nominees-to-apply-for-permanent-residence-0980120.html">Canada selects 576 provincial nominees to apply for permanent residence</a></div>
+		<ul class="post-info">
+						<li><a href="https://www.cicnews.com/category/express-entry" class="post-info__tag category-item-196">Express Entry</a></li>
+					</ul>
+	</div>
+	<div class="post-item__image"><a href="https://www.cicnews.com/2026/09/canada-selects-576-provincial-nominees-to-apply-for-permanent-residence-0980120.html"><img width="216" height="164" src="https://www.cicnews.com/wp-content/uploads/2026/09/EE-DRAW-54-216x164.jpg" class="attachment-post-thumb size-post-thumb wp-post-image" alt="Aerial view of the Toronto skyline and Lake Ontario." decoding="async" /></a></div>
+</div>
+<div class="post-item">
+	<div class="post-item__content">
+		<div class="post-item__title"><a href="https://www.cicnews.com/2026/09/canada-invites-3500-healthcare-and-social-services-workers-to-apply-for-permanent-residence-0979999.html">Canada invites 3,500 Healthcare and Social Services workers to apply for permanent residence</a></div>
+		<ul class="post-info">
+						<li><a href="https://www.cicnews.com/category/express-entry" class="post-info__tag category-item-196">Express Entry</a></li>
+					</ul>
+	</div>
+	<div class="post-item__image"><a href="https://www.cicnews.com/2026/09/canada-invites-3500-healthcare-and-social-services-workers-to-apply-for-permanent-residence-0979999.html"><img width="216" height="164" src="https://www.cicnews.com/wp-content/uploads/2026/09/EE-DRAW-53-216x164.jpg" class="attachment-post-thumb size-post-thumb wp-post-image" alt="Panoramic view of Calgary, Alberta on a sunny day." decoding="async" /></a></div>
+</div>
+</div>
+							<div class="more-link"><a href="https://www.cicnews.com/category/express-entry"><span>Read more Express Entry news</span><i><svg width="9" height="15" viewBox="0 0 9 15"><use xlink:href="#icon-arrow"></use></svg></i></a></div>
+						</div>			</div>
+			<div class="page-content__sidebar">
+				<div class="post-stories">
+					<div class="post-stories__title">Top Stories</div>
+					<div class="post-stories__posts">
+													<div class="post-stories__item">
+								<div class="post-stories__name"><a href="https://www.cicnews.com/2026/09/canadas-proof-of-citizenship-finalizations-slowed-in-july-0980332.html">Canada&#8217;s proof of citizenship finalizations slowed in July</a></div>
+								<ul class="post-info">
+									<li><a href="https://www.cicnews.com/category/citizenship" class="post-info__tag category-item-2508">Citizenship</a></li>
+								</ul>
+							</div>
+													<div class="post-stories__item">
+								<div class="post-stories__name"><a href="https://www.cicnews.com/2026/09/canada-releases-data-on-express-entry-candidate-scores-0980318.html">Canada releases data on Express Entry candidate scores</a></div>
+								<ul class="post-info">
+									<li><a href="https://www.cicnews.com/category/express-entry" class="post-info__tag category-item-196">Express Entry</a></li>
+								</ul>
+							</div>
+													<div class="post-stories__item">
+								<div class="post-stories__name"><a href="https://www.cicnews.com/2026/09/canada-invites-2000-skilled-workers-to-apply-for-permanent-residence-through-express-entry-0980288.html">Canada invites 2,000 skilled workers to apply for permanent residence through Express Entry</a></div>
+								<ul class="post-info">
+									<li><a href="https://www.cicnews.com/category/express-entry" class="post-info__tag category-item-196">Express Entry</a></li>
+								</ul>
+							</div>
+											</div>
+				</div>
+				<div class="site-a" style="position: sticky; top: 44px;">
+					<div id="cicnewsads-1583877078" style="margin-top: 33px;margin-bottom: 33px;margin-left: auto;margin-right: auto;text-align: center;"><script type="text/rocketlazyloadscript" async="async" data-rocket-src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
+<script type="text/rocketlazyloadscript"> var googletag = googletag || {}; googletag.cmd = googletag.cmd || [];</script>
+<div id="gpt-ad-1754679054098-0">
+  <script type="text/rocketlazyloadscript">
+	googletag.cmd.push(function() {
+				googletag.defineSlot( '/22646143967/cicnews.com/cicnews_in_article', [[250,250],[300,250],[300,600]], 'gpt-ad-1754679054098-0' )
+		.addService(googletag.pubads()).setTargeting( 'cicnews_slug', 'ircc-and-canadas-provinces-continue-working-together-to-welcome-ukrainians' ).setCollapseEmptyDiv(true);
+				window.advadsGamEmptySlotsTimers = window.advadsGamEmptySlotsTimers || {};
+		const timers                     = window.advadsGamEmptySlotsTimers;
+
+		timers['gpt-ad-1754679054098-0'] = setTimeout( function () {
+			const id = 'gpt-ad-1754679054098-0';
+			document.dispatchEvent( new CustomEvent( 'aagam_empty_slot', {detail: id} ) );
+			delete ( timers[id] );
+		}, 1000 );
+
+		if ( typeof window.advadsGamHasEmptySlotListener === 'undefined' ) {
+			googletag.pubads().addEventListener( 'slotRequested', function ( ev ) {
+				const id = ev.slot.getSlotElementId();
+				if ( typeof timers[id] === 'undefined' ) {
+					return;
+				}
+				clearTimeout( timers[id] );
+				timers[id] = setTimeout( function () {
+					document.dispatchEvent( new CustomEvent( 'aagam_empty_slot', {detail: id} ) );
+					delete ( timers[id] );
+				}, 2500 );
+			} );
+			googletag.pubads().addEventListener( 'slotResponseReceived', function ( ev ) {
+				const id = ev.slot.getSlotElementId();
+				if ( typeof timers[id] !== 'undefined' ) {
+					clearTimeout( timers[id] );
+					delete ( timers[id] );
+				}
+				if ( ! ev.slot.getResponseInformation() ) {
+					document.dispatchEvent( new CustomEvent( 'aagam_empty_slot', {detail: id} ) );
+				}
+			} );
+			window.advadsGamHasEmptySlotListener = true;
+		}
+
+		googletag.enableServices();
+		googletag.display( 'gpt-ad-1754679054098-0' );
+	} );
+  </script>
+</div>
+</div>				</div>
+			</div>
+		</div>
+	</div>
+</div>
+	</div>
+		<footer class="site-footer">
+		<div class="inner">
+			<div class="subscribe-block" onclick="window.location.href='/cicnews-subscribe.html';" style="cursor: pointer;" aria-label="Subscribe to newsletter">
+	<div class="subscribe-block__container">
+		<div class="subscribe-block__left">
+							<div class="subscribe-block__title" role="heading">Subscribe to our free newsletter</div>
+				<div class="subscribe-block__text">We'll send you breaking news as soon as it happens. <a href="/cicnews-subscribe.html">Sign up now!</a></div>
+					</div>
+		<div class="subscribe-block__right">
+			<div class="subscribe-block__community">
+				<span>Join 1+ million subscribers</span>
+				<i><img width="194" height="80" src="https://www.cicnews.com/wp-content/themes/cic/images/subscribe-line.svg" alt=""></i>
+			</div>
+			<div class="subscribe-block__map only-desktop"><img width="419" height="180" src="https://www.cicnews.com/wp-content/themes/cic/images/subscribe-map.svg" alt=""></div>
+			<div class="subscribe-block__map only-mobile"><img width="300" height="59" src="https://www.cicnews.com/wp-content/themes/cic/images/subscribe-map-mobile.svg" alt=""></div>
+		</div>
+	</div>
+</div>			<div class="site-footer_container">
+				<div class="site-footer__col site-footer__col_1">
+					<a href="https://www.cicnews.com/" class="footer-logo">
+						<div class="footer-logo__image"><img width="143" height="31" src="https://www.cicnews.com/wp-content/uploads/2023/07/logo-4.svg" alt=""></div>
+						<div class="footer-logo__text">The voice of Canadian immigration</div>
+					</a>
+				</div>
+				<div class="site-footer__col site-footer__col_2">
+															<div class="footer-menu">
+						<div class="footer-title">Topics</div>
+												<ul>
+													<li><a href="/category/express-entry" target="_self">Express Entry</a></li>
+													<li><a href="/category/canada" target="_self">Canada</a></li>
+													<li><a href="/category/provinces" target="_self">Provinces</a></li>
+													<li><a href="/category/family" target="_self">Family Sponsorship</a></li>
+													<li><a href="/category/work" target="_self">Work</a></li>
+													<li><a href="/category/citizenship" target="_self">Citizenship</a></li>
+													<li><a href="/category/study" target="_self">Study</a></li>
+													<li><a href="/category/visit" target="_self">Visit</a></li>
+													<li><a href="/category/settle" target="_self">Life in Canada</a></li>
+												</ul>
+											</div>
+														</div>
+				<div class="site-footer__col site-footer__col_3">
+															<div class="footer-menu">
+						<div class="footer-title">Who we are</div>
+												<ul>
+													<li><a href="/about.html" target="_self">About us</a></li>
+													<li><a href="/standards.html" target="_self">Our standards</a></li>
+												</ul>
+											</div>
+										<div class="footer-menu">
+						<div class="footer-title">Media partners</div>
+												<ul>
+													<li><a href="/partners" target="_self">Meet our partners</a></li>
+													<li><a href="https://www.media.canadavisa.com/" target="_blank">Advertise with us</a></li>
+												</ul>
+											</div>
+														</div>
+				<div class="site-footer__col site-footer__col_4">
+					<div class="footer-contacts">
+						<div class="footer-title">Contacts</div>
+						<div class="footer-contacts__list">
+							<ul>
+																<li><a href="https://www.canadavisa.com/contact-us.html" target="_blank" aria-label="Opens in new tab">Contact us <i><svg width="13" height="13" viewBox="0 0 10 10"><use xlink:href="#icon-external"></use></svg></i></a></li>
+								<li>CanadaVisa Media <br /> 155 University Ave, Suite 1210 <br /> Toronto, ON M5H 3B7</li>
+																<li class="only-desktop"><a href="https://www.canadavisa.com/canada-immigration-discussion-board/" target="_blank" aria-label="Opens in new tab"><span><svg width="13" height="13" viewBox="0 0 13 13"><use xlink:href="#icon-canada"></use></svg></span>Visit the CanadaVisa Forum <i><svg width="13" height="13" viewBox="0 0 10 10"><use xlink:href="#icon-external"></use></svg></i></a></li>
+							</ul>
+						</div>
+					</div>
+					<div class="footer-social">
+						<div class="footer-title">FOLLOW US</div>
+						<div class="footer-social__items">
+							<a href="https://www.facebook.com/canadavisa" class="icon-1" target="_blank" aria-label="Opens in new tab"><svg width="16" height="16" viewBox="0 0 16 16"><use xlink:href="#icon-facebook"></use></svg></a>							<a href="https://www.instagram.com/canadavisa/" class="icon-2" target="_blank" aria-label="Opens in new tab"><svg width="16" height="16" viewBox="0 0 16 16"><use xlink:href="#icon-instagram"></use></svg></a>							<a href="https://www.youtube.com/user/Canadavisa" class="icon-3" target="_blank" aria-label="Opens in new tab"><svg width="16" height="16" viewBox="0 0 16 16"><use xlink:href="#icon-youtube"></use></svg></a>							<a href="https://www.linkedin.com/company/canadavisa" class="icon-4" target="_blank" aria-label="Opens in new tab"><svg width="16" height="16" viewBox="0 0 16 16"><use xlink:href="#icon-linkedin"></use></svg></a>							<a href="https://twitter.com/canadavisa_com" class="icon-5" target="_blank" aria-label="Opens in new tab"><svg width="16" height="16" viewBox="0 0 16 16"><use xlink:href="#icon-twitter"></use></svg></a>							<a href="https://www.tiktok.com/@canadavisa_com" class="icon-6" target="_blank" aria-label="Opens in new tab"><svg width="16" height="16" viewBox="0 0 16 16"><use xlink:href="#icon-tiktok"></use></svg></a>							<a href="https://www.threads.net/@canadavisa" class="icon-7" target="_blank" aria-label="Opens in new tab"><svg width="16" height="16" viewBox="0 0 16 16"><use xlink:href="#icon-threads"></use></svg></a>						</div>
+					</div>
+					<div class="footer-sitelink only-mobile"><a href="https://www.canadavisa.com/canada-immigration-discussion-board/" target="_blank"><span><svg width="13" height="13" viewBox="0 0 13 13"><use xlink:href="#icon-canada"></use></svg></span>Visit the CanadaVisa Forum <i><svg width="13" height="13" viewBox="0 0 10 10"><use xlink:href="#icon-external"></use></svg></i></a></div>
+				</div>
+			</div>
+			<div class="site-footer__bottom">
+				<div class="site-footer__text">© CIC News</div>
+								<div class="site-footer__text"><a href="https://www.cicnews.com/privacy.html" target="_self">Privacy Policy</a></div>
+			</div>
+		</div>
+	</footer>
+		<div class="message-copied">
+		<div class="message-copied__title">Link copied to clipboard</div>
+	</div>
+		<div class="mobile-panel">
+		<div class="mobile-container">
+			<div class="mobile-search">
+				<i><svg width="14" height="14" viewBox="0 0 18 18"><use xlink:href="#icon-search"></use></svg></i>
+				<form action="/"><input type="search" placeholder="Search" name="s" value=""></form>
+			</div>
+										<div class="mobile-menu">
+					<ul>
+																<li><a href="/category/express-entry" target="_self">Express Entry</a></li>
+											<li><a href="/category/canada" target="_self">Canada</a></li>
+											<li><a href="/category/provinces" target="_self">Provinces</a></li>
+											<li><a href="/category/family" target="_self">Family Sponsorship</a></li>
+											<li><a href="/category/study" target="_self">Study</a></li>
+											<li><a href="/category/work" target="_self">Work</a></li>
+											<li><a href="/category/visit" target="_self">Visit</a></li>
+											<li><a href="/category/citizenship" target="_self">Citizenship</a></li>
+											<li><a href="/category/settle" target="_self">Life in Canada</a></li>
+											<li><a href="/about.html" target="_self">About us</a></li>
+											<li><a href="/partners" target="_self">Meet our partners</a></li>
+														</div>
+							<div class="mobile-menu">
+					<ul>
+									</div>
+								</div>
+				<div class="mobile-btn"><a href="/partners" target="_blank" class="button button_blue">Subscribe</a></div>
+	</div>
+</div>
+<style>.category-item-2508{color: #004f06;background: #deede9;}
+			.category-item-2508:hover{color: #fff;background: #004f06;}
+			.category-popular .category-popular__id_2508{color: #004f06;border-color: #9fc18d;}
+			.category-popular .category-popular__id_2508:hover{color: #fff;background: #004f06;border-color: #004f06;}
+			.category-item-196{color: #b83b3b;background: #ffeeee;}
+			.category-item-196:hover{color: #fff;background: #b83b3b;}
+			.category-popular .category-popular__id_196{color: #b83b3b;border-color: #ffcfcf;}
+			.category-popular .category-popular__id_196:hover{color: #fff;background: #b83b3b;border-color: #b83b3b;}
+			.category-item-1421{color: #0032fc;background: #d0dff4;}
+			.category-item-1421:hover{color: #fff;background: #0032fc;}
+			.category-popular .category-popular__id_1421{color: #0032fc;border-color: #a0c1f4;}
+			.category-popular .category-popular__id_1421:hover{color: #fff;background: #0032fc;border-color: #0032fc;}
+			.category-item-2734{color: #a30000;background: #f7eded;}
+			.category-item-2734:hover{color: #fff;background: #a30000;}
+			.category-popular .category-popular__id_2734{color: #a30000;border-color: #ff8484;}
+			.category-popular .category-popular__id_2734:hover{color: #fff;background: #a30000;border-color: #a30000;}
+			.category-item-1121{color: #00208c;background: #d5dbe8;}
+			.category-item-1121:hover{color: #fff;background: #00208c;}
+			.category-popular .category-popular__id_1121{color: #00208c;border-color: #3a4c8c;}
+			.category-popular .category-popular__id_1121:hover{color: #fff;background: #00208c;border-color: #00208c;}
+			.category-item-1125{color: #aa6b05;background: #fff5e5;}
+			.category-item-1125:hover{color: #fff;background: #aa6b05;}
+			.category-popular .category-popular__id_1125{color: #aa6b05;border-color: #fcdaa4;}
+			.category-popular .category-popular__id_1125:hover{color: #fff;background: #aa6b05;border-color: #aa6b05;}
+			.category-item-1237{color: #41006d;background: #e0d7e2;}
+			.category-item-1237:hover{color: #fff;background: #41006d;}
+			.category-popular .category-popular__id_1237{color: #41006d;border-color: #e26fc2;}
+			.category-popular .category-popular__id_1237:hover{color: #fff;background: #41006d;border-color: #41006d;}
+			.category-item-1044{color: #065e61;background: #e5fafc;}
+			.category-item-1044:hover{color: #fff;background: #065e61;}
+			.category-popular .category-popular__id_1044{color: #065e61;border-color: #b1e4e7;}
+			.category-popular .category-popular__id_1044:hover{color: #fff;background: #065e61;border-color: #065e61;}
+			.category-item-1420{color: #741a44;background: #f8ebf1;}
+			.category-item-1420:hover{color: #fff;background: #741a44;}
+			.category-popular .category-popular__id_1420{color: #741a44;border-color: #f2dbe6;}
+			.category-popular .category-popular__id_1420:hover{color: #fff;background: #741a44;border-color: #741a44;}
+			.category-item-1126{color: #372da6;background: #efeeff;}
+			.category-item-1126:hover{color: #fff;background: #372da6;}
+			.category-popular .category-popular__id_1126{color: #372da6;border-color: #d3cfff;}
+			.category-popular .category-popular__id_1126:hover{color: #fff;background: #372da6;border-color: #372da6;}
+			</style><svg style="display: none;">
+	<defs>
+		<g id="icon-burger">
+			<path d="M14.7064 8.06986e-07C15.0312 8.25556e-07 15.2946 0.263365 15.2946 0.588241C15.2946 0.913118 15.0312 1.17648 14.7064 1.17648L0.588593 1.17648C0.263717 1.17648 0.000352855 0.913117 0.000352866 0.58824C0.000352876 0.263364 0.263717 -1.85703e-08 0.588593 0L14.7064 8.06986e-07Z"/>
+			<path d="M19.4119 7.0589C19.7368 7.0589 20.0002 7.32226 20.0002 7.64714C20.0002 7.97202 19.7368 8.23538 19.4119 8.23538L0.588239 8.23538C0.263363 8.23538 -1.42008e-08 7.97202 0 7.64714C1.42008e-08 7.32226 0.263364 7.0589 0.588241 7.0589L19.4119 7.0589Z"/>
+			<path d="M14.7064 14.1177C15.0312 14.1177 15.2946 14.3811 15.2946 14.706C15.2946 15.0309 15.0312 15.2942 14.7064 15.2942L0.588593 15.2942C0.263717 15.2942 0.000352855 15.0309 0.000352866 14.706C0.000352876 14.3811 0.263717 14.1177 0.588593 14.1177L14.7064 14.1177Z"/>
+		</g>
+		<g id="icon-arrow">
+			<path fill-rule="evenodd" clip-rule="evenodd" d="M0.212866 0.653784C0.337834 0.528817 0.540447 0.528817 0.665415 0.653784L5.78542 5.77378C5.91038 5.89875 5.91038 6.10136 5.78542 6.22633L0.665415 11.3463C0.540447 11.4713 0.337834 11.4713 0.212866 11.3463C0.0878987 11.2214 0.0878987 11.0188 0.212866 10.8938L5.10659 6.00006L0.212866 1.10633C0.0878987 0.981365 0.0878987 0.778752 0.212866 0.653784Z"/>
+		</g>
+		<g id="icon-close">
+			<path fill-rule="evenodd" clip-rule="evenodd" d="M0.728975 0.274385C0.878676 0.124684 1.12139 0.124684 1.27109 0.274385L5.00003 4.00333L8.72898 0.274385C8.87868 0.124684 9.12139 0.124684 9.27109 0.274385C9.42079 0.424086 9.42079 0.666799 9.27109 0.8165L5.54215 4.54544L9.27109 8.27439C9.42079 8.42409 9.42079 8.6668 9.27109 8.8165C9.12139 8.9662 8.87868 8.9662 8.72898 8.8165L5.00003 5.08756L1.27109 8.8165C1.12139 8.9662 0.878676 8.9662 0.728975 8.8165C0.579274 8.6668 0.579274 8.42409 0.728975 8.27439L4.45792 4.54544L0.728975 0.8165C0.579274 0.666799 0.579274 0.424086 0.728975 0.274385Z"/>
+		</g>
+		<g id="icon-external">
+			<path fill-rule="evenodd" clip-rule="evenodd" d="M4.99992 1.40004C3.0117 1.40004 1.39992 3.01182 1.39992 5.00004V5.54862C1.39992 5.68116 1.29247 5.78862 1.15992 5.78862C1.02737 5.78862 0.919922 5.68116 0.919922 5.54862V5.00004C0.919922 2.74672 2.7466 0.920044 4.99992 0.920044C7.25324 0.920044 9.07992 2.74672 9.07992 5.00004C9.07992 7.25337 7.25324 9.08004 4.99992 9.08004H4.45135C4.3188 9.08004 4.21135 8.97259 4.21135 8.84004C4.21135 8.7075 4.3188 8.60004 4.45135 8.60004H4.99992C6.98815 8.60004 8.59992 6.98827 8.59992 5.00004C8.59992 3.01182 6.98815 1.40004 4.99992 1.40004ZM3.80346 4.03827C3.80346 3.90572 3.91091 3.79827 4.04346 3.79827L5.95992 3.79827C6.02357 3.79827 6.08462 3.82356 6.12963 3.86857C6.17464 3.91358 6.19992 3.97462 6.19992 4.03828L6.1999 5.96181C6.1999 6.09436 6.09244 6.20181 5.95989 6.20181C5.82735 6.20181 5.7199 6.09435 5.7199 5.9618L5.71991 4.61946L1.32963 9.00975C1.2359 9.10347 1.08394 9.10347 0.990216 9.00975C0.89649 8.91602 0.89649 8.76406 0.990216 8.67034L5.38228 4.27827L4.04346 4.27827C3.91091 4.27827 3.80346 4.17082 3.80346 4.03827Z"/>
+		</g>
+		<g id="icon-search">
+			<path fill-rule="evenodd" clip-rule="evenodd" d="M12.7804 13.4594C11.5139 14.5681 9.85534 15.2401 8.03984 15.2401C4.06339 15.2401 0.839844 12.0165 0.839844 8.04009C0.839844 4.06364 4.06339 0.840088 8.03984 0.840088C12.0163 0.840088 15.2398 4.06364 15.2398 8.04009C15.2398 9.85555 14.5679 11.5141 13.4592 12.7806L17.0205 16.3419C17.208 16.5293 17.208 16.8333 17.0205 17.0207C16.8331 17.2082 16.5292 17.2082 16.3417 17.0207L12.7804 13.4594ZM14.2798 8.04009C14.2798 11.4863 11.4861 14.2801 8.03984 14.2801C4.59359 14.2801 1.79984 11.4863 1.79984 8.04009C1.79984 4.59383 4.59359 1.80009 8.03984 1.80009C11.4861 1.80009 14.2798 4.59383 14.2798 8.04009Z"/>
+		</g>
+		<g id="icon-canada">
+			<path fill-rule="evenodd" clip-rule="evenodd" d="M12.2089 4.97235C12.2273 4.9165 12.2112 4.85526 12.168 4.81475C12.1245 4.77417 12.0612 4.76159 12.0048 4.78162C11.9993 4.78355 11.4506 4.97685 10.9944 4.73386C10.7034 4.57876 10.5044 4.27523 10.4035 3.83162C10.389 3.76781 10.3348 3.72005 10.2684 3.71254C10.2023 3.70464 10.1381 3.73924 10.1091 3.79805C10.1007 3.81493 9.26869 5.46796 8.39909 5.08617C8.37389 5.06685 8.25663 4.96574 8.20676 4.73309C8.12856 4.36761 8.21196 3.67999 9.05329 2.47815C9.08989 2.42583 9.08989 2.35707 9.05316 2.30481C9.01656 2.25243 8.95063 2.22784 8.88789 2.24222C8.88116 2.24402 8.20823 2.39212 7.60316 1.98318C7.10089 1.64384 6.78609 1.02125 6.66749 0.132883C6.65656 0.0516087 6.58249 -0.00604171 6.49963 0.000506442C6.41783 -0.00546393 6.34356 0.0518655 6.33263 0.132883C6.21429 1.019 5.90069 1.64082 5.40056 1.98081C4.79876 2.38975 4.11869 2.24357 4.11223 2.24222C4.04976 2.22868 3.98356 2.25269 3.94696 2.30481C3.91036 2.35707 3.91029 2.42583 3.94683 2.47815C4.77756 3.66458 4.86769 4.34951 4.79702 4.71498C4.74923 4.96202 4.62703 5.0664 4.60103 5.08617C3.73263 5.46796 2.89936 3.81487 2.89102 3.79792C2.86182 3.73931 2.79829 3.70464 2.73156 3.71254C2.66523 3.72018 2.61109 3.768 2.59669 3.83162C2.49576 4.27523 2.29696 4.57876 2.00589 4.73386C1.54989 4.97704 1.00102 4.78374 0.995891 4.78181C0.939625 4.76095 0.876025 4.77366 0.832625 4.81436C0.789025 4.855 0.773025 4.91631 0.791492 4.97222C1.28763 6.48042 0.126425 7.18011 0.0770921 7.2088C0.0270921 7.23769 -0.00244144 7.2913 0.00015856 7.34805C0.00302523 7.4048 0.0376254 7.45545 0.0901587 7.47965C3.02516 8.82921 2.95909 10.9554 2.95483 11.0449C2.95176 11.1039 2.98376 11.1596 3.03703 11.1876C3.04776 11.1932 5.92843 11.0415 5.92843 11.0415C5.92843 11.0415 5.92789 12.911 5.92789 13C6.01816 13 6.98189 13 7.07216 13L7.07262 11.0418C8.80722 11.0542 9.93596 11.202 9.96303 11.1876C10.0163 11.1596 10.0484 11.1039 10.0452 11.0449C10.044 11.0229 9.96409 8.83409 12.91 7.47965C12.9624 7.45545 12.9972 7.4048 12.9998 7.34805C13.0026 7.2913 12.973 7.23769 12.923 7.2088C12.9108 7.20174 11.71 6.48767 12.2089 4.97235Z"/>
+		</g>
+		<g id="icon-facebook">
+			<path d="M9.19976 8.90098H10.6998L11.2998 6.50098H9.19976V5.30098C9.19976 4.68298 9.19976 4.10098 10.3998 4.10098H11.2998V2.08498C11.1042 2.05918 10.3656 2.00098 9.58556 2.00098C7.95656 2.00098 6.79976 2.99518 6.79976 4.82098V6.50098H4.99976V8.90098H6.79976V14.001H9.19976V8.90098Z"/>
+		</g>
+		<g id="icon-instagram">
+			<path d="M7.99978 2.40039C6.48008 2.40039 6.28898 2.40739 5.69188 2.43399C5.09478 2.46199 4.68808 2.55579 4.33178 2.69439C3.95805 2.83496 3.61952 3.05547 3.33988 3.34049C3.05503 3.62028 2.83456 3.95876 2.69378 4.33239C2.55518 4.68799 2.46068 5.09539 2.43338 5.69039C2.40678 6.28889 2.39978 6.47929 2.39978 8.00109C2.39978 9.52149 2.40678 9.71189 2.43338 10.309C2.46138 10.9054 2.55518 11.3121 2.69378 11.6684C2.83728 12.0366 3.02838 12.3488 3.33988 12.6603C3.65068 12.9718 3.96288 13.1636 4.33108 13.3064C4.68808 13.445 5.09408 13.5395 5.69048 13.5668C6.28828 13.5934 6.47868 13.6004 7.99978 13.6004C9.52088 13.6004 9.71058 13.5934 10.3084 13.5668C10.9041 13.5388 11.3122 13.445 11.6685 13.3064C12.042 13.1657 12.3803 12.9452 12.6597 12.6603C12.9712 12.3488 13.1623 12.0366 13.3058 11.6684C13.4437 11.3121 13.5382 10.9054 13.5662 10.309C13.5928 9.71189 13.5998 9.52149 13.5998 8.00039C13.5998 6.47929 13.5928 6.28889 13.5662 5.69109C13.5382 5.09539 13.4437 4.68799 13.3058 4.33239C13.165 3.95875 12.9445 3.62026 12.6597 3.34049C12.3801 3.05536 12.0416 2.83484 11.6678 2.69439C11.3108 2.55579 10.9034 2.46129 10.3077 2.43399C9.70988 2.40739 9.52018 2.40039 7.99838 2.40039H8.00048H7.99978ZM7.49788 3.40979H8.00048C9.49568 3.40979 9.67278 3.41469 10.2629 3.44199C10.8089 3.46649 11.1057 3.55819 11.3031 3.63449C11.5642 3.73599 11.7511 3.85779 11.9471 4.05379C12.1431 4.24979 12.2642 4.43599 12.3657 4.69779C12.4427 4.89449 12.5337 5.19129 12.5582 5.73729C12.5855 6.32739 12.5911 6.50449 12.5911 7.99899C12.5911 9.49349 12.5855 9.67129 12.5582 10.2614C12.5337 10.8074 12.442 11.1035 12.3657 11.3009C12.2759 11.544 12.1326 11.7639 11.9464 11.9442C11.7504 12.1402 11.5642 12.2613 11.3024 12.3628C11.1064 12.4398 10.8096 12.5308 10.2629 12.556C9.67278 12.5826 9.49568 12.5889 8.00048 12.5889C6.50528 12.5889 6.32748 12.5826 5.73738 12.556C5.19138 12.5308 4.89528 12.4398 4.69788 12.3628C4.45463 12.2731 4.23457 12.1301 4.05388 11.9442C3.86751 11.7636 3.72399 11.5435 3.63388 11.3002C3.55758 11.1035 3.46588 10.8067 3.44138 10.2607C3.41478 9.67059 3.40918 9.49349 3.40918 7.99759C3.40918 6.50239 3.41478 6.32599 3.44138 5.73589C3.46658 5.18989 3.55758 4.89309 3.63458 4.69569C3.73608 4.43459 3.85788 4.24769 4.05388 4.05169C4.24988 3.85569 4.43608 3.73459 4.69788 3.63309C4.89528 3.55609 5.19138 3.46509 5.73738 3.43989C6.25398 3.41609 6.45418 3.40909 7.49788 3.40839V3.40979ZM10.9895 4.33939C10.9012 4.33939 10.8138 4.35677 10.7323 4.39054C10.6508 4.42431 10.5767 4.47381 10.5143 4.53621C10.4519 4.59862 10.4024 4.6727 10.3686 4.75423C10.3349 4.83576 10.3175 4.92314 10.3175 5.01139C10.3175 5.09964 10.3349 5.18702 10.3686 5.26855C10.4024 5.35008 10.4519 5.42417 10.5143 5.48657C10.5767 5.54897 10.6508 5.59847 10.7323 5.63224C10.8138 5.66601 10.9012 5.68339 10.9895 5.68339C11.1677 5.68339 11.3386 5.61259 11.4647 5.48657C11.5907 5.36054 11.6615 5.18962 11.6615 5.01139C11.6615 4.83316 11.5907 4.66224 11.4647 4.53621C11.3386 4.41019 11.1677 4.33939 10.9895 4.33939ZM8.00048 5.12479C7.61903 5.11884 7.24021 5.18883 6.88606 5.33069C6.53192 5.47255 6.20954 5.68344 5.93769 5.95109C5.66583 6.21873 5.44993 6.53779 5.30257 6.88967C5.1552 7.24156 5.07931 7.61924 5.07931 8.00074C5.07931 8.38224 5.1552 8.75992 5.30257 9.11181C5.44993 9.46369 5.66583 9.78275 5.93769 10.0504C6.20954 10.318 6.53192 10.5289 6.88606 10.6708C7.24021 10.8126 7.61903 10.8826 8.00048 10.8767C8.75546 10.8649 9.47553 10.5567 10.0053 10.0187C10.535 9.4806 10.8319 8.75581 10.8319 8.00074C10.8319 7.24567 10.535 6.52088 10.0053 5.98282C9.47553 5.44475 8.75546 5.13657 8.00048 5.12479ZM8.00048 6.13349C8.49561 6.13349 8.97047 6.33018 9.32058 6.68029C9.67069 7.0304 9.86738 7.50526 9.86738 8.00039C9.86738 8.49552 9.67069 8.97038 9.32058 9.32049C8.97047 9.6706 8.49561 9.86729 8.00048 9.86729C7.50535 9.86729 7.03049 9.6706 6.68038 9.32049C6.33027 8.97038 6.13358 8.49552 6.13358 8.00039C6.13358 7.50526 6.33027 7.0304 6.68038 6.68029C7.03049 6.33018 7.50535 6.13349 8.00048 6.13349Z"/>
+		</g>
+		<g id="icon-youtube">
+			<path d="M8.14616 3.20117C8.46656 3.20297 9.26816 3.21077 10.1202 3.24497L10.4226 3.25817C11.28 3.29837 12.1368 3.36797 12.5622 3.48617C13.1292 3.64577 13.5744 4.11017 13.725 4.69937C13.965 5.63537 13.995 7.46057 13.9986 7.90277L13.9992 7.99397V8.09837C13.995 8.54057 13.965 10.3664 13.725 11.3018C13.5726 11.8928 13.1268 12.3578 12.5622 12.515C12.1368 12.6332 11.28 12.7028 10.4226 12.743L10.1202 12.7568C9.26816 12.7904 8.46656 12.7988 8.14616 12.8L8.00516 12.8006H7.85216C7.17416 12.7964 4.33856 12.7658 3.43616 12.515C2.86976 12.3554 2.42396 11.891 2.27336 11.3018C2.03336 10.3658 2.00336 8.54057 1.99976 8.09837V7.90277C2.00336 7.46057 2.03336 5.63477 2.27336 4.69937C2.42576 4.10837 2.87156 3.64337 3.43676 3.48677C4.33856 3.23537 7.17476 3.20477 7.85276 3.20117H8.14616ZM6.79916 5.90117V10.1012L10.3992 8.00117L6.79916 5.90117Z"/>
+		</g>
+		<g id="icon-linkedin">
+			<path d="M13.9752 9.01678V13.4442H11.4084V9.31318C11.4084 8.27518 11.037 7.56718 10.1082 7.56718C9.39896 7.56718 8.97656 8.04478 8.79116 8.50618C8.72336 8.67118 8.70596 8.90098 8.70596 9.13198V13.4442H6.13796C6.13796 13.4442 6.17276 6.44818 6.13796 5.72278H8.70596V6.81718L8.68916 6.84238H8.70596V6.81718C9.04676 6.29218 9.65576 5.54158 11.0196 5.54158C12.7086 5.54158 13.9752 6.64558 13.9752 9.01678ZM3.45236 2.00098C2.57456 2.00098 1.99976 2.57698 1.99976 3.33478C1.99976 4.07578 2.55776 4.66918 3.41876 4.66918H3.43556C4.33136 4.66918 4.88756 4.07578 4.88756 3.33478C4.87196 2.57698 4.33136 2.00098 3.45236 2.00098ZM2.15216 13.4442H4.71896V5.72278H2.15216V13.4442Z"/>
+		</g>
+		<g id="icon-twitter">
+			<path d="M14.2753 4.40117C13.8133 4.61117 13.3153 4.74917 12.7993 4.81517C13.3273 4.49717 13.7353 3.99317 13.9273 3.38717C13.4293 3.68717 12.8773 3.89717 12.2953 4.01717C11.8213 3.50117 11.1553 3.20117 10.3993 3.20117C8.98927 3.20117 7.83727 4.35317 7.83727 5.77517C7.83727 5.97917 7.86127 6.17717 7.90327 6.36317C5.76727 6.25517 3.86527 5.22917 2.59927 3.67517C2.37727 4.05317 2.25127 4.49717 2.25127 4.96517C2.25127 5.85917 2.70127 6.65117 3.39727 7.10117C2.97127 7.10117 2.57527 6.98117 2.22727 6.80117V6.81917C2.22727 8.06717 3.11527 9.11117 4.29127 9.34517C3.9137 9.4485 3.51732 9.46287 3.13327 9.38717C3.29623 9.89866 3.61539 10.3462 4.04588 10.6669C4.47636 10.9876 4.99653 11.1654 5.53327 11.1752C4.62344 11.8954 3.49566 12.2848 2.33527 12.2792C2.13127 12.2792 1.92727 12.2672 1.72327 12.2432C2.86327 12.9752 4.21927 13.4012 5.67127 13.4012C10.3993 13.4012 12.9973 9.47717 12.9973 6.07517C12.9973 5.96117 12.9973 5.85317 12.9913 5.73917C13.4953 5.37917 13.9273 4.92317 14.2753 4.40117Z"/>
+		</g>
+		<g id="icon-tiktok">
+			<path d="M11.0824 3.56883C10.6053 3.02416 10.3424 2.32467 10.3426 1.60059H8.18586V10.2553C8.16923 10.7236 7.9715 11.1672 7.63431 11.4927C7.29712 11.8182 6.84679 12.0001 6.37815 12.0002C5.38705 12.0002 4.56345 11.1905 4.56345 10.1855C4.56345 8.98499 5.72207 8.08463 6.91558 8.45454V6.24899C4.50762 5.92793 2.39978 7.79846 2.39978 10.1855C2.39978 12.5097 4.32615 14.1638 6.37117 14.1638C8.56276 14.1638 10.3426 12.3841 10.3426 10.1855V5.79532C11.2171 6.42338 12.2671 6.76035 13.3438 6.7585V4.60181C13.3438 4.60181 12.0316 4.66463 11.0824 3.56883Z"/>
+		</g>
+		<g id="icon-messenger">
+			<path fill-rule="evenodd" clip-rule="evenodd" d="M9.62793 10.6266L7.90179 8.83278L4.57625 10.6717L8.22139 6.80367L9.94754 8.59744L13.2717 6.75849L9.62726 10.6266H9.62793ZM8.92466 2.25586C5.23839 2.25586 2.25 5.05036 2.25 8.49831C2.25 10.4593 3.21691 12.2092 4.72999 13.3536V15.7428L7.00769 14.4791C7.61454 14.649 8.25848 14.7408 8.92466 14.7408C12.6116 14.7408 15.6 11.9456 15.6 8.49831C15.6 5.05036 12.6116 2.25586 8.92466 2.25586Z"/>
+		</g>
+		<g id="icon-email">
+			<path d="M14.9704 3.99951C14.9136 3.99365 14.8564 3.99365 14.7996 3.99951H3.13294C3.05817 4.00066 2.98389 4.01187 2.91211 4.03284L8.93294 10.0287L14.9704 3.99951Z"/>
+			<path d="M15.588 4.57898L9.52135 10.6206C9.36522 10.7759 9.15401 10.863 8.93385 10.863C8.7137 10.863 8.50249 10.7759 8.34635 10.6206L2.33385 4.62481C2.31537 4.69275 2.30557 4.76275 2.30469 4.83315V13.1665C2.30469 13.3875 2.39248 13.5995 2.54877 13.7557C2.70505 13.912 2.91701 13.9998 3.13802 13.9998H14.8047C15.0257 13.9998 15.2377 13.912 15.3939 13.7557C15.5502 13.5995 15.638 13.3875 15.638 13.1665V4.83315C15.6347 4.74634 15.6178 4.66058 15.588 4.57898ZM3.70885 13.1665H3.12969V12.5706L6.15885 9.56648L6.74635 10.154L3.70885 13.1665ZM14.7964 13.1665H14.213L11.1755 10.154L11.763 9.56648L14.7922 12.5706L14.7964 13.1665Z"/>
+		</g>
+		<g id="icon-copy">
+			<path d="M5.01193 14.347C4.41624 14.347 3.83392 14.1704 3.3386 13.8395C2.84329 13.5086 2.45723 13.0382 2.22927 12.4879C2.0013 11.9375 1.94166 11.3319 2.05788 10.7477C2.17411 10.1634 2.46099 9.62677 2.88224 9.20558L5.99005 6.09896C6.55488 5.53412 7.32096 5.2168 8.11975 5.2168C8.91854 5.2168 9.68462 5.53412 10.2494 6.09896C10.8143 6.66379 11.1316 7.42987 11.1316 8.22867C11.1316 9.02747 10.8143 9.79356 10.2494 10.3584L9.91286 10.6944L9.05161 9.83433L9.39063 9.49531C9.72593 9.1584 9.91397 8.70228 9.91351 8.22695C9.91306 7.75162 9.72414 7.29587 9.38819 6.95961C9.04627 6.63329 8.59179 6.45123 8.11914 6.45123C7.64649 6.45123 7.19201 6.63329 6.85009 6.95961L3.74349 10.0662C3.57672 10.2328 3.44441 10.4307 3.35415 10.6484C3.26388 10.8662 3.21742 11.0996 3.21742 11.3353C3.21742 11.571 3.26388 11.8044 3.35415 12.0222C3.44441 12.2399 3.57672 12.4378 3.74349 12.6044C4.08541 12.9307 4.5399 13.1127 5.01254 13.1127C5.48519 13.1127 5.93967 12.9307 6.2816 12.6044L7.14224 13.465C6.86309 13.7456 6.53107 13.9679 6.16541 14.1193C5.79975 14.2707 5.40769 14.3481 5.01193 14.347Z"/>
+			<path d="M9.8801 13.1302C9.28441 13.1302 8.70208 12.9536 8.20677 12.6227C7.71145 12.2918 7.3254 11.8214 7.09743 11.2711C6.86946 10.7207 6.80982 10.1151 6.92605 9.53088C7.04228 8.94663 7.32916 8.40998 7.7504 7.98878L8.08699 7.6528L8.94763 8.51406L8.61165 8.85005C8.27517 9.18655 8.08614 9.64293 8.08614 10.1188C8.08614 10.5947 8.27517 11.0511 8.61165 11.3876C8.95358 11.7139 9.40806 11.896 9.88071 11.896C10.3534 11.896 10.8078 11.7139 11.1498 11.3876L14.257 8.28033C14.5928 7.94362 14.7814 7.48745 14.7814 7.01188C14.7814 6.5363 14.5928 6.08013 14.257 5.74342C13.915 5.4171 13.4606 5.23504 12.9879 5.23504C12.5153 5.23504 12.0608 5.4171 11.7189 5.74342L10.8582 4.88216C11.423 4.31732 12.1891 4 12.9879 4C13.7867 4 14.5528 4.31732 15.1176 4.88216C15.6824 5.44699 15.9998 6.21308 15.9998 7.01188C15.9998 7.81068 15.6824 8.57676 15.1176 9.14159L12.011 12.2476C11.7319 12.5282 11.3999 12.7507 11.0342 12.9022C10.6686 13.0536 10.2759 13.1311 9.8801 13.1302Z"/>
+		</g>
+		<g id="icon-reddit">
+			<path d="M24 11.779c0-1.459-1.192-2.645-2.657-2.645-.715 0-1.363.286-1.84.746-1.81-1.191-4.259-1.949-6.971-2.046l1.483-4.669 4.016.941-.006.058c0 1.193.975 2.163 2.174 2.163 1.198 0 2.172-.97 2.172-2.163s-.975-2.164-2.172-2.164c-.92 0-1.704.574-2.021 1.379l-4.329-1.015c-.189-.046-.381.063-.44.249l-1.654 5.207c-2.838.034-5.409.798-7.3 2.025-.474-.438-1.103-.712-1.799-.712-1.465 0-2.656 1.187-2.656 2.646 0 .97.533 1.811 1.317 2.271-.052.282-.086.567-.086.857 0 3.911 4.808 7.093 10.719 7.093s10.72-3.182 10.72-7.093c0-.274-.029-.544-.075-.81.832-.447 1.405-1.312 1.405-2.318zm-17.224 1.816c0-.868.71-1.575 1.582-1.575.872 0 1.581.707 1.581 1.575s-.709 1.574-1.581 1.574-1.582-.706-1.582-1.574zm9.061 4.669c-.797.793-2.048 1.179-3.824 1.179l-.013-.003-.013.003c-1.777 0-3.028-.386-3.824-1.179-.145-.144-.145-.379 0-.523.145-.145.381-.145.526 0 .65.647 1.729.961 3.298.961l.013.003.013-.003c1.569 0 2.648-.315 3.298-.962.145-.145.381-.144.526 0 .145.145.145.379 0 .524zm-.189-3.095c-.872 0-1.581-.706-1.581-1.574 0-.868.709-1.575 1.581-1.575s1.581.707 1.581 1.575-.709 1.574-1.581 1.574z"/>
+		</g>
+		<g id="icon-whatsapp">
+			<path d="M9.00001 2C13.1423 2 16.5 5.35775 16.5 9.5C16.5 13.6422 13.1423 17 9.00001 17C7.67459 17.0021 6.3725 16.6514 5.22751 15.9837L1.50301 17L2.51701 13.274C1.84883 12.1286 1.4978 10.826 1.50001 9.5C1.50001 5.35775 4.85776 2 9.00001 2ZM6.44401 5.975L6.29401 5.981C6.1969 5.98691 6.10199 6.01242 6.01501 6.056C5.93365 6.10207 5.85938 6.15967 5.79451 6.227C5.70451 6.31175 5.65351 6.38525 5.59876 6.4565C5.32135 6.81717 5.17199 7.25998 5.17426 7.715C5.17576 8.0825 5.27176 8.44025 5.42176 8.77475C5.72851 9.45125 6.23326 10.1675 6.89926 10.8312C7.05976 10.991 7.21726 11.1515 7.38676 11.3007C8.2143 12.0293 9.20045 12.5548 10.2668 12.8352L10.6928 12.9005C10.8315 12.908 10.9703 12.8975 11.1098 12.8907C11.3282 12.8795 11.5415 12.8203 11.7345 12.7175C11.8327 12.6669 11.9286 12.6118 12.0218 12.5525C12.0218 12.5525 12.054 12.5315 12.1155 12.485C12.2168 12.41 12.279 12.3567 12.363 12.269C12.4253 12.2045 12.4793 12.1287 12.5205 12.0425C12.579 11.9202 12.6375 11.687 12.6615 11.4927C12.6795 11.3442 12.6743 11.2632 12.672 11.213C12.669 11.1327 12.6023 11.0495 12.5295 11.0142L12.093 10.8185C12.093 10.8185 11.4405 10.5342 11.0415 10.3527C10.9998 10.3345 10.955 10.3241 10.9095 10.322C10.8582 10.3167 10.8063 10.3225 10.7574 10.3389C10.7085 10.3554 10.6637 10.3821 10.626 10.4172C10.6223 10.4157 10.572 10.4585 10.0298 11.1155C9.99863 11.1573 9.95576 11.1889 9.90661 11.2063C9.85745 11.2236 9.80424 11.226 9.75375 11.213C9.7049 11.1999 9.65703 11.1834 9.61051 11.1635C9.5175 11.1245 9.48526 11.1095 9.4215 11.0825C8.99106 10.8947 8.59252 10.6409 8.24026 10.3302C8.14576 10.2477 8.05801 10.1577 7.96801 10.0707C7.67295 9.78817 7.4158 9.4685 7.20301 9.11975L7.15876 9.0485C7.12697 9.00062 7.10128 8.94897 7.08226 8.89475C7.05376 8.7845 7.12801 8.696 7.12801 8.696C7.12801 8.696 7.31026 8.4965 7.39501 8.3885C7.47751 8.2835 7.54726 8.1815 7.59226 8.10875C7.68076 7.96625 7.70851 7.82 7.66201 7.70675C7.45201 7.19375 7.23451 6.683 7.01101 6.176C6.96676 6.0755 6.83551 6.0035 6.71626 5.98925C6.67576 5.98475 6.63526 5.98025 6.59476 5.97725C6.49404 5.97224 6.39311 5.97325 6.29251 5.98025L6.44326 5.97425L6.44401 5.975Z"/>
+		</g>
+		<g id="icon-telegram">
+			<path d="M14.9446 4.62436L3.42725 9.08869C2.96377 9.29659 2.80701 9.71292 3.31523 9.93887L6.26994 10.8827L13.414 6.44469C13.8041 6.16608 14.2035 6.24037 13.8598 6.54686L7.72401 12.1311L7.53127 14.4944C7.70979 14.8593 8.03667 14.861 8.24517 14.6796L9.94274 13.0651L12.8501 15.2534C13.5254 15.6552 13.8928 15.3959 14.0381 14.6594L15.945 5.58304C16.143 4.67646 15.8054 4.27702 14.9446 4.62436Z"/>
+		</g>
+		<g id="icon-threads">
+			<path d="M11.115 7.53332C11.0589 7.5069 11.002 7.48146 10.9443 7.45711C10.8438 5.63665 9.83209 4.59444 8.13334 4.58377C8.12565 4.58372 8.11799 4.58372 8.1103 4.58372C7.09423 4.58372 6.24918 5.01016 5.72905 5.78615L6.66331 6.41629C7.05186 5.83666 7.66166 5.71309 8.11075 5.71309C8.11593 5.71309 8.12114 5.71309 8.12627 5.71314C8.68561 5.71664 9.10768 5.87654 9.38086 6.18837C9.57966 6.41539 9.71262 6.7291 9.77846 7.12502C9.28255 7.04215 8.74622 7.01667 8.17288 7.04899C6.55779 7.14046 5.51948 8.06663 5.58921 9.35357C5.6246 10.0064 5.95536 10.568 6.52052 10.9348C6.99835 11.245 7.61378 11.3966 8.25338 11.3623C9.09805 11.3168 9.7607 10.9999 10.223 10.4205C10.5741 9.9805 10.7961 9.4103 10.8942 8.69183C11.2967 8.9307 11.595 9.24504 11.7598 9.6229C12.04 10.2652 12.0563 11.3208 11.1804 12.1813C10.4129 12.9352 9.49036 13.2613 8.09616 13.2714C6.54962 13.2601 5.37999 12.7724 4.61953 11.8219C3.90742 10.9318 3.5394 9.64624 3.52567 8.00077C3.5394 6.35529 3.90742 5.06968 4.61953 4.17962C5.37999 3.2291 6.5496 2.74144 8.09614 2.73014C9.65391 2.74152 10.8439 3.23153 11.6335 4.18664C12.0206 4.65501 12.3125 5.24402 12.505 5.93079L13.5998 5.64358C13.3665 4.79825 12.9995 4.06982 12.5001 3.4657C11.4878 2.24121 10.0074 1.61378 8.09996 1.60077H8.09232C6.18873 1.61373 4.72489 2.24356 3.74149 3.47272C2.86639 4.56653 2.415 6.08848 2.39983 7.99627L2.39978 8.00077L2.39983 8.00527C2.415 9.91304 2.86639 11.435 3.74149 12.5288C4.72489 13.758 6.18873 14.3878 8.09232 14.4008H8.09996C9.79236 14.3892 10.9853 13.9536 11.968 12.9882C13.2538 11.7252 13.2151 10.142 12.7913 9.17017C12.4873 8.47324 11.9076 7.90718 11.115 7.53332ZM8.19292 10.2346C7.48505 10.2738 6.74965 9.96137 6.71339 9.29224C6.68651 8.7961 7.07249 8.2425 8.23636 8.17656C8.36965 8.169 8.50044 8.1653 8.62893 8.1653C9.05168 8.1653 9.44717 8.20568 9.80673 8.28297C9.67262 9.92977 8.88597 10.1972 8.19292 10.2346Z"/>
+		</g>
+		<g id="icon-dots-1">
+			<path d="M1.4286 10.5706C2.08601 9.91318 3.15189 9.91318 3.8093 10.5706C4.4667 11.228 4.4667 12.2939 3.8093 12.9513C3.15189 13.6087 2.08601 13.6087 1.4286 12.9513C0.771194 12.2939 0.771194 11.228 1.4286 10.5706Z"/>
+			<path d="M6.18999 5.80862C6.8474 5.15121 7.91327 5.15121 8.57068 5.80862C9.22809 6.46603 9.22809 7.5319 8.57068 8.18931C7.91327 8.84672 6.8474 8.84672 6.18999 8.18931C5.53258 7.5319 5.53258 6.46603 6.18999 5.80862Z"/>
+			<path d="M1.4286 1.04774C2.08601 0.390335 3.15189 0.390335 3.8093 1.04774C4.4667 1.70515 4.4667 2.77103 3.8093 3.42844C3.15189 4.08585 2.08601 4.08585 1.4286 3.42844C0.771194 2.77103 0.771194 1.70515 1.4286 1.04774Z"/>
+		</g>
+		<g id="icon-dots-2">
+			<path d="M3.5 2C3.5 2.82843 2.82843 3.5 2 3.5C1.17157 3.5 0.5 2.82843 0.5 2C0.5 1.17157 1.17157 0.5 2 0.5C2.82843 0.5 3.5 1.17157 3.5 2Z"/>
+			<path d="M9.5 2C9.5 2.82843 8.82843 3.5 8 3.5C7.17157 3.5 6.5 2.82843 6.5 2C6.5 1.17157 7.17157 0.5 8 0.5C8.82843 0.5 9.5 1.17157 9.5 2Z"/>
+			<path d="M3.5 8C3.5 8.82843 2.82843 9.5 2 9.5C1.17157 9.5 0.5 8.82843 0.5 8C0.5 7.17157 1.17157 6.5 2 6.5C2.82843 6.5 3.5 7.17157 3.5 8Z"/>
+			<path d="M9.5 8C9.5 8.82843 8.82843 9.5 8 9.5C7.17157 9.5 6.5 8.82843 6.5 8C6.5 7.17157 7.17157 6.5 8 6.5C8.82843 6.5 9.5 7.17157 9.5 8Z"/>
+		</g>
+		<g id="icon-dots-3">
+			<path d="M6.08001 5.56396C6.8181 6.30205 6.8181 7.49873 6.08001 8.23682C5.34192 8.97491 4.14523 8.97491 3.40714 8.23682C2.66905 7.49873 2.66905 6.30205 3.40714 5.56396C4.14523 4.82587 5.34192 4.82587 6.08001 5.56396ZM10.2378 9.72175C10.9759 10.4598 10.9759 11.6565 10.2378 12.3946C9.49971 13.1327 8.30302 13.1327 7.56493 12.3946C6.82684 11.6565 6.82684 10.4598 7.56493 9.72175C8.30303 8.98366 9.49971 8.98366 10.2378 9.72175ZM10.237 1.40694C10.9751 2.14503 10.9751 3.34172 10.237 4.07981C9.49893 4.8179 8.30225 4.8179 7.56416 4.07981C6.82607 3.34172 6.82607 2.14504 7.56416 1.40694C8.30225 0.668854 9.49893 0.668853 10.237 1.40694Z"/>
+		</g>
+		<g id="icon-dots-4">
+			<path d="M3.43555 12C3.43555 12.8284 2.76397 13.5 1.93555 13.5C1.10712 13.5 0.435547 12.8284 0.435547 12C0.435547 11.1716 1.10712 10.5 1.93555 10.5C2.76397 10.5 3.43555 11.1716 3.43555 12Z"/>
+			<path d="M0.564941 7C0.564941 7.82843 1.23651 8.5 2.06494 8.5C2.89337 8.5 3.56494 7.82843 3.56494 7C3.56494 6.17157 2.89337 5.5 2.06494 5.5C1.23651 5.5 0.564941 6.17157 0.564941 7Z"/>
+			<path d="M10.4355 12C10.4355 12.8284 11.1071 13.5 11.9355 13.5C12.764 13.5 13.4355 12.8284 13.4355 12C13.4355 11.1716 12.764 10.5 11.9355 10.5C11.1071 10.5 10.4355 11.1716 10.4355 12Z"/>
+			<path d="M10.5649 7C10.5649 7.82843 11.2365 8.5 12.0649 8.5C12.8934 8.5 13.5649 7.82843 13.5649 7C13.5649 6.17157 12.8934 5.5 12.0649 5.5C11.2365 5.5 10.5649 6.17157 10.5649 7Z"/>
+			<path d="M5.56494 2C5.56494 2.82843 6.23651 3.5 7.06494 3.5C7.89337 3.5 8.56494 2.82843 8.56494 2C8.56494 1.17157 7.89337 0.5 7.06494 0.5C6.23651 0.5 5.56494 1.17157 5.56494 2Z"/>
+			<path d="M8.43555 11.8857C8.43555 12.7142 7.76397 13.3857 6.93555 13.3857C6.10712 13.3857 5.43555 12.7142 5.43555 11.8857C5.43555 11.0573 6.10712 10.3857 6.93555 10.3857C7.76397 10.3857 8.43555 11.0573 8.43555 11.8857Z"/>
+		</g>
+		<g id="icon-dots-5">
+			<circle cx="2" cy="2.5" r="2"/>
+			<circle cx="10" cy="2.5" r="2"/>
+			<circle cx="2" cy="10.5" r="2"/>
+			<circle cx="10" cy="10.5" r="2"/>
+		</g>
+		<g id="icon-pin">
+			<path fill-rule="evenodd" clip-rule="evenodd" d="M4.99814 8.14355C5.20853 8.14355 5.37909 8.31411 5.37909 8.52451L5.37909 13.0959C5.37909 13.3063 5.20853 13.4769 4.99814 13.4769C4.78775 13.4769 4.61719 13.3063 4.61719 13.0959L4.61719 8.52451C4.61719 8.31411 4.78775 8.14355 4.99814 8.14355Z"/>
+			<path fill-rule="evenodd" clip-rule="evenodd" d="M4.99907 8.90488C7.31341 8.90488 9.18955 7.02874 9.18955 4.7144C9.18955 2.40007 7.31341 0.523926 4.99907 0.523926C2.68473 0.523926 0.808594 2.40007 0.808594 4.7144C0.808594 7.02874 2.68473 8.90488 4.99907 8.90488ZM4.9993 5.85749C5.63049 5.85749 6.14216 5.34582 6.14216 4.71463C6.14216 4.08345 5.63049 3.57178 4.9993 3.57178C4.36812 3.57178 3.85645 4.08345 3.85645 4.71463C3.85645 5.34582 4.36812 5.85749 4.9993 5.85749Z"/>
+		</g>
+		<g id="icon-filter">
+			<rect x="0.333984" y="0.584961" width="10.5" height="1.16667" rx="0.583333"/>
+			<rect x="1.5" y="4.08496" width="8.16667" height="1.16667" rx="0.583333"/>
+			<rect x="2.66797" y="7.58496" width="5.83333" height="1.16667" rx="0.583333"/>
+		</g>
+	</defs>
+</svg>
+<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="position: absolute;left: -10000px;top: 0;">
+	<defs>
+		<linearGradient id="gradient-instagram" x1="2.40039" y1="11.9004" x2="11.784" y2="-0.189973" gradientUnits="userSpaceOnUse">
+			<stop stop-color="#FFDD55"/>
+			<stop offset="0.183304" stop-color="#FE7168"/>
+			<stop offset="0.374606" stop-color="#FB5085"/>
+			<stop offset="0.593518" stop-color="#C23DD5"/>
+			<stop offset="1" stop-color="#287FFF"/>
+		</linearGradient>
+		<linearGradient id="gradient-messenger" x1="13" y1="3.99951" x2="4.5" y2="15.9995" gradientUnits="userSpaceOnUse">
+			<stop stop-color="#FE7168"/>
+			<stop offset="0.208333" stop-color="#FB5085"/>
+			<stop offset="0.427083" stop-color="#C23DD5"/>
+			<stop offset="1" stop-color="#287FFF"/>
+		</linearGradient>
+	</defs>
+</svg>
+
+
+
+
+<script type="text/rocketlazyloadscript" data-rocket-type='text/javascript'>
+/* <![CDATA[ */
+var advancedAds = {"adHealthNotice":{"enabled":false,"pattern":"AdSense fallback was loaded for empty AdSense ad \"[ad_title]\""},"frontendPrefix":"cicnewsads-"};
+
+/* ]]> */
+</script>
+<script type="speculationrules">
+{"prefetch":[{"source":"document","where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":["/wp-*.php","/wp-admin/*","/wp-content/uploads/*","/wp-content/*","/wp-content/plugins/*","/wp-content/themes/cic/*","/*\\?(.+)"]}},{"not":{"selector_matches":"a[rel~=\"nofollow\"]"}},{"not":{"selector_matches":".no-prefetch, .no-prefetch a"}}]},"eagerness":"conservative"}]}
+</script>
+<script id="ppress-frontend-script-js-extra">
+var pp_ajax_form = {"ajaxurl":"https://www.cicnews.com/wp-admin/admin-ajax.php","confirm_delete":"Are you sure?","deleting_text":"Deleting...","deleting_error":"An error occurred. Please try again.","nonce":"5873c51d9d","disable_ajax_form":"false","is_checkout":"0","is_checkout_tax_enabled":"0","is_checkout_autoscroll_enabled":"true"};
+//# sourceURL=ppress-frontend-script-js-extra
+</script>
+<script defer='defer' src="https://www.cicnews.com/wp-content/plugins/wp-user-avatar/assets/js/frontend.min.js?ver=4.17.2" id="ppress-frontend-script-js"></script>
+<script src="https://www.cicnews.com/wp-content/themes/cic/js/shareon.iife.js?ver=3.5.7" id="shareon-js"></script>
+<script src="https://www.cicnews.com/wp-content/themes/cic/js/scripts.js?ver=1.0" id="template-script-js"></script>
+<script src="https://www.cicnews.com/wp-content/plugins/advanced-ads/admin/assets/js/advertisement.js" id="advanced-ads-find-adblocker-js"></script>
+<script id="advanced-ads-pro-main-js-extra">
+var advanced_ads_cookies = {"cookie_path":"/","cookie_domain":""};
+var advadsCfpInfo = {"cfpExpHours":"3","cfpClickLimit":"3","cfpBan":"7","cfpPath":"https://www.cicnews.com","cfpDomain":"$host","cfpEnabled":""};
+//# sourceURL=advanced-ads-pro-main-js-extra
+</script>
+<script src="https://www.cicnews.com/wp-content/plugins/advanced-ads-pro/assets/dist/advanced-ads-pro.js?ver=6.9.4" id="advanced-ads-pro-main-js"></script>
+<script src="https://www.cicnews.com/wp-content/plugins/advanced-ads-pro/assets/js/postscribe.js?ver=3.0.9" id="advanced-ads-pro/postscribe-js"></script>
+<script id="advanced-ads-pro/cache_busting-js-extra">
+var advanced_ads_pro_ajax_object = {"ajax_url":"https://www.cicnews.com/wp-admin/admin-ajax.php","lazy_load_module_enabled":"1","lazy_load":{"default_offset":200,"offsets":[]},"moveintohidden":"","wp_timezone_offset":"0","the_id":"33324","is_singular":"1"};
+var advanced_ads_responsive = {"reload_on_resize":"0"};
+//# sourceURL=advanced-ads-pro%2Fcache_busting-js-extra
+</script>
+<script src="https://www.cicnews.com/wp-content/plugins/advanced-ads-pro/assets/dist/front.js?ver=3.0.9" id="advanced-ads-pro/cache_busting-js"></script>
+<!--noptimize--><script type="text/rocketlazyloadscript">window.advads_admin_bar_items = [{"title":"Content Ads","type":"ad","count":1},{"title":"In Article 3","type":"placement","count":1},{"title":"In Article 2","type":"placement","count":1},{"title":"In Article 1","type":"placement","count":1}];</script><!--/noptimize--><!--noptimize--><script>window.advads_passive_placements = {"73432_1":{"elementid":["cicnewsads-2180a3e9ae3b6fa197589c6cd68023ee"],"ads":{"34207":{"id":34207,"title":"Content Ads","expiry_date":0,"visitors":[],"content":"<div id=\"cicnewsads-2409091908\" class=\"cicnewsads-in-article-3 cicnewsads-entity-placement\" style=\"margin-top: 33px;margin-bottom: 33px;margin-left: auto;margin-right: auto;text-align: center;\"><script async=\"async\" src=\"https:\/\/securepubads.g.doubleclick.net\/tag\/js\/gpt.js\"><\/script>\n<script> var googletag = googletag || {}; googletag.cmd = googletag.cmd || [];<\/script>\n<div id=\"gpt-ad-5652089302997-0\">\n  <script>\n\tgoogletag.cmd.push(function() {\n\t\t\t\tgoogletag.defineSlot( '\/22646143967\/cicnews.com\/cicnews_in_article', [[250,250],[300,250],[300,600]], 'gpt-ad-5652089302997-0' )\n\t\t.addService(googletag.pubads()).setTargeting( 'cicnews_slug', 'ircc-and-canadas-provinces-continue-working-together-to-welcome-ukrainians' ).setCollapseEmptyDiv(true);\n\t\t\t\twindow.advadsGamEmptySlotsTimers = window.advadsGamEmptySlotsTimers || {};\n\t\tconst timers                     = window.advadsGamEmptySlotsTimers;\n\n\t\ttimers['gpt-ad-5652089302997-0'] = setTimeout( function () {\n\t\t\tconst id = 'gpt-ad-5652089302997-0';\n\t\t\tdocument.dispatchEvent( new CustomEvent( 'aagam_empty_slot', {detail: id} ) );\n\t\t\tdelete ( timers[id] );\n\t\t}, 1000 );\n\n\t\tif ( typeof window.advadsGamHasEmptySlotListener === 'undefined' ) {\n\t\t\tgoogletag.pubads().addEventListener( 'slotRequested', function ( ev ) {\n\t\t\t\tconst id = ev.slot.getSlotElementId();\n\t\t\t\tif ( typeof timers[id] === 'undefined' ) {\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t\tclearTimeout( timers[id] );\n\t\t\t\ttimers[id] = setTimeout( function () {\n\t\t\t\t\tdocument.dispatchEvent( new CustomEvent( 'aagam_empty_slot', {detail: id} ) );\n\t\t\t\t\tdelete ( timers[id] );\n\t\t\t\t}, 2500 );\n\t\t\t} );\n\t\t\tgoogletag.pubads().addEventListener( 'slotResponseReceived', function ( ev ) {\n\t\t\t\tconst id = ev.slot.getSlotElementId();\n\t\t\t\tif ( typeof timers[id] !== 'undefined' ) {\n\t\t\t\t\tclearTimeout( timers[id] );\n\t\t\t\t\tdelete ( timers[id] );\n\t\t\t\t}\n\t\t\t\tif ( ! ev.slot.getResponseInformation() ) {\n\t\t\t\t\tdocument.dispatchEvent( new CustomEvent( 'aagam_empty_slot', {detail: id} ) );\n\t\t\t\t}\n\t\t\t} );\n\t\t\twindow.advadsGamHasEmptySlotListener = true;\n\t\t}\n\n\t\tgoogletag.enableServices();\n\t\tgoogletag.display( 'gpt-ad-5652089302997-0' );\n\t} );\n  <\/script>\n<\/div>\n<\/div>","once_per_page":0,"debugmode":false,"blog_id":1,"type":"gam","position":"center_nofloat","day_indexes":false,"privacy":{"ignore":false,"needs_consent":false}}},"type":"ad","id":34207,"placement_info":{"id":"73432","title":"In Article 3","content":"New placement content goes here","type":"custom_position","slug":"in-article-3","status":"publish","item":"ad_34207","display":[],"visitors":[],"ad_label":"default","placement_position":"default","inline-css":"","lazy_load":"enabled","cache-busting":"auto","inject_by":"pro_custom_element","pro_custom_element":"main.post-main > div.post-body > p:eq(24)","pro_custom_position":"insertAfter","container_id":"#c870c2f10397204fb7c6f384019bf6587","cache_busting_empty":"0"},"test_id":null,"inject_before":[""]},"73431_3":{"elementid":["cicnewsads-79b0acb2535880b7b95bfe0f1a7f46c9"],"ads":{"34207":{"id":34207,"title":"Content Ads","expiry_date":0,"visitors":[],"content":"<div id=\"cicnewsads-571127521\" class=\"cicnewsads-in-article-2 cicnewsads-entity-placement\" style=\"margin-top: 33px;margin-bottom: 33px;margin-left: auto;margin-right: auto;text-align: center;\"><script async=\"async\" src=\"https:\/\/securepubads.g.doubleclick.net\/tag\/js\/gpt.js\"><\/script>\n<script> var googletag = googletag || {}; googletag.cmd = googletag.cmd || [];<\/script>\n<div id=\"gpt-ad-4928355692781-0\">\n  <script>\n\tgoogletag.cmd.push(function() {\n\t\t\t\tgoogletag.defineSlot( '\/22646143967\/cicnews.com\/cicnews_in_article', [[250,250],[300,250],[300,600]], 'gpt-ad-4928355692781-0' )\n\t\t.addService(googletag.pubads()).setTargeting( 'cicnews_slug', 'ircc-and-canadas-provinces-continue-working-together-to-welcome-ukrainians' ).setCollapseEmptyDiv(true);\n\t\t\t\twindow.advadsGamEmptySlotsTimers = window.advadsGamEmptySlotsTimers || {};\n\t\tconst timers                     = window.advadsGamEmptySlotsTimers;\n\n\t\ttimers['gpt-ad-4928355692781-0'] = setTimeout( function () {\n\t\t\tconst id = 'gpt-ad-4928355692781-0';\n\t\t\tdocument.dispatchEvent( new CustomEvent( 'aagam_empty_slot', {detail: id} ) );\n\t\t\tdelete ( timers[id] );\n\t\t}, 1000 );\n\n\t\tif ( typeof window.advadsGamHasEmptySlotListener === 'undefined' ) {\n\t\t\tgoogletag.pubads().addEventListener( 'slotRequested', function ( ev ) {\n\t\t\t\tconst id = ev.slot.getSlotElementId();\n\t\t\t\tif ( typeof timers[id] === 'undefined' ) {\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t\tclearTimeout( timers[id] );\n\t\t\t\ttimers[id] = setTimeout( function () {\n\t\t\t\t\tdocument.dispatchEvent( new CustomEvent( 'aagam_empty_slot', {detail: id} ) );\n\t\t\t\t\tdelete ( timers[id] );\n\t\t\t\t}, 2500 );\n\t\t\t} );\n\t\t\tgoogletag.pubads().addEventListener( 'slotResponseReceived', function ( ev ) {\n\t\t\t\tconst id = ev.slot.getSlotElementId();\n\t\t\t\tif ( typeof timers[id] !== 'undefined' ) {\n\t\t\t\t\tclearTimeout( timers[id] );\n\t\t\t\t\tdelete ( timers[id] );\n\t\t\t\t}\n\t\t\t\tif ( ! ev.slot.getResponseInformation() ) {\n\t\t\t\t\tdocument.dispatchEvent( new CustomEvent( 'aagam_empty_slot', {detail: id} ) );\n\t\t\t\t}\n\t\t\t} );\n\t\t\twindow.advadsGamHasEmptySlotListener = true;\n\t\t}\n\n\t\tgoogletag.enableServices();\n\t\tgoogletag.display( 'gpt-ad-4928355692781-0' );\n\t} );\n  <\/script>\n<\/div>\n<\/div>","once_per_page":0,"debugmode":false,"blog_id":1,"type":"gam","position":"center_nofloat","day_indexes":false,"privacy":{"ignore":false,"needs_consent":false}}},"type":"ad","id":34207,"placement_info":{"id":"73431","title":"In Article 2","content":"New placement content goes here","type":"custom_position","slug":"in-article-2","status":"publish","item":"ad_34207","display":[],"visitors":[],"ad_label":"default","placement_position":"default","inline-css":"","lazy_load":"enabled","cache-busting":"auto","inject_by":"pro_custom_element","pro_custom_element":"main.post-main > div.post-body > p:eq(17)","pro_custom_position":"insertAfter","container_id":"#c2647e94d03b3360175417c8525553068","cache_busting_empty":"0"},"test_id":null,"inject_before":[""]},"73430_5":{"elementid":["cicnewsads-b145b13dc1ed14e74693d5a42a3de942"],"ads":{"34207":{"id":34207,"title":"Content Ads","expiry_date":0,"visitors":[],"content":"<div id=\"cicnewsads-3114683160\" class=\"cicnewsads-in-article-1 cicnewsads-entity-placement\" style=\"margin-top: 33px;margin-bottom: 33px;margin-left: auto;margin-right: auto;text-align: center;\"><script async=\"async\" src=\"https:\/\/securepubads.g.doubleclick.net\/tag\/js\/gpt.js\"><\/script>\n<script> var googletag = googletag || {}; googletag.cmd = googletag.cmd || [];<\/script>\n<div id=\"gpt-ad-8974498394804-0\">\n  <script>\n\tgoogletag.cmd.push(function() {\n\t\t\t\tgoogletag.defineSlot( '\/22646143967\/cicnews.com\/cicnews_in_article', [[250,250],[300,250],[300,600]], 'gpt-ad-8974498394804-0' )\n\t\t.addService(googletag.pubads()).setTargeting( 'cicnews_slug', 'ircc-and-canadas-provinces-continue-working-together-to-welcome-ukrainians' ).setCollapseEmptyDiv(true);\n\t\t\t\twindow.advadsGamEmptySlotsTimers = window.advadsGamEmptySlotsTimers || {};\n\t\tconst timers                     = window.advadsGamEmptySlotsTimers;\n\n\t\ttimers['gpt-ad-8974498394804-0'] = setTimeout( function () {\n\t\t\tconst id = 'gpt-ad-8974498394804-0';\n\t\t\tdocument.dispatchEvent( new CustomEvent( 'aagam_empty_slot', {detail: id} ) );\n\t\t\tdelete ( timers[id] );\n\t\t}, 1000 );\n\n\t\tif ( typeof window.advadsGamHasEmptySlotListener === 'undefined' ) {\n\t\t\tgoogletag.pubads().addEventListener( 'slotRequested', function ( ev ) {\n\t\t\t\tconst id = ev.slot.getSlotElementId();\n\t\t\t\tif ( typeof timers[id] === 'undefined' ) {\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t\tclearTimeout( timers[id] );\n\t\t\t\ttimers[id] = setTimeout( function () {\n\t\t\t\t\tdocument.dispatchEvent( new CustomEvent( 'aagam_empty_slot', {detail: id} ) );\n\t\t\t\t\tdelete ( timers[id] );\n\t\t\t\t}, 2500 );\n\t\t\t} );\n\t\t\tgoogletag.pubads().addEventListener( 'slotResponseReceived', function ( ev ) {\n\t\t\t\tconst id = ev.slot.getSlotElementId();\n\t\t\t\tif ( typeof timers[id] !== 'undefined' ) {\n\t\t\t\t\tclearTimeout( timers[id] );\n\t\t\t\t\tdelete ( timers[id] );\n\t\t\t\t}\n\t\t\t\tif ( ! ev.slot.getResponseInformation() ) {\n\t\t\t\t\tdocument.dispatchEvent( new CustomEvent( 'aagam_empty_slot', {detail: id} ) );\n\t\t\t\t}\n\t\t\t} );\n\t\t\twindow.advadsGamHasEmptySlotListener = true;\n\t\t}\n\n\t\tgoogletag.enableServices();\n\t\tgoogletag.display( 'gpt-ad-8974498394804-0' );\n\t} );\n  <\/script>\n<\/div>\n<\/div>","once_per_page":0,"debugmode":false,"blog_id":1,"type":"gam","position":"center_nofloat","day_indexes":false,"privacy":{"ignore":false,"needs_consent":false}}},"type":"ad","id":34207,"placement_info":{"id":"73430","title":"In Article 1","content":"New placement content goes here","type":"custom_position","slug":"in-article-1","status":"publish","item":"ad_34207","display":[],"visitors":[],"ad_label":"default","placement_position":"default","inline-css":"","lazy_load":"enabled","cache-busting":"auto","inject_by":"pro_custom_element","pro_custom_element":"main.post-main > div.post-body > p:eq(10)","pro_custom_position":"insertAfter","container_id":"#cc2c1c5d9d7de9e4391f3f2776e0371cd","cache_busting_empty":"0"},"test_id":null,"inject_before":[""]}};
+window.advads_has_ads = [["34207","ad","Content Ads","off"]];
+( window.advanced_ads_ready || jQuery( document ).ready ).call( null, function() {if ( !window.advanced_ads_pro ) {console.log("Advanced Ads Pro: cache-busting can not be initialized");} });</script><!--/noptimize--><!--noptimize--><script>!function(){window.advanced_ads_ready_queue=window.advanced_ads_ready_queue||[],advanced_ads_ready_queue.push=window.advanced_ads_ready;for(var d=0,a=advanced_ads_ready_queue.length;d<a;d++)advanced_ads_ready(advanced_ads_ready_queue[d])}();</script><!--/noptimize--><script type="text/javascript" src="/_Incapsula_Resource?SWJIYLWA=719d34d31c8e3a6e6fffd425f7e032f3&ns=2&cb=1639842883" async></script></body>
+</html>
+<!-- This website is like a Rocket, isn't it? Performance optimized by WP Rocket. Learn more: https://wp-rocket.me - Debug: cached@1789538954 -->

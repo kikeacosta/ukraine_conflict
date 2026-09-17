@@ -1,5 +1,14 @@
 # Raw inputs
 
+**Every input file and data source, with provenance, references and URLs, is
+catalogued in [`../documents/data_sources.md`](../documents/data_sources.md).**
+Migration inputs, including saved copies of the web sources behind them, are in
+[`migration/`](migration/README.md).
+
+> ⚠️ `migration/national_programme_arrivals_PLACEHOLDER.csv` approximates
+> Canada and USA arrivals until year-end series are added. Search the code for
+> `TODO-PLACEHOLDER`.
+
 Most files in this folder are tracked in git. The large ones are **not** — see
 `../.gitignore`.
 
@@ -65,5 +74,8 @@ aggregates them to anonymous counts before anything is written to
 | `a0.csv` | Infant mortality separation factors |
 | `ohchr_civilian_deaths.xlsx` | OHCHR annual civilian death totals |
 | `UKR_2022-2025_OHCHR.xlsx` | OHCHR civilian deaths by age and sex, via UNICEF-IGME |
-| `refugees_eurostat/` | Eurostat temporary protection registrations by age and sex |
+| `refugees_eurostat/` | Eurostat temporary protection stock by age and sex (read by 06), and the TP decisions series (evaluated, not used) |
+| `migration/` | UNHCR Data Finder extract, CES figures, Canada/USA placeholder anchors, and reference copies — see `migration/README.md` |
+| `Pozniak_migration.csv` | SBGSU border crossings 2022–2026. Not read by code; kept for reference |
+| `ukr_centre_for_economic_strategy_age_sex_migrants.csv` | CES fifth-wave age-sex shares. Not read by code; kept for reference |
 | `acled/` | ACLED fatality counts, comparison only. Not tracked - the cached extract ships instead |

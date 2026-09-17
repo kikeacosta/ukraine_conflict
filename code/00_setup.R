@@ -254,80 +254,8 @@ srb <- 1.06
 prop_male_birth <- srb / (1 + srb)
 prop_female_birth <- 1 / (1 + srb)
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# reconciled net emigration, by year and component ====
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# 06 takes the MODE totals from here and 10 turns the whole table into the
-# PERT bounds, so the two cannot disagree about what the central case is.
-#
-# The sources count different things and none of them counts what the
-# projection needs (people who left the resident population), so the bounds
-# are the disagreement between sources rather than a nominal +/- around a
-# single one:
-#
-# WEST - displacement across the western border.
-#   floor  CES (2026) table 1, net crossings of Ukrainian citizens:
-#          3.09 / 0.16 / 0.46 / 0.30 M. Crossing balances miss the peak-week
-#          undercount (SBGSU logged 6.0M exits to Poland against Poland's
-#          6.9M entries), arrivals from third countries, and departures by
-#          men 18-60 outside the crossings.
-#   ceiling Eurostat TP stock rescaled to UNHCR's non-Russia total:
-#          5.04 / 0.64 / 0.00 / 0.13 M. Registers overstate - status is kept
-#          after return, is held twice on two passports, and was granted to
-#          Ukrainians already working in the EU before February 2022.
-#   The two swap places after 2022: registration is the harder count during
-#   the mass registration, but from 2023 the Eurostat stock only looks flat
-#   because purges of inactive status offset new grants (CES 2026, 3.1).
-#
-# RU_BY - displacement into Russia and Belarus, which no register sees.
-#   UNHCR carried 2.8M for Russia in Dec 2022 (Russian official data), then
-#   1.3M in Apr 2025 (rental contracts, which miss non-renters and the
-#   naturalised), then ~6k once Russia stopped publishing and the basis was
-#   withdrawn. That last figure is the loss of a measurement, not a fall in
-#   the number of people, so the band is built around the 1.3M and not it.
-#
-# Both are SYSTEMATIC - a coverage bias runs the same way in every year - so
-# 11 draws one quantile per component and applies it across all four years.
-#
-# ONE RULE, NO FREE PARAMETERS. For the west the bounds ARE the two readings
-# and the mode is their midpoint. Nothing is tuned: an earlier version leaned
-# 2022 towards the register because the crossing balance demonstrably missed
-# the peak weeks, but that argument is already carried by the crossing figure
-# being the FLOOR, and weighting it again would have been counting the same
-# evidence twice.
-mig_west_sources <-
-  tribble(
-    ~year, ~crossings, ~register,
-    # CES (2026) table 1, net crossings of Ukrainian citizens, and the
-    # Eurostat TP stock differenced after rescaling to UNHCR's non-Russia
-    # total of 5.81M (factor 1.3088 on a 2025 stock of 4,439,305).
-    2022,  3090000,    5037521,
-    2023,   160000,     638366,
-    2024,   460000,      -1211,
-    2025,   300000,     135324
-  )
-
-migration_bounds <-
-  bind_rows(
-    mig_west_sources |>
-      transmute(
-        year,
-        component = "west",
-        min = pmin(crossings, register),
-        mode = (crossings + register) / 2,
-        max = pmax(crossings, register)
-      ),
-    # Entered once, in 2022. UNHCR already recorded 2.8M in Russia by December
-    # 2022, so the channel had filled within the first year; what it carries
-    # thereafter is decline, not further departure. Modelling it as a single
-    # 2022 flow sized at the END-of-period stock gets the cumulative
-    # denominator right at 2025 and the path approximately right before it,
-    # without inventing a year-by-year split no source can support.
-    tibble(
-      year = 2022, component = "ru_by",
-      min = 700000, mode = 1300000, max = 2000000
-    )
-  )
+# Net emigration inputs and PERT bounds are built from data in 06 and written
+# to data_inter/ (ukr_migration_bounds.rds); see documents/migration_methodology.md.
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # cohort-component projection for a single simulation draw ====
@@ -375,10 +303,14 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
       arrange(sex, age)
   }
 
-  # ems is POSITIVE for people leaving, so a year's net emigration is sum(ems)
-  # and the drawn total is matched by proportional rescaling, which leaves the
-  # age-sex profile untouched. A baseline of exactly zero is 13's no-migration
-  # scenario and is left alone.
+  # ems is net emigration at the mode (POSITIVE = leaving, negative = return)
+  # and w is the departures profile, summing to 1 within a year. The draw
+  # changes only the year's total, and the difference from the mode is ADDED
+  # along the departures profile, so the return cells stay as the registers
+  # show them. Scaling the signed profile proportionally instead would inflate
+  # returns whenever a draw raises emigration, and would blow up in years
+  # whose net total is small next to its departures and returns. 13's
+  # no-migration scenario passes ems = 0 and w = 0.
   mig_base_by_year <- static_inputs %>%
     group_by(year) %>%
     summarise(mig_base = sum(ems), .groups = "drop")
@@ -387,8 +319,7 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
     left_join(draws_this_sim, by = "year") %>%
     left_join(mig_base_by_year, by = "year") %>%
     mutate(
-      scale_mig = if_else(is.na(draw_mig) | mig_base == 0, 1, draw_mig / mig_base),
-      ems = ems * scale_mig,
+      ems = ems + if_else(is.na(draw_mig), 0, draw_mig - mig_base) * w,
 
       # spread the drawn yearly totals over age and sex
       cvs = draw_cvs * prop_cvs,
@@ -403,12 +334,6 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
 
       cnf = cvs + cmb
     )
-
-  # Proportional rescaling only carries meaning while the drawn total and the
-  # baseline flow are of comparable size. If the parameter table in 10 and the
-  # flows from 06 disagree by an order of magnitude the ratio silently inflates
-  # a year instead of rescaling it, so refuse to run rather than return that.
-  stopifnot(all(abs(df_sim$scale_mig) < 10))
 
   results_list <- list()
   # 1 January 2022 by completed age is 31 December 2021 by completed age

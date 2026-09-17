@@ -20,6 +20,7 @@
 # INPUTS   data_inter/ukr_ucdp_invals.rds                     (from 07_invals)
 #          data_inter/ukr_ualosses_..._sex_age_2022_2025.rds  (from 08)
 #          data_inter/ukr_ualosses_..._imputed_...rds         (from 09)
+#          data_inter/ukr_migration_bounds.rds                (from 06)
 # OUTPUT   data_inter/ukr_param_table.rds
 # ==============================================================================
 
@@ -63,18 +64,20 @@ cvs <-
 # Net emigration enters as TWO components, because two different things are
 # unknown about it and they are unknown to different degrees:
 #
-#   mig_west   how much of the western outflow the sources see. The floor is
-#              CES's net border crossings, the ceiling the rescaled Eurostat
-#              register, and the gap between them is the discrepancy Pozniak
-#              (2023) set out - a register that keeps people after they
-#              return against a crossing balance that missed the peak weeks.
-#   mig_ru_by  displacement into Russia and Belarus, which no register sees
-#              and which UNHCR stopped being able to estimate in May 2025.
+#   mig_west   how much of the western outflow the sources see. The two
+#              readings are CES's net border crossings and the cohort-
+#              differenced register stock built in 06; the gap between them
+#              is the discrepancy Pozniak (2023) set out - registers that keep
+#              people after they return against a crossing balance that
+#              missed the peak weeks.
+#   mig_ru_by  displacement into Russia and Belarus, which no register sees;
+#              one 2022 entry centred on UNHCR's end-2022 statistical stock.
 #
-# The bounds, and the sources behind each number, are in migration_bounds in
-# 00_setup.R; 06 scales its age-sex profiles to the modes from the same
-# table. Both components are systematic rather than year-by-year noise, and
-# 11 draws them accordingly.
+# 06 builds the bounds from the input data and allocates its age-sex flows at
+# the modes of the same table. Both components are systematic rather than
+# year-by-year noise, and 11 draws them accordingly.
+migration_bounds <- read_rds("data_inter/ukr_migration_bounds.rds")
+
 mig <-
   migration_bounds |>
   mutate(role = paste0("mig_", component)) |>

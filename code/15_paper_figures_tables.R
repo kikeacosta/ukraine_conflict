@@ -579,10 +579,20 @@ mig_cum <-
   filter(role %in% names(MIG_ROLES)) |>
   summarise(total = sum(draw) / 1e6, .by = sim_id)
 
+# both reference values are computed from the saved sources, not typed in
+ces_fig <- read_csv("data_input/migration/ces_2026_figures.csv", show_col_types = FALSE)
+unhcr_2025 <-
+  read_csv("data_input/migration/unhcr/unhcr_population_coo_UKR_2021_2025.csv",
+           show_col_types = FALSE) |>
+  filter(year == 2025) |>
+  summarise(v = sum(coalesce(refugees, 0) + coalesce(asylum_seekers, 0))) |>
+  pull(v)
+
 mig_refs <- tribble(
-  ~label,                                  ~value,
-  "CES 2026 (4.0 west + 0.3 + 1.3 RU/BY)",   5.59,
-  "UNHCR 2026 global (RU/BY ~0.05)",         5.86
+  ~label,                                                ~value,
+  "CES 2026 total (west + via RU/BY + in RU/BY)",
+  ces_fig$value[ces_fig$key == "refugees_total"] / 1e6,
+  "UNHCR Data Finder, end 2025 (excl. US parolees)",   unhcr_2025 / 1e6
 )
 
 figA3 <-
@@ -596,9 +606,9 @@ figA3 <-
     x = "Cumulative net emigration 2022-2025 (millions)", y = "Density",
     linetype = "Published estimate",
     caption = paste0(
-      "Beta-PERT draws (n = ", scales::comma(n_sim), ").\nNeither published ",
-      "figure pairs a register-weighted western estimate\nwith a Russia and ",
-      "Belarus component, so both sit below the mode."
+      "Beta-PERT draws (n = ", scales::comma(n_sim), ").\nThe published ",
+      "figures count different populations: the Data Finder\nomits US parolees ",
+      "and most of Canada, CES pairs crossings with 1.3M in Russia/Belarus."
     )
   ) +
   theme_paper() +
@@ -766,7 +776,8 @@ tab_pert <-
 
 tab_pert <- bind_rows(
   tab_pert |> mutate(year = as.character(year)),
-  tab_pert |> summarise(across(-year, sum)) |> mutate(year = "Total")
+  # mig_ru_by has a 2022 row only, so the other years are empty, not zero
+  tab_pert |> summarise(across(-year, \(x) sum(x, na.rm = TRUE))) |> mutate(year = "Total")
 )
 
 save_tab(tab_pert, "table3_pert_input_bounds.csv")
