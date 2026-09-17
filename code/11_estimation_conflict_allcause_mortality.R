@@ -122,14 +122,16 @@ static_inputs <- expand_grid(
   left_join(exp_mort2, by = c("year", "sex", "age")) %>%
   left_join(asfr2, by = c("year", "sex", "age")) %>%
   left_join(profile_props, by = c("year", "sex", "age")) %>%
-  replace_na(list(ems = 0, mx = 0, fx = 0, prop_cvs = 0, prop_cmb = 0))
+  replace_na(list(ems = 0, w = 0, mx = 0, fx = 0, prop_cvs = 0, prop_cmb = 0))
 
 # every cell must have a real mortality rate: an mx of 0 here would mean the
 # join silently failed and that cohort would be projected as immortal
 stopifnot(
   nrow(static_inputs) == 4 * 2 * 101,
   all(static_inputs$mx > 0),
-  !any(is.na(static_inputs))
+  !any(is.na(static_inputs)),
+  # each draw is spread along this departures profile, so it must sum to 1
+  all(abs(tapply(static_inputs$w, static_inputs$year, sum) - 1) < 1e-9)
 )
 
 # 5. THE PROJECTION FOR ONE DRAW ===============================================

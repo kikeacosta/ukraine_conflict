@@ -13,7 +13,7 @@
 #     for civilians, the ualosses register for combatants). They are not
 #     modelled as a rate, so they do not shrink when the population shrinks.
 #
-#   * roughly 5.9 million people left Ukraine between 2022 and 2025. That
+#   * roughly 6 million people left Ukraine between 2022 and 2025 (see 06). That
 #     emigration is subtracted from the exposure, i.e. from the DENOMINATOR
 #     of every death rate.
 #
@@ -110,7 +110,7 @@ static_inputs <-
   left_join(exp_mort2, by = c("year", "sex", "age")) %>%
   left_join(asfr2, by = c("year", "sex", "age")) %>%
   left_join(profile_props, by = c("year", "sex", "age")) %>%
-  replace_na(list(ems = 0, mx = 0, fx = 0, prop_cvs = 0, prop_cmb = 0))
+  replace_na(list(ems = 0, w = 0, mx = 0, fx = 0, prop_cvs = 0, prop_cmb = 0))
 
 stopifnot(all(static_inputs$mx > 0), !any(is.na(static_inputs)))
 
@@ -122,7 +122,7 @@ sim_full <- run_single_sim(1, draws_df, static_inputs, pop22_ini)
 sim_nomig <- run_single_sim(
   1,
   draws_df,
-  static_inputs |> mutate(ems = 0),
+  static_inputs |> mutate(ems = 0, w = 0),
   pop22_ini
 )
 

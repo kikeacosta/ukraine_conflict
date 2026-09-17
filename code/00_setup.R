@@ -254,80 +254,8 @@ srb <- 1.06
 prop_male_birth <- srb / (1 + srb)
 prop_female_birth <- 1 / (1 + srb)
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# reconciled net emigration, by year and component ====
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# 06 takes the MODE totals from here and 10 turns the whole table into the
-# PERT bounds, so the two cannot disagree about what the central case is.
-#
-# The sources count different things and none of them counts what the
-# projection needs (people who left the resident population), so the bounds
-# are the disagreement between sources rather than a nominal +/- around a
-# single one:
-#
-# WEST - displacement across the western border.
-#   floor  CES (2026) table 1, net crossings of Ukrainian citizens:
-#          3.09 / 0.16 / 0.46 / 0.30 M. Crossing balances miss the peak-week
-#          undercount (SBGSU logged 6.0M exits to Poland against Poland's
-#          6.9M entries), arrivals from third countries, and departures by
-#          men 18-60 outside the crossings.
-#   ceiling Eurostat TP stock rescaled to UNHCR's non-Russia total:
-#          5.04 / 0.64 / 0.00 / 0.13 M. Registers overstate - status is kept
-#          after return, is held twice on two passports, and was granted to
-#          Ukrainians already working in the EU before February 2022.
-#   The two swap places after 2022: registration is the harder count during
-#   the mass registration, but from 2023 the Eurostat stock only looks flat
-#   because purges of inactive status offset new grants (CES 2026, 3.1).
-#
-# RU_BY - displacement into Russia and Belarus, which no register sees.
-#   UNHCR carried 2.8M for Russia in Dec 2022 (Russian official data), then
-#   1.3M in Apr 2025 (rental contracts, which miss non-renters and the
-#   naturalised), then ~6k once Russia stopped publishing and the basis was
-#   withdrawn. That last figure is the loss of a measurement, not a fall in
-#   the number of people, so the band is built around the 1.3M and not it.
-#
-# Both are SYSTEMATIC - a coverage bias runs the same way in every year - so
-# 11 draws one quantile per component and applies it across all four years.
-#
-# ONE RULE, NO FREE PARAMETERS. For the west the bounds ARE the two readings
-# and the mode is their midpoint. Nothing is tuned: an earlier version leaned
-# 2022 towards the register because the crossing balance demonstrably missed
-# the peak weeks, but that argument is already carried by the crossing figure
-# being the FLOOR, and weighting it again would have been counting the same
-# evidence twice.
-mig_west_sources <-
-  tribble(
-    ~year, ~crossings, ~register,
-    # CES (2026) table 1, net crossings of Ukrainian citizens, and the
-    # Eurostat TP stock differenced after rescaling to UNHCR's non-Russia
-    # total of 5.81M (factor 1.3088 on a 2025 stock of 4,439,305).
-    2022,  3090000,    5037521,
-    2023,   160000,     638366,
-    2024,   460000,      -1211,
-    2025,   300000,     135324
-  )
-
-migration_bounds <-
-  bind_rows(
-    mig_west_sources |>
-      transmute(
-        year,
-        component = "west",
-        min = pmin(crossings, register),
-        mode = (crossings + register) / 2,
-        max = pmax(crossings, register)
-      ),
-    # Entered once, in 2022. UNHCR already recorded 2.8M in Russia by December
-    # 2022, so the channel had filled within the first year; what it carries
-    # thereafter is decline, not further departure. Modelling it as a single
-    # 2022 flow sized at the END-of-period stock gets the cumulative
-    # denominator right at 2025 and the path approximately right before it,
-    # without inventing a year-by-year split no source can support.
-    tibble(
-      year = 2022, component = "ru_by",
-      min = 700000, mode = 1300000, max = 2000000
-    )
-  )
+# Net emigration inputs and PERT bounds are built from data in 06 and written
+# to data_inter/ (ukr_migration_bounds.rds); see documents/migration_methodology.md.
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # cohort-component projection for a single simulation draw ====
@@ -342,16 +270,47 @@ migration_bounds <-
 #   sim_id         identifier carried through to the output
 #   draws_this_sim one row per year: draw_cvs, draw_cmb, draw_mig, min_cmb
 #   static_inputs  year-sex-age grid with ems, mx, fx, prop_cvs, prop_cmb
-#   pop22_ini      population by sex and age on 1 January 2022
+#   pop22_ini      population by sex and completed age on 1 January 2022
 #
-# TIMING: mid-year convention. Half the emigration and half the conflict
-# deaths are removed before exposure is computed, half the expected deaths
-# after, so exposure approximates person-years lived.
+# AGE CONVENTION: row x in year t is ONE birth cohort, the one born in year
+# t - x, i.e. completed age x on 31 December of year t. Newborns are row 0.
+# This is the convention the migration input from 06 is built in. The SSSU
+# population on 1 January 2022 at age x is the cohort born in 2021 - x, so it
+# enters 2022 in row x + 1, exactly as if it had been aged on from 31 December
+# 2021; nothing is dropped. (An earlier version joined it at row x and then
+# overwrote row 0 with 2022 births, which lost the ~271k children born in
+# 2021 and left rows from 2023 onward in two different conventions.)
+#
+# Period rates and age-at-death profiles (mx, fx, OHCHR, ualosses) are by
+# completed age at the event, while row x spends year t aged x - 1 and then x.
+# They are applied to row x unchanged, which is a half-year age offset applied
+# uniformly to every row; see documents/migration_methodology.md, 11.12.
+#
+# TIMING: mid-year convention. Exposure is the average of the cohort's stock at
+# the start and end of the year. For existing cohorts that means half the
+# emigration and half the conflict deaths are removed before expected deaths
+# are computed, and half the expected deaths after. Newborns start the year at
+# zero and arrive through it, so their exposure is half of what survives.
 run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
-  # ems is POSITIVE for people leaving, so a year's net emigration is sum(ems)
-  # and the drawn total is matched by proportional rescaling, which leaves the
-  # age-sex profile untouched. A baseline of exactly zero is 13's no-migration
-  # scenario and is left alone.
+  # carries a stock at 31 December into next year's rows: everyone moves up one
+  # row, 100+ stays open, and row 0 is left empty for next year's births
+  age_on <- function(d, next_year) {
+    d %>%
+      mutate(age = pmin(age + 1, 100)) %>%
+      summarise(pop = sum(pop), .by = c(sex, age)) %>%
+      bind_rows(tibble(sex = c("f", "m"), age = 0, pop = 0)) %>%
+      mutate(year = next_year) %>%
+      arrange(sex, age)
+  }
+
+  # ems is net emigration at the mode (POSITIVE = leaving, negative = return)
+  # and w is the departures profile, summing to 1 within a year. The draw
+  # changes only the year's total, and the difference from the mode is ADDED
+  # along the departures profile, so the return cells stay as the registers
+  # show them. Scaling the signed profile proportionally instead would inflate
+  # returns whenever a draw raises emigration, and would blow up in years
+  # whose net total is small next to its departures and returns. 13's
+  # no-migration scenario passes ems = 0 and w = 0.
   mig_base_by_year <- static_inputs %>%
     group_by(year) %>%
     summarise(mig_base = sum(ems), .groups = "drop")
@@ -360,8 +319,7 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
     left_join(draws_this_sim, by = "year") %>%
     left_join(mig_base_by_year, by = "year") %>%
     mutate(
-      scale_mig = if_else(is.na(draw_mig) | mig_base == 0, 1, draw_mig / mig_base),
-      ems = ems * scale_mig,
+      ems = ems + if_else(is.na(draw_mig), 0, draw_mig - mig_base) * w,
 
       # spread the drawn yearly totals over age and sex
       cvs = draw_cvs * prop_cvs,
@@ -377,14 +335,9 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
       cnf = cvs + cmb
     )
 
-  # Proportional rescaling only carries meaning while the drawn total and the
-  # baseline flow are of comparable size. If the parameter table in 10 and the
-  # flows from 06 disagree by an order of magnitude the ratio silently inflates
-  # a year instead of rescaling it, so refuse to run rather than return that.
-  stopifnot(all(abs(df_sim$scale_mig) < 10))
-
   results_list <- list()
-  current_pop_ini <- pop22_ini %>% mutate(year = 2022)
+  # 1 January 2022 by completed age is 31 December 2021 by completed age
+  current_pop_ini <- age_on(pop22_ini %>% select(sex, age, pop), 2022)
 
   for (yr in 2022:2025) {
     yr_data <- df_sim %>%
@@ -395,21 +348,27 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
     yr_processed <- yr_data %>%
       mutate(
         pop2 = pop - 0.5 * ems - 0.5 * cnf, # population at risk
-        noc = pop2 * mx, # expected (non-conflict) deaths
+        # expected (non-conflict) deaths. mx is a rate per PERSON-YEAR (04
+        # fits it to deaths over the mean of consecutive 1 January stocks),
+        # so deaths must equal mx x exposure. exposure = pop2 - noc / 2, which
+        # solves to noc = pop2 * mx / (1 + mx / 2). Using pop2 * mx instead
+        # would apply mx / (1 - mx / 2): 6% too high at 80, 21% at 100.
+        noc = pop2 * mx / (1 + 0.5 * mx),
         exposure = pop2 - 0.5 * noc, # person-years lived
 
-        # age 0 is not carried in from the previous year: it is born during
-        # this one. Births = sum(ASFR x female exposure), split by the sex
-        # ratio at birth.
+        # row 0 is the cohort born during this year: it starts empty and
+        # receives births = sum(ASFR x female exposure), split by the sex
+        # ratio at birth. Births never touch the other rows.
         births = sum(fx * exposure),
         pop = case_when(
           age == 0 & sex == "f" ~ prop_female_birth * births,
           age == 0 & sex == "m" ~ prop_male_birth * births,
           .default = pop
         ),
-        # then re-run the same bookkeeping for the newborn cohort
-        pop2 = ifelse(age == 0, pop - 0.5 * ems - 0.5 * cnf, pop2),
-        noc = ifelse(age == 0, pop2 * mx, noc),
+        # same bookkeeping for the newborns, but they start the year at zero:
+        # the average of the start (0) and end stock is half of what survives
+        pop2 = ifelse(age == 0, 0.5 * (pop - ems - cnf), pop2),
+        noc = ifelse(age == 0, pop2 * mx / (1 + 0.5 * mx), noc),
         exposure = ifelse(age == 0, pop2 - 0.5 * noc, exposure),
 
         dx = noc + cnf, # all-cause deaths
@@ -429,20 +388,7 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
 
     # age the survivors on into next year's starting population
     if (yr < 2025) {
-      current_pop_ini <- yr_processed %>%
-        select(year, sex, age, pop = pop_end) %>%
-        mutate(
-          age = ifelse(age == 100, 100, age + 1), # 100+ is open
-          year = year + 1
-        ) %>%
-        summarise(pop = sum(pop), .by = c(year, sex, age)) %>%
-        bind_rows(tibble(
-          age = 0,
-          sex = c("f", "m"),
-          pop = 0,
-          year = yr + 1
-        )) %>%
-        arrange(sex, age)
+      current_pop_ini <- age_on(yr_processed %>% select(sex, age, pop = pop_end), yr + 1)
     }
   }
 

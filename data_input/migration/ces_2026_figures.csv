@@ -1,0 +1,12 @@
+key,year,value,unit,used_by_code,printed_page,quote_or_basis
+net_outflow_citizens,2022,3090000,persons,yes,13-14,Table 1 year total -3.09 M; text: net outflow was 3.1 million Ukrainian citizens in 2022 (UN data citing neighbouring border guards). CES does not use SBGSU data for 2022
+net_outflow_citizens,2023,161000,persons,yes,13-14,"Text: 161,000 citizens in 2023 (State Border Guard Service of Ukraine data); Table 1 -0.16 M"
+net_outflow_citizens,2024,459000,persons,yes,13-14,"Text: in 2024 459,000 more Ukrainian citizens left than returned; Table 1 -0.46 M"
+net_outflow_citizens,2025,303000,persons,yes,13-14,"Text: in 2025, 303,000 more Ukrainian citizens left the country than entered it; Table 1 -0.30 M"
+left_via_russia_belarus_now_elsewhere,2022,277000,persons,yes,14,"About 277,000 Ukrainians also left the country via Russia or Belarus (6.5% of surveyed refugees). Allocated to 2022"
+western_border_abroad_total,,4000000,persons,no,14,Approximately 4 million Ukrainian citizens remain abroad having left via the Western border
+abroad_excluding_russia_belarus,,4300000,persons,no,14,A total of about 4.3 million Ukrainian refugees remain abroad not counting those in Russia and Belarus
+russia_belarus_un_estimate,,1300000,persons,no,10,Latest UN estimate relied on by CES; UN estimate fell to several thousand in May 2025 when its basis was withdrawn
+refugees_total,,5600000,persons,no,14,Total number of Ukrainian refugees is about 5.6 million
+men_18_22_net_departures_aug_nov_2025,2025,96000,persons,no,15,"For August-November 2025, the net loss was about 96,000 men aged 18-22 (Polish, Slovak, Romanian border guards; HU and MD extrapolated)"
+survey_interviews,,1000,respondents,no,9,"1,000 refugees interviewed; 1,173 questionnaires completed; excludes Ukrainians in Russia and Belarus; fieldwork Dec 2025 - Jan 2026"
