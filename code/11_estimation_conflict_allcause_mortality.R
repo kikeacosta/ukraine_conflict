@@ -103,13 +103,31 @@ stopifnot(setequal(unique(asfr2$year), 2022:2025))
 ohchr2 <- read_rds("data_inter/ukr_ohchr_civilian_casualties.rds") %>%
   select(year, sex, age, prop_cvs = cx)
 
-# combatants: age-sex distribution of the confirmed dead in the ualosses register
-ual2 <- read_rds("data_inter/ukr_ualosses_conflict_deaths_sex_age_2022_2025.rds") %>%
-  filter(status == "dead", year %in% 2022:2025) |>
-  select(-status) |>
-  complete(year = 2022:2025, sex, age = 0:100, fill = list(dx = 0)) |>
-  mutate(prop_cmb = dx / sum(dx), .by = year) |>
-  select(-dx)
+# combatants: TWO age-sex distributions, not one. The register's confirmed dead
+# and its missing do not share an age profile - the missing are older, with
+# 6.4 points more of their mass in ages 40-49 and 5.6 points less in 20-29, and
+# a mean age about a year higher. Spreading the whole combatant total over the
+# confirmed-dead profile therefore placed the imputed deaths at ages where they
+# did not occur, which matters because the Arriaga decomposition in 14 is
+# age-weighted and younger deaths cost more life expectancy each.
+#
+# So registered deaths take the profile of the register's dead, and imputed
+# deaths take the profile of the missing they are imputed from.
+ual_raw <- read_rds("data_inter/ukr_ualosses_conflict_deaths_sex_age_2022_2025.rds")
+
+cmb_profile <- function(keep_status, nm) {
+  ual_raw |>
+    filter(status == keep_status, year %in% 2022:2025) |>
+    select(-status) |>
+    complete(year = 2022:2025, sex, age = 0:100, fill = list(dx = 0)) |>
+    summarise(dx = sum(dx), .by = c(year, sex, age)) |>
+    mutate("{nm}" := dx / sum(dx), .by = year) |>
+    select(-dx)
+}
+
+ual2 <-
+  cmb_profile("dead", "prop_cmb_dead") |>
+  left_join(cmb_profile("missing", "prop_cmb_miss"), by = c("year", "sex", "age"))
 
 profile_props <- ual2 |> left_join(ohchr2, by = c("year", "sex", "age"))
 
@@ -125,7 +143,8 @@ static_inputs <- expand_grid(
   left_join(exp_mort2, by = c("year", "sex", "age")) %>%
   left_join(asfr2, by = c("year", "sex", "age")) %>%
   left_join(profile_props, by = c("year", "sex", "age")) %>%
-  replace_na(list(ems = 0, w = 0, mx = 0, fx = 0, prop_cvs = 0, prop_cmb = 0))
+  replace_na(list(ems = 0, w = 0, mx = 0, fx = 0, prop_cvs = 0,
+                  prop_cmb_dead = 0, prop_cmb_miss = 0))
 
 # every cell must have a real mortality rate: an mx of 0 here would mean the
 # join silently failed and that cohort would be projected as immortal
@@ -134,7 +153,11 @@ stopifnot(
   all(static_inputs$mx > 0),
   !any(is.na(static_inputs)),
   # each draw is spread along this departures profile, so it must sum to 1
-  all(abs(tapply(static_inputs$w, static_inputs$year, sum) - 1) < 1e-9)
+  all(abs(tapply(static_inputs$w, static_inputs$year, sum) - 1) < 1e-9),
+  # and each combatant profile must sum to 1 within a year, or the drawn
+  # totals would not be preserved once they are spread over age
+  all(abs(tapply(static_inputs$prop_cmb_dead, static_inputs$year, sum) - 1) < 1e-9),
+  all(abs(tapply(static_inputs$prop_cmb_miss, static_inputs$year, sum) - 1) < 1e-9)
 )
 
 # 5. THE PROJECTION FOR ONE DRAW ===============================================

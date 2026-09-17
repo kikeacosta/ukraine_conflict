@@ -303,7 +303,8 @@ stopifnot(!is.na(n_sim), n_sim >= 100)
 # ARGUMENTS
 #   sim_id         identifier carried through to the output
 #   draws_this_sim one row per year: draw_cvs, draw_cmb, draw_mig, min_cmb
-#   static_inputs  year-sex-age grid with ems, mx, fx, prop_cvs, prop_cmb
+#   static_inputs  year-sex-age grid with ems, w, mx, fx, prop_cvs,
+#                  prop_cmb_dead, prop_cmb_miss
 #   pop22_ini      population by sex and completed age on 1 January 2022
 #
 # AGE CONVENTION: row x in year t is ONE birth cohort, the one born in year
@@ -357,14 +358,21 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
 
       # spread the drawn yearly totals over age and sex
       cvs = draw_cvs * prop_cvs,
-      cmb = draw_cmb * prop_cmb,
 
       # partition combatants: everything up to the individually confirmed
       # count is "confirmed", the excess is attributed to the imputed missing
       ratio_confirmed = if_else(draw_cmb > 0, min_cmb / draw_cmb, 1),
       ratio_confirmed = pmin(pmax(ratio_confirmed, 0), 1),
-      cmb_confirmed = cmb * ratio_confirmed,
-      cmb_imputed = cmb * (1 - ratio_confirmed),
+
+      # the two parts carry DIFFERENT age profiles. The register's missing are
+      # older than its confirmed dead, so spreading both over the confirmed
+      # profile placed imputed deaths at ages they did not occur - and 14's
+      # decomposition is age-weighted, so that biases the loss they account
+      # for. Registered deaths take the dead profile, imputed deaths take the
+      # profile of the missing they come from.
+      cmb_confirmed = draw_cmb * ratio_confirmed * prop_cmb_dead,
+      cmb_imputed = draw_cmb * (1 - ratio_confirmed) * prop_cmb_miss,
+      cmb = cmb_confirmed + cmb_imputed,
 
       cnf = cvs + cmb
     )

@@ -77,12 +77,23 @@ asfr2 <- asfr %>%
 ohchr2 <- read_rds("data_inter/ukr_ohchr_civilian_casualties.rds") %>%
   select(year, sex, age, prop_cvs = cx)
 
-ual2 <- read_rds("data_inter/ukr_ualosses_conflict_deaths_sex_age_2022_2025.rds") %>%
-  filter(status == "dead", year %in% 2022:2025) |>
-  select(-status) |>
-  complete(year = 2022:2025, sex, age = 0:100, fill = list(dx = 0)) |>
-  mutate(prop_cmb = dx / sum(dx), .by = year) |>
-  select(-dx)
+# two profiles, matching 11: registered deaths take the age distribution of the
+# register's confirmed dead, imputed deaths that of the missing they come from
+ual_raw <- read_rds("data_inter/ukr_ualosses_conflict_deaths_sex_age_2022_2025.rds")
+
+cmb_profile <- function(keep_status, nm) {
+  ual_raw |>
+    filter(status == keep_status, year %in% 2022:2025) |>
+    select(-status) |>
+    complete(year = 2022:2025, sex, age = 0:100, fill = list(dx = 0)) |>
+    summarise(dx = sum(dx), .by = c(year, sex, age)) |>
+    mutate("{nm}" := dx / sum(dx), .by = year) |>
+    select(-dx)
+}
+
+ual2 <-
+  cmb_profile("dead", "prop_cmb_dead") |>
+  left_join(cmb_profile("missing", "prop_cmb_miss"), by = c("year", "sex", "age"))
 
 profile_props <- ual2 |> left_join(ohchr2, by = c("year", "sex", "age"))
 
@@ -110,7 +121,8 @@ static_inputs <-
   left_join(exp_mort2, by = c("year", "sex", "age")) %>%
   left_join(asfr2, by = c("year", "sex", "age")) %>%
   left_join(profile_props, by = c("year", "sex", "age")) %>%
-  replace_na(list(ems = 0, w = 0, mx = 0, fx = 0, prop_cvs = 0, prop_cmb = 0))
+  replace_na(list(ems = 0, w = 0, mx = 0, fx = 0, prop_cvs = 0,
+                  prop_cmb_dead = 0, prop_cmb_miss = 0))
 
 stopifnot(all(static_inputs$mx > 0), !any(is.na(static_inputs)))
 
