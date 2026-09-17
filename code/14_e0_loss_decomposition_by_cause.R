@@ -33,7 +33,7 @@
 #
 # SIGN CONVENTION: positive = years of life expectancy LOST.
 #
-# INPUT    data_inter/ukr_sim_draws_2022_2025.rds   (from 11)
+# INPUT    data_inter/ukr_sim_draws_2022_2025_n<n_sim>.rds   (from 11)
 # OUTPUTS  data_inter/ukr_e0_loss_by_cause_draws_2022_2025.rds
 #          data_inter/ukr_e0_loss_by_cause_summary_2022_2025.rds
 #          data_inter/ukr_conflict_deaths_by_cause_summary_2022_2025.rds
@@ -44,10 +44,12 @@ rm(list = ls())
 gc()
 source("code/00_setup.R")
 
-draws_file <- "data_inter/ukr_sim_draws_2022_2025.rds"
+# named for the simulation size set in 00_setup.R, so this reads the draws that
+# match the configured n_sim rather than whatever a previous run left behind
+draws_file <- sprintf("data_inter/ukr_sim_draws_2022_2025_n%d.rds", n_sim)
 if (!file.exists(draws_file)) {
   stop(
-    "Simulation draws not found. Run step 11 first (~7 minutes):\n  ",
+    "Simulation draws not found at n_sim = ", n_sim, ". Run step 11 first:\n  ",
     draws_file,
     call. = FALSE
   )

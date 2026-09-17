@@ -13,7 +13,7 @@
 #
 # The cause-of-death decomposition lives in 14, not here.
 #
-# INPUTS   data_inter/ukr_sim_draws_2022_2025.rds              (from 11)
+# INPUTS   data_inter/ukr_sim_draws_2022_2025_n<n_sim>.rds              (from 11)
 #          data_inter/ukr_probabilistic_deaths_rates_2022_2025.rds (from 11)
 #          data_inter/ukr_param_table.rds                          (from 10)
 # OUTPUTS  figures/mort_rates_*.png, figures/losses_boxplot.png,
@@ -24,10 +24,12 @@ rm(list = ls())
 gc()
 source("code/00_setup.R")
 
-draws_file <- "data_inter/ukr_sim_draws_2022_2025.rds"
+# named for the simulation size set in 00_setup.R, so this reads the draws that
+# match the configured n_sim rather than whatever a previous run left behind
+draws_file <- sprintf("data_inter/ukr_sim_draws_2022_2025_n%d.rds", n_sim)
 if (!file.exists(draws_file)) {
   stop(
-    "Simulation draws not found. Run step 11 first (~7 minutes):\n  ",
+    "Simulation draws not found at n_sim = ", n_sim, ". Run step 11 first:\n  ",
     draws_file,
     call. = FALSE
   )

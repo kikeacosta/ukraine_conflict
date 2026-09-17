@@ -34,7 +34,7 @@
 #          data_inter/ukr_ohchr_civilian_casualties.rds    (from 07_ohchr)
 #          data_inter/ukr_ualosses_...rds                  (from 08)
 #
-# OUTPUTS  data_inter/ukr_sim_draws_2022_2025.rds  (all 5,000 draws)
+# OUTPUTS  data_inter/ukr_sim_draws_2022_2025_n<n_sim>.rds  (every draw)
 #          data_inter/ukr_probabilistic_deaths_rates_2022_2025.rds (summary)
 #          data_inter/ukr_sim_param_draws.rds      (the draws themselves, for 15 and 16)
 #
