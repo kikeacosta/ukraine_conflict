@@ -35,6 +35,7 @@
 #   table7_totals_by_year.csv                        14   <- new
 #   tableA3_e0_loss_by_cause.csv                     14
 #   tableA4_uncertainty_shares.csv                   11, 14 <- new
+#   tableA5_military_reconciliation.csv              07_ucdp, 08, 10, 11
 #
 # INPUTS   the .rds products of steps 07-14
 # ==============================================================================
@@ -1006,6 +1007,92 @@ tA1 <-
 
 save_tab(tA1, "tableA1_source_reconciliation.csv")
 print(tA1)
+
+# ==============================================================================
+# TABLE A5 - Ukrainian military deaths: UCDP against the register and this study
+# ==============================================================================
+# UCDP is the only source in Table 1 with an independent military count and
+# bounds, and its best estimate for Ukraine sits BELOW the register's
+# individually named dead - so the gap between it and this study is not only a
+# disagreement about the missing. This table sets the three side by side and
+# splits the gap into the part that is UCDP short of the named dead and the part
+# that is the imputed dead among the missing, whom an event-based count does not
+# see.
+#
+# Two columns test the obvious alternative explanations:
+#   ukr_share   the Ukrainian share of the military deaths UCDP attributes to a
+#               side. A falling share is what one-sided thinning of reporting
+#               looks like: Ukraine does not disclose its military losses, while
+#               Russian losses are widely claimed.
+#   even_split  UCDP best with the unknown-side deaths split evenly between the
+#               belligerents, instead of in proportion to each side's reported
+#               losses as 07 does. Anchored to 07's own figure, so the column
+#               differs from it only in that rule.
+#
+# UCDP deaths in the Russia-Ukraine state dyad are assigned by side, not by
+# where the event happened, so Ukrainian losses in Kursk and Belgorod count.
+ged <- read_rds("data_inter/ucdp_ged_events_slim.rds")
+
+ucdp_ukr <-
+  read_rds("data_inter/ukr_ucdp_invals.rds") |>
+  filter(role == "combatants") |>
+  select(year, ucdp = dts, ucdp_lo = dts_l, ucdp_hi = dts_u)
+
+dyad <-
+  ged |>
+  filter(
+    year %in% 2022:2025, type_of_violence == 1,
+    str_detect(side_a, "Russia"), str_detect(side_b, "Ukraine")
+  ) |>
+  summarise(
+    ukr = sum(b), rus = sum(a), civ = sum(c), unk = sum(u, na.rm = TRUE),
+    .by = year
+  ) |>
+  mutate(
+    ukr_prop = ukr + unk * ukr / (ukr + rus + civ),
+    ukr_even = ukr + unk * (1 - civ / (civ + ukr + rus)) / 2
+  )
+
+cmb_draws <- param_draws |> filter(role == "combatants")
+q3 <- function(x) tibble(med = median(x), lo = quantile(x, 0.025), hi = quantile(x, 0.975))
+
+recon_year <-
+  dyad |>
+  left_join(ucdp_ukr, by = "year") |>
+  left_join(
+    param_table |> filter(role == "combatants") |> select(year, registered = min),
+    by = "year"
+  ) |>
+  left_join(cmb_draws |> reframe(q3(draw), .by = year), by = "year") |>
+  mutate(even_split = ucdp + (ukr_even - ukr_prop)) |>
+  arrange(year)
+
+recon_total <-
+  recon_year |>
+  summarise(across(c(ukr, rus, ucdp, ucdp_lo, ucdp_hi, even_split, registered), sum)) |>
+  bind_cols(cmb_draws |> summarise(draw = sum(draw), .by = sim_id) |> reframe(q3(draw)))
+
+tA5 <-
+  bind_rows(
+    recon_year |> mutate(year = as.character(year)),
+    recon_total |> mutate(year = "Total")
+  ) |>
+  transmute(
+    year,
+    ucdp_ukrainian_side_reported = round(ukr),
+    ucdp_best = fmt_ci(ucdp, ucdp_lo, ucdp_hi),
+    ucdp_unknowns_split_evenly = round(even_split),
+    ukrainian_share_of_ucdp_military = scales::percent(ukr / (ukr + rus), accuracy = 0.1),
+    ualosses_registered_dead = round(registered),
+    this_study = fmt_ci(med, lo, hi),
+    ucdp_as_pct_of_registered = scales::percent(ucdp / registered, accuracy = 0.1),
+    gap_to_ucdp = round(med - ucdp),
+    of_which_ucdp_below_registered = round(registered - ucdp),
+    of_which_imputed_missing = round(med - registered)
+  )
+
+save_tab(tA5, "tableA5_military_reconciliation.csv")
+print(tA5)
 
 # ==============================================================================
 # TABLE A2 - Empirical status transitions of the missing
