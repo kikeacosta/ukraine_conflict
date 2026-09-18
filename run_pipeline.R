@@ -20,6 +20,9 @@ steps_to_run <- list(
   list(name = "06", file = "code/06_net_migration.R"),
   list(name = "07a", file = "code/07_ucdp_ukr_conflict_deaths.R"),
   list(name = "07b", file = "code/07_ohchr_ukr_conflict_deaths.R"),
+  # 07c feeds the UCDP-vs-ACLED reconciliation in table A1; without it 15
+  # stops on a missing ukr_rus_acled_source_comparison.rds
+  list(name = "07c", file = "code/07_acled_ukr_conflict_deaths.R"),
   list(name = "08", file = "code/08_ualosses.R"),
   list(name = "09", file = "code/09_ualosses_missing_analysis.R"),
   list(name = "10", file = "code/10_dists_tables.R"),
@@ -27,7 +30,10 @@ steps_to_run <- list(
   list(name = "12", file = "code/12_plotting_estimates.R"),
   list(name = "13", file = "code/13_sensitivity_migration_contributions.R"),
   list(name = "13b", file = "code/13b_sensitivity_alpha_missing.R"),
-  list(name = "14", file = "code/14_e0_loss_decomposition_by_cause.R")
+  list(name = "14", file = "code/14_e0_loss_decomposition_by_cause.R"),
+  # 15 builds every manuscript figure and table. It was missing from this
+  # list, so a full pipeline run produced none of the deliverables.
+  list(name = "15", file = "code/15_paper_figures_tables.R")
 )
 
 for (step in steps_to_run) {
