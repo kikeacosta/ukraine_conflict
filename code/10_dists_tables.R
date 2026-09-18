@@ -95,9 +95,10 @@ stopifnot(
   all(param_table$mode <= param_table$max)
 )
 
-# 06 scaled its profiles to the modes, so the draw at the mode must leave the
-# age-sex cells untouched. If these drift apart the projection silently
-# rescales every year (see the guard in run_single_sim).
+# 06 allocated its flows at the modes, so a draw at the mode must leave the
+# age-sex cells untouched. If these drift apart, run_single_sim() adds the
+# difference along the departures profile in every draw, silently shifting
+# every year's flows.
 stopifnot(
   all.equal(
     param_table |>

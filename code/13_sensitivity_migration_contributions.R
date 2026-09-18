@@ -30,7 +30,7 @@
 #
 # NOTE: this is a deterministic sensitivity analysis. It runs the projection
 # once at the MODE of each conflict-death distribution rather than over the
-# 5,000 draws, because the question is about the direction and size of the
+# simulation draws, because the question is about the direction and size of the
 # migration effect, not about its uncertainty.
 #
 # INPUTS   the same as step 11

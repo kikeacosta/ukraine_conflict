@@ -1,5 +1,5 @@
 # ==============================================================================
-# STEP A01 - UNICEF export: all 5,000 iterations, by cause of death
+# STEP A01 - UNICEF export: every iteration, by cause of death
 # ==============================================================================
 #
 # WHAT THIS SCRIPT DOES
@@ -139,7 +139,7 @@ gap <- max(abs(
 cat("max |all - sum(components)| :", gap, "\n")
 stopifnot(gap < 1e-9)
 
-cat("\ntotal deaths by cause, summed over all iterations / 5000:\n")
+cat("\ntotal deaths by cause, averaged over iterations:\n")
 print(out[, .(deaths = sum(dx) / length(unique(out$it))), by = cause])
 
 # 5. WRITE =====================================================================

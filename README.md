@@ -1,31 +1,37 @@
 # Conflict and all-cause mortality in Ukraine, 2022–2025
 
-Estimates the mortality impact of the war in Ukraine: how many deaths were
-caused by the conflict, how many years of life expectancy were lost, and how
-that loss divides between civilian and combatant deaths — all with credible
-intervals from a 5,000-draw Monte Carlo simulation.
+Estimates the direct mortality impact of the war in Ukraine: how many deaths
+were caused by conflict violence, how many years of life expectancy they cost,
+and how that loss divides between civilian and combatant deaths — all with
+uncertainty intervals from a Monte Carlo simulation over the disputed inputs.
+
+Conflict deaths are added to a modelled counterfactual; no all-cause mortality
+is observed for 2022–2025, so indirect effects of the war are not estimated.
 
 ## Running it
 
 Open `ukraine_conflict.Rproj` (paths are relative to the project root) and run
-the scripts in `code/` in numerical order. `00_setup.R` is sourced by each of
-them and installs anything missing.
+the whole pipeline, which executes every step below in order and ends with the
+manuscript figures and tables:
 
 ```r
-source("code/01_pop_estimates_sssu.R")
-# ... 02, 03, 04, 05, 06, 07_*, 08, 09, 10 ...
-source("code/11_estimation_conflict_allcause_mortality.R")
-source("code/14_e0_loss_decomposition_by_cause.R")
+source("run_pipeline.R")
 ```
+
+`00_setup.R` is sourced by each step and installs anything missing. Steps can
+also be run one at a time in numerical order.
 
 **You do not need the large raw data files.** Every step that reads one caches
 a small extract into `data_inter/`, and those extracts are in the repository.
 Steps re-run the heavy processing only if their cache is missing. See
 [`data_input/README.md`](data_input/README.md).
 
-The one exception is step 11, which regenerates the 5,000 simulation draws
-(~7 minutes) because they are too large to track. It caches them too, so it
-only costs that once.
+The one exception is step 11, which regenerates the simulation draws because
+they are too large to track. Their number is set once, as `n_sim` in
+`code/00_setup.R`: 1,000 while the pipeline is under construction (about a
+minute), 20,000 for reported estimates (about half an hour). The cache is named
+for the size, so the two never mix, and `tables/_run_provenance.csv` records the
+size every table was built at.
 
 ## The pipeline
 
@@ -44,12 +50,13 @@ only costs that once.
 | `08` | Combatant deaths by age and sex from the ualosses register | `ukr_ualosses_..._sex_age_...rds` |
 | `09` | Markov imputation of how the "missing" resolve | `ukr_ualosses_..._imputed_...rds` |
 | `10` | min / mode / max parameter table | `ukr_param_table.rds` |
-| `11` | 5,000-draw cohort-component projection | `ukr_sim_draws_2022_2025.rds` |
+| `11` | Monte Carlo cohort-component projection | `ukr_sim_draws_2022_2025_n<n_sim>.rds` |
 | `12` | Figures for the mortality estimates | `figures/mort_rates_*.png` |
-| `13` | Sensitivity: the migration denominator effect | `figures/loss_decomp_migration_*.png` |
+| `13` | Sensitivity: the migration denominator effect | `ukr_migration_decomposition.rds` |
+| `13b` | Sensitivity: the share of the missing assumed alive, and sampling error in the resolution rates | `ukr_alpha_sensitivity_*.rds` |
 | `14` | **Life expectancy loss decomposed by cause** | `ukr_e0_loss_by_cause_*.rds` |
 | `15` | **All manuscript figures and tables** | `figures/fig*.png`, `tables/table*.csv` |
-| `a01` | UNICEF export (not part of the paper): all 5,000 iterations by cause | `data_inter/unicef/<yymmdd>_ukraine_mx_estimates_*.csv` |
+| `a01` | UNICEF export (not part of the paper): every iteration, by cause | `data_inter/unicef/<yymmdd>_ukraine_mx_estimates_*.csv` |
 
 Steps 01→04 build the counterfactual. 05→09 assemble the conflict deaths and
 the demographic components. 10→11 run the simulation. 12→15 report. `a01` is a separate deliverable for UNICEF, not part of the paper.
@@ -65,9 +72,11 @@ timing for emigration, conflict deaths and expected deaths. The counterfactual
 is a Lee-Carter forecast fitted to **2000–2019** — 2020 and 2021 are excluded
 so COVID excess mortality does not enter the "no war" baseline.
 
-Conflict death totals are uncertain, so each year's civilian and combatant
-totals are drawn 5,000 times from PERT distributions, and every draw is
-projected through the full accounting. Step 14 then builds two life tables per
+Conflict death totals and migration are uncertain, so they are drawn from PERT
+distributions and every draw is projected through the full accounting. Civilian
+deaths are drawn independently by year; military deaths and each migration
+component take one quantile per draw, held across all four years, because their
+uncertainty is one systematic quantity rather than four separate ones. Step 14 then builds two life tables per
 draw (baseline and observed), runs an Arriaga decomposition, and splits each
 age's contribution between causes in proportion to that age's conflict deaths.
 
@@ -81,7 +90,9 @@ expectancy gap.
 
 | Where | Assumption |
 |---|---|
-| `09` | `suelo_vivo = 0.1` — 10% of the long-term missing are assumed alive. This drives the combatant mode and deserves a sensitivity check. |
+| `09` | `suelo_vivo = 0.1` — 10% of the long-term missing are assumed alive. It carries about 90% of the imputed deaths and is not identified by the data; step 13b shows the results across its whole range (table A6, figure A4). |
+| `09` | A person recorded as missing who cannot be found in the later register release is treated as still missing, not as resurfaced alive. |
+| `11` | Imputed combatant deaths take the age–sex profile of the missing; registered deaths that of the confirmed dead. |
 | `00_setup` | Sex ratio at birth `srb = 1.06`. |
 | `11`, `13` | WPP2024 publishes fertility only to 2023; the 2023 schedule is carried forward to 2024–2025. |
 | `11` | Starts from continental Ukraine (SSSU region `cnt`): the whole country without Crimea and Sevastopol, **including** Donetsk and Luhansk. SSSU population estimates for those two regions assume complete registration, which has not held since 2015. |
@@ -115,7 +126,11 @@ anything sitting directly in `figures/` is a manuscript deliverable.
 | `fig3_life_expectancy_loss.png` | Distribution of the e0 loss across draws |
 | `fig4_decomposition_migration_mortality.png` | Mortality vs the migration denominator effect |
 | `fig5_decomposition_by_cause.png` | e0 loss by civilians / registered / imputed combatants |
+| `fig6_uncertainty_shares.png` | How much of the spread in the loss each input accounts for |
 | `figA1_pert_draw_distributions.png` | Beta-PERT draw densities against their input bounds |
+| `figA2_pert_draw_distributions_migration.png` | The same for the two migration components |
+| `figA3_cumulative_migration_draws.png` | Cumulative emigration across draws |
+| `figA4_alpha_sensitivity_missing.png` | Military deaths and e0 loss across the share of the missing assumed alive |
 | `table1_source_totals.csv` | What each source reports, with bounds and age-sex availability |
 | `table2_missing_imputation.csv` | Missing combatants imputed to dead or alive |
 | `table3_pert_input_bounds.csv` | Year-specific PERT min / mode / max |
@@ -126,3 +141,7 @@ anything sitting directly in `figures/` is a manuscript deliverable.
 | `tableA1_source_reconciliation.csv` | UCDP vs ACLED, Ukraine and Russia |
 | `tableA2_status_transitions.csv` | Observed transitions of the missing between registers |
 | `tableA3_e0_loss_by_cause.csv` | Years of life expectancy lost, by cause |
+| `tableA4_uncertainty_shares.csv` | How much of the spread in the loss each input accounts for |
+| `tableA5_military_reconciliation.csv` | Ukrainian military deaths: UCDP against the register and this study |
+| `tableA6_alpha_sensitivity.csv` | Military deaths and e0 loss across the share of the missing assumed alive |
+| `_run_provenance.csv` | Draws, seed, draws file and commit the tables were built from |

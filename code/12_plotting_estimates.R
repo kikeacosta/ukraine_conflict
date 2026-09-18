@@ -100,7 +100,7 @@ ggsave("figures/exploratory/mort_rates_2022_2025_invals.png", w = 8, h = 5)
 # ==============================================================================
 # 2. THE SAME, AS INDIVIDUAL DRAWS
 # ==============================================================================
-# 5,000 overplotted lines per panel is slow to render and visually identical
+# thousands of overplotted lines per panel is slow to render and visually identical
 # to a subsample, so the spaghetti uses the first 300 draws.
 n_show <- 300
 
@@ -226,7 +226,7 @@ ggsave("figures/exploratory/losses_boxplot.png", w = 8, h = 3.5)
 # ==============================================================================
 # 4. THE DRAWN CONFLICT DEATH TOTALS
 # ==============================================================================
-# Densities of the 5,000 draws, with the min / mode / max that defined each
+# Densities of the draws, with the min / mode / max that defined each
 # PERT distribution marked as dashed lines.
 cols <- c("#AE2012", "#005F73")
 

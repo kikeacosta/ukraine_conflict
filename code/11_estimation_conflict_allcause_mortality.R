@@ -15,7 +15,7 @@
 #               split into confirmed and imputed-from-missing
 #
 # Conflict death totals and net emigration are both uncertain, so both are
-# drawn 5,000 times from the PERT bounds in the parameter table built in 10.
+# drawn n_sim times (00_setup.R) from the PERT bounds in the parameter table built in 10.
 # Every draw is projected through the full 2022-2025 accounting, which is what
 # gives the results their credible intervals.
 #

@@ -14,7 +14,7 @@
 #
 # METHOD
 # ------
-# For every one of the 5,000 draws from step 11, and every year and sex:
+# For every draw from step 11, and every year and sex:
 #
 #   1. build two life tables - one on the counterfactual "expected" mortality
 #      (no war) and one on all-cause mortality (with war);

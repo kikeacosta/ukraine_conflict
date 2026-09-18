@@ -178,8 +178,8 @@ lifetable <- function(dt_in) {
 # vectorised life table ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Same arithmetic as lifetable() above, but computed column-wise over many
-# groups at once, so the 40,000 life tables implied by 5,000 draws x 4 years
-# x 2 sexes take seconds instead of minutes. Used by 12 and 14.
+# groups at once, so the n_sim x 4 years x 2 sexes life tables of a full run
+# take seconds instead of minutes. Used by 12 and 14.
 #
 # MX : n_age x G matrix of single-year death rates, open interval at the last
 #      age. sx : length-G vector of sex ("f"/"m"), selecting the a0 rule.
