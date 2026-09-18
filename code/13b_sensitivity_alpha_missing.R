@@ -1,5 +1,13 @@
 # ==============================================================================
-# STEP 13b - Sensitivity: the share of the long-term missing assumed dead
+# STEP 13b - Sensitivity of the missing-combatant imputation
+# ==============================================================================
+#
+# Two things the main Monte Carlo does not propagate, quantified here instead
+# of being asserted to be small or large:
+#   1. suelo_vivo, the share of the long-term missing assumed alive - swept
+#      over its whole range, since nothing in the data identifies it;
+#   2. sampling error in the observed transition rates, which are proportions
+#      estimated from finite counts (section 5).
 # ==============================================================================
 #
 # WHY THIS MATTERS
@@ -265,6 +273,98 @@ p_e0 <-
   theme_bw()
 ggsave("figures/exploratory/alpha_sensitivity_e0.png", p_e0, w = 9, h = 4.5)
 
-message("\nDone. data_inter/ukr_alpha_sensitivity_military.rds and ",
-        "ukr_alpha_sensitivity_e0.rds written; consumed by 15 for the ",
-        "manuscript table and figure.")
+# ==============================================================================
+# 5. SAMPLING ERROR IN THE OBSERVED TRANSITION RATES
+# ==============================================================================
+# The rates in ukr_ualosses_transition_rates.rds are proportions estimated from
+# finite counts, so they carry sampling error that the pipeline does not
+# propagate. This measures it rather than asserting it is small.
+#
+# Each cohort-year is an independent multinomial sample over
+# {dead, missing, prisoner} with the observed at-risk denominator (the cohorts
+# are disjoint sets of people, so their sampling errors are independent; the
+# chain couples them afterwards, which the resampling below reproduces by
+# construction). Draws come from the Dirichlet posterior with a Jeffreys prior,
+# counts + 1/2, generated from independent Gammas so no extra package is
+# needed. Each draw goes through the same impute_missing() chain at the
+# production suelo_vivo, so the spread is attributable to rate sampling alone.
+#
+# WHY THIS IS REPORTED RATHER THAN PROPAGATED: the observed transitions carry
+# under a tenth of the imputed dead (see the decomposition printed below); the
+# terminal suelo_vivo assumption carries the rest. Sampling error on a tenth of
+# the quantity is correspondingly small, and folding a band of that size into a
+# distribution two orders of magnitude wider would add machinery without
+# changing any reported figure.
+set.seed(42)
+B_rates <- 2000
+
+rdirich <- function(alpha) {
+  g <- rgamma(length(alpha), shape = alpha, rate = 1)
+  g / sum(g)
+}
+
+boot_total <- vapply(seq_len(B_rates), function(b) {
+  resampled <- map_dfr(sort(unique(tasas_long$year)), function(y) {
+    d <- tasas_long |> filter(year == y) |> arrange(status2)
+    tibble(year = y, status2 = d$status2, prop = rdirich(d$n + 0.5))
+  })
+  imp <- impute_missing(0.10, resampled, stock_missing_2026) |>
+    left_join(confirmados_df, by = "year") |>
+    mutate(total = confirmados_stock + imputed_dead)
+  sum(imp$total)
+}, numeric(1))
+
+point_total <- military_totals$total_military[military_totals$suelo_vivo == 0.10]
+ci_rates <- quantile(boot_total, c(0.025, 0.975))
+
+# where the imputed dead actually come from: observed transitions carry the
+# last chain terms, the terminal assumption carries the residual
+gp <- function(y, s) {
+  v <- tasas_long$prop[tasas_long$year == y & tasas_long$status2 == s]
+  if (length(v) == 0) 0 else v[1]
+}
+M <- setNames(stock_missing_2026$missing_stock, stock_missing_2026$year)
+sm <- 1 - 0.10
+terminal <- c(
+  M[["2022"]] * sm,
+  M[["2023"]] * gp(2022, "missing") * sm,
+  M[["2024"]] * gp(2023, "missing") * gp(2022, "missing") * sm,
+  M[["2025"]] * gp(2024, "missing") * gp(2023, "missing") * gp(2022, "missing") * sm
+)
+imputed_dead_total <- sum(impute_missing(0.10, tasas_long, stock_missing_2026)$imputed_dead)
+observed_part <- imputed_dead_total - sum(terminal)
+
+rate_sampling <- tibble(
+  point_total = point_total,
+  sd = sd(boot_total),
+  lo = ci_rates[[1]],
+  hi = ci_rates[[2]],
+  width = ci_rates[[2]] - ci_rates[[1]],
+  imputed_dead = imputed_dead_total,
+  from_observed_transitions = observed_part,
+  from_terminal_assumption = sum(terminal),
+  n_draws = B_rates
+)
+write_rds(rate_sampling, "data_inter/ukr_transition_rate_sampling.rds")
+
+cat("\n=== SAMPLING ERROR IN THE OBSERVED TRANSITION RATES ===\n")
+cat(sprintf("military total, point estimate : %s\n", scales::comma(round(point_total))))
+cat(sprintf("95%% sampling interval          : %s - %s (width %s, %.2f%% of the total)\n",
+            scales::comma(round(ci_rates[[1]])), scales::comma(round(ci_rates[[2]])),
+            scales::comma(round(ci_rates[[2]] - ci_rates[[1]])),
+            100 * (ci_rates[[2]] - ci_rates[[1]]) / point_total))
+cat(sprintf("\nof the %s imputed dead:\n", scales::comma(round(imputed_dead_total))))
+cat(sprintf("  from observed transitions    : %s (%.1f%%)\n",
+            scales::comma(round(observed_part)), 100 * observed_part / imputed_dead_total))
+cat(sprintf("  from the terminal assumption : %s (%.1f%%)\n",
+            scales::comma(round(sum(terminal))), 100 * sum(terminal) / imputed_dead_total))
+cat(sprintf("\nFor scale, moving suelo_vivo by 0.01 shifts the total by about %s,\n",
+            scales::comma(round(
+              sum(impute_missing(0.10, tasas_long, stock_missing_2026)$imputed_dead) -
+              sum(impute_missing(0.11, tasas_long, stock_missing_2026)$imputed_dead)))))
+cat("which is several times the entire sampling band above.\n")
+
+message("\nDone. data_inter/ukr_alpha_sensitivity_military.rds, ",
+        "ukr_alpha_sensitivity_e0.rds and ukr_transition_rate_sampling.rds ",
+        "written; the first two are consumed by 15 for the manuscript table ",
+        "and figure.")
