@@ -245,6 +245,103 @@ arriaga_TE <- function(lb, lw) {
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# missing-combatant imputation ====
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Synthetic-cohort Markov imputation of the long-term missing. Extracted from
+# 09's original inline calculation so that 09 (which fixes suelo_vivo = 0.10)
+# and 13b (which varies it as a sensitivity check) call the SAME formula
+# instead of two copies that could drift apart.
+#
+# tasas_long     observed one-window resolution rates by event-year cohort
+#                and destination status: transitions |> filter(from ==
+#                "missing") |> mutate(prop = n / sum(n), .by = year), as
+#                built in 09.
+# stock_missing  tibble(year, missing_stock) - the missing stock by event
+#                year, from step 08's output.
+# suelo_vivo     share of the NEVER-RESOLVED long-term missing assumed
+#                alive; suelo_muerto = 1 - suelo_vivo is assumed dead. This
+#                is the one free parameter: 09 fixes it at 0.10, 13b sweeps
+#                it over [0, 1].
+#
+# A "step" in the chain is the ~8-month window between two register
+# releases, not a calendar year; event-year cohorts stand in for duration
+# since disappearance. Returns stock_missing with imputed_dead,
+# imputed_alive and imputed_prisoner added.
+impute_missing <- function(suelo_vivo, tasas_long, stock_missing) {
+  suelo_muerto <- 1 - suelo_vivo
+
+  extraer_tasa <- function(target_year, target_status) {
+    valor <- tasas_long$prop[
+      tasas_long$year == target_year & tasas_long$status2 == target_status
+    ]
+    if (length(valor) == 0) return(0) else return(valor[1])
+  }
+
+  p_a22 <- extraer_tasa(2022, "alive")
+  p_d22 <- extraer_tasa(2022, "dead")
+  p_p22 <- extraer_tasa(2022, "prisoner")
+  p_m22 <- extraer_tasa(2022, "missing")
+
+  p_a23 <- extraer_tasa(2023, "alive")
+  p_d23 <- extraer_tasa(2023, "dead")
+  p_p23 <- extraer_tasa(2023, "prisoner")
+  p_m23 <- extraer_tasa(2023, "missing")
+
+  p_a24 <- extraer_tasa(2024, "alive")
+  p_d24 <- extraer_tasa(2024, "dead")
+  p_p24 <- extraer_tasa(2024, "prisoner")
+  p_m24 <- extraer_tasa(2024, "missing")
+
+  stock_missing %>%
+    mutate(
+      imputed_dead = case_when(
+        year == 2022 ~ missing_stock * suelo_muerto,
+
+        year == 2023 ~ (missing_stock * p_d22) +
+          (missing_stock * p_m22 * suelo_muerto),
+
+        year == 2024 ~ (missing_stock * p_d23) +
+          (missing_stock * p_m23 * p_d22) +
+          (missing_stock * p_m23 * p_m22 * suelo_muerto),
+
+        year == 2025 ~ (missing_stock * p_d24) +
+          (missing_stock * p_m24 * p_d23) +
+          (missing_stock * p_m24 * p_m23 * p_d22) +
+          (missing_stock * p_m24 * p_m23 * p_m22 * suelo_muerto)
+      ),
+
+      imputed_alive = case_when(
+        year == 2022 ~ missing_stock * suelo_vivo,
+
+        year == 2023 ~ (missing_stock * p_a22) +
+          (missing_stock * p_m22 * suelo_vivo),
+
+        year == 2024 ~ (missing_stock * p_a23) +
+          (missing_stock * p_m23 * p_a22) +
+          (missing_stock * p_m23 * p_m22 * suelo_vivo),
+
+        year == 2025 ~ (missing_stock * p_a24) +
+          (missing_stock * p_m24 * p_a23) +
+          (missing_stock * p_m24 * p_m23 * p_a22) +
+          (missing_stock * p_m24 * p_m23 * p_m22 * suelo_vivo)
+      ),
+
+      imputed_prisoner = case_when(
+        year == 2022 ~ 0,
+
+        year == 2023 ~ (missing_stock * p_p22),
+
+        year == 2024 ~ (missing_stock * p_p23) +
+          (missing_stock * p_m23 * p_p22),
+
+        year == 2025 ~ (missing_stock * p_p24) +
+          (missing_stock * p_m24 * p_p23) +
+          (missing_stock * p_m24 * p_m23 * p_p22)
+      )
+    )
+}
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # demographic assumptions shared by the projection scripts ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Sex ratio at birth (male births per female birth). Used by 11 and 13 to

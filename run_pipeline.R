@@ -26,6 +26,7 @@ steps_to_run <- list(
   list(name = "11", file = "code/11_estimation_conflict_allcause_mortality.R"),
   list(name = "12", file = "code/12_plotting_estimates.R"),
   list(name = "13", file = "code/13_sensitivity_migration_contributions.R"),
+  list(name = "13b", file = "code/13b_sensitivity_alpha_missing.R"),
   list(name = "14", file = "code/14_e0_loss_decomposition_by_cause.R")
 )
 

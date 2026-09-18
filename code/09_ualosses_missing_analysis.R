@@ -104,87 +104,20 @@ tasas_long <-
 
 print(tasas_long |> arrange(year, status2))
 
-# intensity lookup
-extraer_tasa <- function(target_year, target_status) {
-  valor <- tasas_long$prop[
-    tasas_long$year == target_year & tasas_long$status2 == target_status
-  ]
-  if (length(valor) == 0) return(0) else return(valor[1])
-}
-
-p_a22 <- extraer_tasa(2022, "alive")
-p_d22 <- extraer_tasa(2022, "dead")
-p_p22 <- extraer_tasa(2022, "prisoner")
-p_m22 <- extraer_tasa(2022, "missing")
-
-p_a23 <- extraer_tasa(2023, "alive")
-p_d23 <- extraer_tasa(2023, "dead")
-p_p23 <- extraer_tasa(2023, "prisoner")
-p_m23 <- extraer_tasa(2023, "missing")
-
-p_a24 <- extraer_tasa(2024, "alive")
-p_d24 <- extraer_tasa(2024, "dead")
-p_p24 <- extraer_tasa(2024, "prisoner")
-p_m24 <- extraer_tasa(2024, "missing")
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # synthetic-cohort Markov imputation of the missing
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# NOTE: a "step" in this chain is the ~8-month window between the two
-# registers, not a calendar year; the event-year cohorts stand in for
-# duration since disappearance.
+# impute_missing() (00_setup.R) holds the chain itself, extracted here so
+# this call and the alpha sensitivity in 13b share one formula instead of
+# two copies that could drift apart. A "step" in the chain is the ~8-month
+# window between two registers, not a calendar year; event-year cohorts
+# stand in for duration since disappearance.
 stock_missing_2026 <-
   stocks |>
   filter(status == "missing") |>
   select(year, missing_stock = n)
 
-imputation_final <- stock_missing_2026 %>%
-  mutate(
-    imputed_dead = case_when(
-      year == 2022 ~ missing_stock * suelo_muerto,
-
-      year == 2023 ~ (missing_stock * p_d22) +
-        (missing_stock * p_m22 * suelo_muerto),
-
-      year == 2024 ~ (missing_stock * p_d23) +
-        (missing_stock * p_m23 * p_d22) +
-        (missing_stock * p_m23 * p_m22 * suelo_muerto),
-
-      year == 2025 ~ (missing_stock * p_d24) +
-        (missing_stock * p_m24 * p_d23) +
-        (missing_stock * p_m24 * p_m23 * p_d22) +
-        (missing_stock * p_m24 * p_m23 * p_m22 * suelo_muerto)
-    ),
-
-    imputed_alive = case_when(
-      year == 2022 ~ missing_stock * suelo_vivo,
-
-      year == 2023 ~ (missing_stock * p_a22) +
-        (missing_stock * p_m22 * suelo_vivo),
-
-      year == 2024 ~ (missing_stock * p_a23) +
-        (missing_stock * p_m23 * p_a22) +
-        (missing_stock * p_m23 * p_m22 * suelo_vivo),
-
-      year == 2025 ~ (missing_stock * p_a24) +
-        (missing_stock * p_m24 * p_a23) +
-        (missing_stock * p_m24 * p_m23 * p_a22) +
-        (missing_stock * p_m24 * p_m23 * p_m22 * suelo_vivo)
-    ),
-
-    imputed_prisoner = case_when(
-      year == 2022 ~ 0,
-
-      year == 2023 ~ (missing_stock * p_p22),
-
-      year == 2024 ~ (missing_stock * p_p23) +
-        (missing_stock * p_m23 * p_p22),
-
-      year == 2025 ~ (missing_stock * p_p24) +
-        (missing_stock * p_m24 * p_p23) +
-        (missing_stock * p_m24 * p_m23 * p_p22)
-    )
-  )
+imputation_final <- impute_missing(suelo_vivo, tasas_long, stock_missing_2026)
 
 print(imputation_final)
 

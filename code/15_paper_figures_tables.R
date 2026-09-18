@@ -117,6 +117,8 @@ loss_draws <- read_rds("data_inter/ukr_e0_loss_by_cause_draws_2022_2025.rds")
 loss_sum <- read_rds("data_inter/ukr_e0_loss_by_cause_summary_2022_2025.rds")
 deaths_sum <- read_rds("data_inter/ukr_conflict_deaths_by_cause_summary_2022_2025.rds")
 mig <- read_rds("data_inter/ukr_migration_decomposition.rds")
+alpha_mil <- read_rds("data_inter/ukr_alpha_sensitivity_military.rds")
+alpha_e0 <- read_rds("data_inter/ukr_alpha_sensitivity_e0.rds")
 
 # The draws file is named for the simulation size, so 15 reads the one matching
 # the n_sim it was configured with rather than whatever the last run left behind.
@@ -1093,6 +1095,76 @@ tA5 <-
 
 save_tab(tA5, "tableA5_military_reconciliation.csv")
 print(tA5)
+
+# ==============================================================================
+# TABLE A6 / FIGURE A4 - Sensitivity to the missing-combatant imputation
+# ==============================================================================
+# The military death total is dominated by suelo_vivo (09): the assumed
+# share of the long-term missing who are alive. Nothing in the data
+# identifies this number, so 13b re-runs the imputation chain and the
+# downstream projection across suelo_vivo in [0, 1], holding everything
+# else at its production mode, and this assembles the result into a
+# manuscript table and figure.
+tA6 <-
+  alpha_mil |>
+  summarise(total_military_deaths = sum(total_military), .by = suelo_vivo) |>
+  left_join(
+    alpha_e0 |>
+      summarise(
+        male_loss_2025 = loss[year == 2025 & sex == "m"],
+        female_loss_2025 = loss[year == 2025 & sex == "f"],
+        .by = suelo_vivo
+      ),
+    by = "suelo_vivo"
+  ) |>
+  arrange(suelo_vivo) |>
+  transmute(
+    suelo_vivo,
+    total_military_deaths = round(total_military_deaths),
+    male_e0_loss_2025 = round(male_loss_2025, 2),
+    female_e0_loss_2025 = round(female_loss_2025, 3)
+  )
+
+save_tab(tA6, "tableA6_alpha_sensitivity.csv")
+print(tA6)
+
+figA4a <-
+  alpha_mil |>
+  summarise(total_military = sum(total_military), .by = suelo_vivo) |>
+  ggplot(aes(suelo_vivo, total_military)) +
+  geom_line(linewidth = 1, colour = "#B23A48") +
+  geom_point(colour = "#B23A48") +
+  geom_vline(xintercept = 0.10, linetype = "dashed", colour = "grey50") +
+  scale_y_continuous(labels = scales::comma) +
+  labs(
+    x = "Share of the never-resolved missing assumed alive",
+    y = "Total military deaths, 2022–2025"
+  ) +
+  theme_paper()
+
+figA4b <-
+  alpha_e0 |>
+  nice_sex() |>
+  ggplot(aes(suelo_vivo, loss, colour = factor(year))) +
+  geom_line(linewidth = 1) +
+  geom_vline(xintercept = 0.10, linetype = "dashed", colour = "grey50") +
+  facet_wrap(~sex, scales = "free_y") +
+  labs(
+    x = "Share of the never-resolved missing assumed alive",
+    y = "Life expectancy loss (years)",
+    colour = "Year"
+  ) +
+  theme_paper()
+
+figA4 <- figA4a + figA4b +
+  plot_annotation(
+    title = "Sensitivity to the missing-combatant imputation assumption",
+    caption = paste0(
+      "Dashed line: the production value (suelo_vivo = 0.10). Deterministic, ",
+      "at the mode of every other input - not a Monte Carlo re-run at each point."
+    )
+  )
+save_fig(figA4, "figA4_alpha_sensitivity_missing.png", 11, 4.5)
 
 # ==============================================================================
 # TABLE A2 - Empirical status transitions of the missing
