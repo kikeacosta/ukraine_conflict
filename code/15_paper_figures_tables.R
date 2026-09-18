@@ -657,13 +657,15 @@ acled <- read_rds("data_inter/ukr_acled.rds")
 ucdp_cmp_full <- read_rds("data_inter/ukr_rus_ucdp_source_comparison.rds")
 ucdp_ukr <- ucdp_cmp_full |> filter(country == "Ukraine")
 
-ual_tot <-
-  ual |>
-  filter(status != "prisoner") |>
-  summarise(n = sum(dx), .by = status)
-
-ual_low <- ual_tot$n[ual_tot$status == "dead"]
-ual_high <- sum(ual_tot$n)
+# Taken from the parameter table and summed over rounded years, exactly as
+# table 3 builds its Total row, so the two tables print the same bounds. The
+# register counts are fractional (08 redistributes records of unknown age or
+# year), and rounding their four-year sum once gives 176,055 where table 3 has
+# 176,054. Both are valid roundings of 176,054.6; a reader comparing the two
+# tables would still see a discrepancy.
+cmb_bounds <- param_table |> filter(role == "combatants")
+ual_low <- sum(round(cmb_bounds$min))
+ual_high <- sum(round(cmb_bounds$max))
 
 acled_tot <- acled |> summarise(dts = sum(dts), .by = role)
 
