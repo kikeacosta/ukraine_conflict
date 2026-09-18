@@ -63,9 +63,19 @@ transitions <- cache_rds(
         v18_lu |> select(name2, date_bth, status2 = status),
         by = c("name2", "date_bth")
       ) |>
-      # absent from the later register = resurfaced alive
+      # A name+DOB not found in v18 is treated as CENSORED (still missing),
+      # not resolved alive. v18 postdates v14 and the register only grows
+      # (accumulates records, never removes them), so a person genuinely
+      # found alive would need to be actively pulled from the register - the
+      # far more likely explanation for an absence is a linkage miss (a
+      # name transliterated differently, a date-of-birth correction) than a
+      # real resurrection. An earlier version of this line read "absent
+      # from the later register = resurfaced alive" and used that reading
+      # directly; treating the same absences as still-missing instead
+      # raises the imputed dead total by about 4,600 (2.8%), which is the
+      # size of the assumption this line was making.
       mutate(
-        status2 = ifelse(is.na(status2), "alive", status2),
+        status2 = ifelse(is.na(status2), "missing", status2),
         year = year(date_evnt)
       )
 
