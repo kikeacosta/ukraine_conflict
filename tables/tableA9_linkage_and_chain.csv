@@ -1,0 +1,7 @@
+design,alpha_central,military_deaths,male_2022,male_2023,male_2024,female_2025,male_2025
+"duration model, no longer listed = alive (production)",0.052,169062,4.61,4.08,5.4,0.129,5.92
+no longer listed = still missing,0.048,173697,4.61,4.12,5.55,0.129,6.17
+people listed as missing in v14 only,0.051,169089,4.61,4.08,5.4,0.129,5.92
+duration model to the longest duration observed,0.037,162557,4.57,3.98,5.19,0.128,5.64
+projected captivity also counted among the unrecorded prisoners,0.078,167287,4.59,4.05,5.35,0.129,5.85
+event-year cohorts standing in for duration,0.042,166400,4.62,4.02,5.3,0.128,5.81

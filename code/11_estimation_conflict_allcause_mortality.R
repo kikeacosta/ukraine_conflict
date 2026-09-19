@@ -63,13 +63,6 @@ message("simulation size: n_sim = ", n_sim)
 # --- parameter table: min / mode / max conflict deaths per year and role -----
 param_table <- read_rds("data_inter/ukr_param_table.rds")
 
-# the register's INDIVIDUALLY CONFIRMED deaths; anything drawn above them is
-# attributable to the imputation of the missing, and that is the split
-# reported as confirmed vs imputed
-combatant_confirmed <- param_table %>%
-  filter(role == "combatants") %>%
-  select(year, conf_cmb = confirmed)
-
 # --- counterfactual ("expected") mortality, no war --------------------------
 exp_mort2 <- read_rds("data_inter/ukr_mxs_obs_plus_frcst_1989_2025.rds") %>%
   filter(year %in% 2022:2025, source == "frcst") %>%
@@ -174,106 +167,52 @@ stopifnot(
 # the two apart means the draws are on disk for the figures even when the
 # projection is read back from cache, and the projection stays a pure function
 # of them.
-set.seed(42)
-
+# simulation_draws() (00_setup.R) holds the sampling, so 13g can repeat it
+# with another PERT shape on the same random numbers. What each input's draw
+# stands for:
+#
 # CIVILIANS are drawn independently in every year. What is uncertain is each
 # year's own count, coming from event reporting specific to that year's
 # events, and 2022 being at its ceiling says nothing about 2023.
-draws_cvs_long <- param_table %>%
-  filter(role == "civilians") %>%
-  group_by(role, year) %>%
-  reframe(
-    sim_id = 1:n_sim,
-    draw = rpert(n_sim, min = min, mode = mode, max = max)
-  )
-
+#
 # COMBATANTS are not like that, although they look like a count. What is
 # uncertain about them is alpha, the share of the never-resolved missing who
 # are alive (00_setup.R, alpha_evidence(): the evidence, the sources and the
-# range). That is ONE property of the missing, not four
-# separate facts, so alpha is drawn once per simulation and every year's total
-# follows from it: at_alpha0 - alpha x residual, the line 09's chain traces.
-# Drawing the years independently would let one simulation put 2022 at "none
-# of the missing alive" and 2025 at "a fifth of them alive", which is not a
-# scenario anyone could defend, and the errors would partly cancel in the
-# four-year total.
+# range). That is ONE property of the missing, not four separate facts, so
+# alpha is drawn once per simulation and every year's total follows from it:
+# at_alpha0 - alpha x residual, the line 09's imputation traces. Drawing the
+# years independently would let one simulation put 2022 at "none of the
+# missing alive" and 2025 at "a fifth of them alive", which is not a scenario
+# anyone could defend, and the errors would partly cancel in the four-year
+# total.
+#
+# MIGRATION is uncertain in how much of the outflow the sources capture, and a
+# register that keeps people after they return does so in every year alike.
+# The WESTERN component is bracketed by source: one weight w per simulation,
+# drawn from a symmetric Beta-PERT on [0, 1] with mode 0.5, blends the two
+# readings' whole paths - w = 0 is the crossings reading in every year, w = 1
+# the register reading - so its four-year total runs between the two sources'
+# own totals, and the mode is their midpoint in every year (see 10). RUSSIA AND
+# BELARUS is one 2022 entry with its own PERT bounds.
 alpha_range <- read_rds("data_inter/ukr_alpha_missing.rds")
 alpha_lines <- read_rds("data_inter/ukr_military_alpha_lines.rds")
+sampled <- simulation_draws(param_table, alpha_range, alpha_lines, n = n_sim)
+draws_df <- sampled$draws_df
+param_draws <- sampled$param_draws
+write_rds(sampled$alpha_draws, "data_inter/ukr_sim_alpha_draws.rds")
 
-alpha_draws <- tibble(
-  sim_id = 1:n_sim,
-  alpha = qpert(
-    runif(n_sim),
-    min = alpha_range$alpha_min,
-    mode = alpha_range$alpha_mode,
-    max = alpha_range$alpha_max
-  )
-)
-write_rds(alpha_draws, "data_inter/ukr_sim_alpha_draws.rds")
-
-draws_cmb_long <-
-  expand_grid(alpha_draws, alpha_lines |> select(year, at_alpha0, residual)) |>
-  transmute(role = "combatants", year, sim_id, draw = at_alpha0 - alpha * residual)
-
-# the draws must stay inside 10's bounds, which are the same line evaluated
-# at the ends of the range
+# the military draws must stay inside 10's bounds, which are the same line
+# evaluated at the ends of the range
 stopifnot(
-  draws_cmb_long |>
+  param_draws |>
+    filter(role == "combatants") |>
     left_join(param_table |> filter(role == "combatants") |> select(year, min, max), by = "year") |>
     with(all(draw >= min - 1e-6 & draw <= max + 1e-6))
 )
 
-draws_conflict_long <- bind_rows(draws_cvs_long, draws_cmb_long)
-
-draws_conflict <- draws_conflict_long %>%
-  pivot_wider(names_from = role, values_from = draw) %>%
-  rename(draw_cmb = combatants, draw_cvs = civilians)
-
-# Migration is not like that. What is uncertain is how much of the outflow
-# the sources capture, and a register that keeps people after they return
-# does so in every year alike. Drawing the years independently would let a
-# simulation put 2022 on the register reading and 2023 on the crossing
-# reading, which is not a scenario anyone could defend. So each component
-# gets ONE quantile per simulation, held across all four years.
-#
-# The WESTERN component is bracketed by source: one weight w per simulation,
-# drawn from a symmetric Beta-PERT on [0, 1] with mode 0.5, blends the two
-# readings' whole paths - w = 0 is the crossings reading in every year, w = 1
-# the register reading. Its four-year total therefore runs between the two
-# sources' own totals, and the mode is their midpoint in every year (see 10).
-# RUSSIA AND BELARUS is one 2022 entry with its own PERT bounds.
-mig_component_draws <- function(rl) {
-  u <- runif(n_sim)
-  rows <- param_table %>% filter(role == rl)
-  if (rl == "mig_west") {
-    w <- qpert(u, min = 0, mode = 0.5, max = 1)
-    rows %>%
-      group_by(role, year) %>%
-      reframe(sim_id = 1:n_sim, draw = crossings + w * (register - crossings))
-  } else {
-    rows %>%
-      group_by(role, year) %>%
-      reframe(sim_id = 1:n_sim, draw = qpert(u, min = min, mode = mode, max = max))
-  }
-}
-
-draws_mig_long <-
-  bind_rows(
-    mig_component_draws("mig_west"),
-    mig_component_draws("mig_ru_by")
-  )
-
-draws_mig <- draws_mig_long %>%
-  summarise(draw_mig = sum(draw), .by = c(sim_id, year))
-
-draws_df <- draws_conflict %>%
-  left_join(draws_mig, by = c("sim_id", "year")) %>%
-  left_join(combatant_confirmed, by = "year")
-
 # One tidy row per simulation, year and role. 15 draws its PERT figures from
 # this rather than re-deriving the draws from the projection output, and 16
 # uses it to attribute the spread in the results back to its inputs.
-param_draws <- bind_rows(draws_conflict_long, draws_mig_long)
 write_rds(param_draws, "data_inter/ukr_sim_param_draws.rds")
 
 # 7. RUN (OR REUSE) THE PROJECTIONS ============================================

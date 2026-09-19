@@ -41,6 +41,13 @@
 #   tableA7_migration_sensitivity.csv                13, 13c
 #   figA5_migration_sensitivity.png                  13, 13c
 #   tableA8_migration_specification.csv              13c
+#   tableA9_linkage_and_chain.csv                    09, 13b
+#   tableA10_registration_lag.csv                    08b, 13d
+#   tableA11_population_base_and_timing.csv          13e, 13f
+#   tableA12_counterfactual_window.csv               13g
+#   tableA13_pert_shape.csv                          13g
+#   tableA14_years_of_life_lost.csv                  14b
+#   tableA15_adult_mortality_45q15.csv               14b
 #
 # INPUTS   the .rds products of steps 07-14
 # ==============================================================================
@@ -1419,11 +1426,12 @@ save_fig(figA5, "figA5_migration_sensitivity.png", 12, 7)
 # ==============================================================================
 # TABLE A8 - Migration specification checks
 # ==============================================================================
-# Three assumptions of the migration input changed one at a time (13c,
+# Four assumptions of the migration input changed one at a time (13c,
 # section 5): where the western mode sits in the bracket (A2), the age-sex
-# profile of the Russia and Belarus flow (A9), and additive versus
-# proportional allocation of a draw away from the mode (A5, at both ends of
-# the western bracket). Loss in years, every conflict input at its mode.
+# profile of the Russia and Belarus flow (A9), additive versus proportional
+# allocation of a draw away from the mode (A5, at both ends of the western
+# bracket), and the Canada and USA placeholder 30% lower and higher (A10).
+# Loss in years, every conflict input at its mode.
 spec <- read_rds("data_inter/ukr_migration_specification_e0.rds")
 spec_order <- unique(spec$scenario)
 
@@ -1442,6 +1450,117 @@ tA8 <-
 
 save_tab(tA8, "tableA8_migration_specification.csv")
 print(tA8)
+
+# ==============================================================================
+# TABLES A9-A15 - The remaining sensitivity analyses and summary measures
+# ==============================================================================
+# One row per scenario, the loss in years at the mode of every other input:
+# men in each year and women in 2025, the cells that move. A13 is the PERT
+# shape, and A14 and A15 the summary measures from the draws, with intervals.
+loss_wide <- function(d, keep_cols) {
+  d |>
+    filter(sex == "m" | year == 2025) |>
+    mutate(col = if_else(sex == "m", paste0("male_", year), paste0("female_", year))) |>
+    select(all_of(keep_cols), col, loss) |>
+    pivot_wider(names_from = col, values_from = loss) |>
+    mutate(across(starts_with("male_"), \(x) round(x, 2)),
+           across(starts_with("female_"), \(x) round(x, 3)))
+}
+
+# A9: the linkage rules and the design of the chain (09, 13b)
+tA9 <-
+  read_rds("data_inter/ukr_linkage_rules_e0.rds") |>
+  mutate(alpha_central = round(alpha_mode, 3), military_deaths = round(military)) |>
+  loss_wide(c("design", "alpha_central", "military_deaths"))
+save_tab(tA9, "tableA9_linkage_and_chain.csv")
+print(tA9)
+
+# A10: the horizon of the registration-lag correction (08b, 13d)
+lag <- read_rds("data_inter/ukr_registration_lag.rds")
+tA10 <-
+  lag$loss |>
+  left_join(lag$military |> summarise(military_deaths = round(sum(total)), .by = scenario),
+            by = "scenario") |>
+  mutate(scenario = factor(scenario, levels = unique(lag$military$scenario))) |>
+  loss_wide(c("scenario", "military_deaths")) |>
+  arrange(scenario)
+save_tab(tA10, "tableA10_registration_lag.csv")
+print(tA10)
+
+# A11: the population base of Donetsk and Luhansk (13e) and the timing of
+# 2022's events (13f)
+dl <- read_rds("data_inter/ukr_denominator_donetsk_luhansk.rds")
+timing <- read_rds("data_inter/ukr_timing_2022.rds")
+tA11 <-
+  bind_rows(
+    dl$loss |> mutate(check = "Population base of Donetsk and Luhansk"),
+    timing$loss |> mutate(check = "Timing of 2022's deaths and departures")
+  ) |>
+  mutate(scenario = factor(scenario, levels = unique(scenario))) |>
+  loss_wide(c("check", "scenario")) |>
+  arrange(check, scenario)
+save_tab(tA11, "tableA11_population_base_and_timing.csv")
+print(tA11)
+
+# A12: the Lee-Carter window (13g), with the counterfactual e0 in 2025
+baseline <- read_rds("data_inter/ukr_baseline_window_e0.rds")
+tA12 <-
+  baseline |>
+  mutate(window = factor(window, levels = unique(window))) |>
+  loss_wide("window") |>
+  left_join(baseline |> filter(year == 2025) |>
+              transmute(window = factor(window, levels = unique(baseline$window)), sex,
+                        e0 = round(e0_bsn, 2)) |>
+              pivot_wider(names_from = sex, values_from = e0, names_prefix = "counterfactual_e0_2025_"),
+            by = "window") |>
+  arrange(window)
+save_tab(tA12, "tableA12_counterfactual_window.csv")
+print(tA12)
+
+# A13: the PERT shape (13g): median and 95% interval of the loss
+tA13 <-
+  read_rds("data_inter/ukr_pert_shape_e0.rds") |>
+  mutate(sex = if_else(sex == "f", "Females", "Males"),
+         loss = sprintf("%.2f (%.2f-%.2f)", median, lo, hi)) |>
+  select(year, sex, shape, loss) |>
+  pivot_wider(names_from = shape, values_from = loss, names_prefix = "pert_shape_") |>
+  arrange(sex, year)
+save_tab(tA13, "tableA13_pert_shape.csv")
+print(tA13)
+
+# A14: years of life lost and 45q15 (14b), medians and 95% intervals
+yq <- read_rds("data_inter/ukr_yll_45q15_summary.rds")
+fmt_ui <- function(m, lo, hi, digits = 0) {
+  f <- if (digits == 0) \(x) scales::comma(round(x)) else \(x) formatC(x, format = "f", digits = digits)
+  sprintf("%s (%s-%s)", f(m), f(lo), f(hi))
+}
+yll_labels <- c(yll_civilian = "Civilians", yll_registered = "Registered combatants",
+                yll_late = "Late registrations (estimated)", yll_imputed = "Missing combatants (imputed)",
+                yll_total = "Total")
+tA14_yll <-
+  bind_rows(yq$both_sexes |> mutate(year = as.character(year)),
+            yq$all_years_both |> mutate(year = "2022-2025")) |>
+  filter(measure %in% names(yll_labels)) |>
+  mutate(cause = factor(yll_labels[as.character(measure)], levels = yll_labels),
+         yll = fmt_ui(median, lo, hi)) |>
+  select(year, cause, yll) |>
+  pivot_wider(names_from = year, values_from = yll) |>
+  arrange(cause)
+q_labels <- c(q4515_bsn = "Counterfactual", q4515_war = "With conflict deaths",
+              q4515_diff = "Difference")
+tA14_q <-
+  yq$by_year_sex |>
+  filter(measure %in% names(q_labels)) |>
+  mutate(sex = if_else(sex == "f", "Females", "Males"),
+         measure = factor(q_labels[as.character(measure)], levels = q_labels),
+         q = fmt_ui(1000 * median, 1000 * lo, 1000 * hi, digits = 1)) |>
+  select(sex, measure, year, q) |>
+  pivot_wider(names_from = year, values_from = q) |>
+  arrange(sex, measure)
+save_tab(tA14_yll, "tableA14_years_of_life_lost.csv")
+save_tab(tA14_q, "tableA15_adult_mortality_45q15.csv")
+print(tA14_yll)
+print(tA14_q)
 # ==============================================================================
 # TABLE A2 - Resolution of the missing over twelve months
 # ==============================================================================

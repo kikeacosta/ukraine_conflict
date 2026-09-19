@@ -28,11 +28,12 @@
 # an artefact of the allocation rather than a result. The loss with
 # no migration at all is 13's scenario, reported alongside.
 #
-# Section 5 then checks three specification choices of the migration input,
+# Section 5 then checks four specification choices of the migration input,
 # one at a time at the mode (documents/migration_methodology.md, section 10):
 # where the western mode sits in the bracket (A2), the age-sex profile of the
-# Russia and Belarus flow (A9), and additive against proportional allocation
-# (A5). 15 reports them as table A8.
+# Russia and Belarus flow (A9), additive against proportional allocation (A5),
+# and the Canada and USA placeholder 30% lower and higher (A10). 15 reports
+# them as table A8.
 #
 # INPUTS   the same as 13
 #          data_inter/ukr_migration_decomposition.rds (from 13)
@@ -234,7 +235,7 @@ message("Done. data_inter/ukr_migration_sensitivity_e0.rds written for 15.")
 # ==============================================================================
 # 5. SPECIFICATION CHECKS
 # ==============================================================================
-# Three assumptions in documents/migration_methodology.md (section 10) are
+# Four assumptions in documents/migration_methodology.md (section 10) are
 # tested by changing one of them at a time, deterministically, with every
 # conflict input at its mode:
 #
@@ -301,6 +302,26 @@ proportional <- function(totals) {
     select(-target, -base)
 }
 
+
+# A fourth check: the Canada and USA placeholder (06) scaled up and down by
+# 30%. Canada and the USA enter the register reading through their year-end
+# stocks, so the reading moves by 30% of each year's change in their stock, and
+# the western mode, the midpoint of the two readings, by half of that.
+readings <- read_rds("data_inter/ukr_migration_readings.rds")
+placeholder_flow <-
+  readings |>
+  arrange(year) |>
+  transmute(year, flow = (canada_placeholder + usa_placeholder) -
+              lag(canada_placeholder + usa_placeholder, default = 0))
+placeholder_totals <- function(k) {
+  mig_bounds |>
+    filter(role == "mig_west") |>
+    left_join(placeholder_flow, by = "year") |>
+    transmute(year, value = (crossings + register + k * flow) / 2) |>
+    bind_rows(component_at_mode("mig_ru_by")) |>
+    summarise(draw_mig = sum(value), .by = year)
+}
+
 specification <- bind_rows(
   loss_of(static_inputs, mode_totals) |> mutate(scenario = "Mode"),
   loss_of(static_inputs, totals_with_west(1 / 3)) |> mutate(scenario = "A2: western mode a third of the way from the crossings reading"),
@@ -308,7 +329,9 @@ specification <- bind_rows(
   loss_of(static_inputs, totals_with_west(0)) |> mutate(scenario = "A5: crossings end, additive (as used)"),
   loss_of(proportional(totals_with_west(0)), mode_totals) |> mutate(scenario = "A5: crossings end, proportional"),
   loss_of(static_inputs, totals_with_west(1)) |> mutate(scenario = "A5: register end, additive (as used)"),
-  loss_of(proportional(totals_with_west(1)), mode_totals) |> mutate(scenario = "A5: register end, proportional")
+  loss_of(proportional(totals_with_west(1)), mode_totals) |> mutate(scenario = "A5: register end, proportional"),
+  loss_of(static_inputs, placeholder_totals(-0.3)) |> mutate(scenario = "A10: Canada and USA 30% lower"),
+  loss_of(static_inputs, placeholder_totals(0.3)) |> mutate(scenario = "A10: Canada and USA 30% higher")
 )
 
 # the first row must reproduce 13's loss at the mode

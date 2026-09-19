@@ -814,16 +814,43 @@ stopifnot(!is.na(n_sim), n_sim >= 100)
 # overwrote row 0 with 2022 births, which lost the ~271k children born in
 # 2021 and left rows from 2023 onward in two different conventions.)
 #
-# Period rates and age-at-death profiles (mx, fx, OHCHR, ualosses) are by
-# completed age at the event, while row x spends year t aged x - 1 and then x.
-# They are applied to row x unchanged, which is a half-year age offset applied
-# uniformly to every row; see documents/migration_methodology.md, 11.12.
+# PERIOD INPUTS ON COHORT ROWS. Rates and age-at-death profiles (mx, fx,
+# OHCHR, ualosses) are by completed age at the event, while row x spends year
+# t aged x - 1 before its birthday and x after. So each is carried onto the
+# rows as the cohort lives it: row x (x >= 1) takes the mean of the rates at
+# ages x - 1 and x, and half of the deaths at each of those ages; row 0, born
+# during the year, takes the age-0 rate and half of the age-0 deaths; the open
+# row 100 keeps what would fall to row 101. The output is returned by
+# completed age again: each row's exposure is split half to each of its two
+# ages (row 0 wholly to age 0), expected deaths are the rate at each age times
+# that exposure, and conflict deaths are the counts by age at death, so the
+# life tables of 12 and 14 are period tables that reproduce the inputs.
 #
-# TIMING: mid-year convention. Exposure is the average of the cohort's stock at
-# the start and end of the year. For existing cohorts that means half the
-# emigration and half the conflict deaths are removed before expected deaths
-# are computed, and half the expected deaths after. Newborns start the year at
-# zero and arrive through it, so their exposure is half of what survives.
+# TIMING: mid-year convention by default. Exposure is the average of the
+# cohort's stock at the start and end of the year. For existing cohorts that
+# means half the year's net outflow and half its conflict deaths are removed
+# before expected deaths are computed, and half the expected deaths after.
+# Newborns start the year at zero and arrive through it, so their exposure is
+# half of what survives. draws_this_sim may carry absent_mig, absent_cvs and
+# absent_cmb, the share of each year's net outflow, civilian and military
+# deaths removed before exposure is counted (1/2 when absent); 13f sets them
+# for 2022 from the months of the events.
+#
+# The three conversions between completed age (0-100, 100 open) and cohort
+# rows, for one year and sex ordered by age:
+rates_to_rows <- function(v) c(v[1], (head(v, -1) + tail(v, -1)) / 2)
+counts_to_rows <- function(v) {
+  n <- length(v)
+  r <- c(v / 2, 0) + c(0, v / 2)
+  r[n] <- r[n] + r[n + 1]
+  r[seq_len(n)]
+}
+rows_to_ages <- function(e) {
+  n <- length(e)
+  a <- c(e[1], e[-1] / 2)
+  a[-n] <- a[-n] + e[-1] / 2
+  a
+}
 run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
   # carries a stock at 31 December into next year's rows: everyone moves up one
   # row, 100+ stays open, and row 0 is left empty for next year's births
@@ -848,6 +875,10 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
     group_by(year) %>%
     summarise(mig_base = sum(ems), .groups = "drop")
 
+  for (col in c("absent_mig", "absent_cvs", "absent_cmb")) {
+    if (!col %in% names(draws_this_sim)) draws_this_sim[[col]] <- 0.5
+  }
+
   df_sim <- static_inputs %>%
     left_join(draws_this_sim, by = "year") %>%
     left_join(mig_base_by_year, by = "year") %>%
@@ -869,10 +900,17 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
       # for. Registered deaths take the dead profile, imputed deaths take the
       # profile of the missing they come from.
       cmb_confirmed = draw_cmb * ratio_confirmed * prop_cmb_dead,
-      cmb_imputed = draw_cmb * (1 - ratio_confirmed) * prop_cmb_miss,
-      cmb = cmb_confirmed + cmb_imputed,
-
-      cnf = cvs + cmb
+      cmb_imputed = draw_cmb * (1 - ratio_confirmed) * prop_cmb_miss
+    ) %>%
+    # the period inputs carried onto the cohort rows (see AGE CONVENTION)
+    arrange(year, sex, age) %>%
+    mutate(
+      mx_row = rates_to_rows(mx),
+      fx_row = rates_to_rows(fx),
+      cvs_row = counts_to_rows(cvs),
+      cmb_row = counts_to_rows(cmb_confirmed + cmb_imputed),
+      cnf_row = cvs_row + cmb_row,
+      .by = c(year, sex)
     )
 
   results_list <- list()
@@ -887,19 +925,20 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
 
     yr_processed <- yr_data %>%
       mutate(
-        pop2 = pop - 0.5 * ems - 0.5 * cnf, # population at risk
+        # population at risk
+        pop2 = pop - absent_mig * ems - absent_cvs * cvs_row - absent_cmb * cmb_row,
         # expected (non-conflict) deaths. mx is a rate per PERSON-YEAR (04
         # fits it to deaths over the mean of consecutive 1 January stocks),
         # so deaths must equal mx x exposure. exposure = pop2 - noc / 2, which
         # solves to noc = pop2 * mx / (1 + mx / 2). Using pop2 * mx instead
         # would apply mx / (1 - mx / 2): 6% too high at 80, 21% at 100.
-        noc = pop2 * mx / (1 + 0.5 * mx),
+        noc = pop2 * mx_row / (1 + 0.5 * mx_row),
         exposure = pop2 - 0.5 * noc, # person-years lived
 
         # row 0 is the cohort born during this year: it starts empty and
         # receives births = sum(ASFR x female exposure), split by the sex
         # ratio at birth. Births never touch the other rows.
-        births = sum(fx * exposure),
+        births = sum(fx_row * exposure),
         pop = case_when(
           age == 0 & sex == "f" ~ prop_female_birth * births,
           age == 0 & sex == "m" ~ prop_male_birth * births,
@@ -907,24 +946,28 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
         ),
         # same bookkeeping for the newborns, but they start the year at zero:
         # the average of the start (0) and end stock is half of what survives
-        pop2 = ifelse(age == 0, 0.5 * (pop - ems - cnf), pop2),
-        noc = ifelse(age == 0, pop2 * mx / (1 + 0.5 * mx), noc),
+        pop2 = ifelse(age == 0, 0.5 * (pop - ems - cnf_row), pop2),
+        noc = ifelse(age == 0, pop2 * mx_row / (1 + 0.5 * mx_row), noc),
         exposure = ifelse(age == 0, pop2 - 0.5 * noc, exposure),
 
-        dx = noc + cnf, # all-cause deaths
+        dx = noc + cnf_row, # all-cause deaths
         pop_end = pop - ems - dx # survivors at 31 December
       )
 
-    # keep the components only; every rate downstream is derived from these
+    # keep the components only, back by completed age (see AGE CONVENTION);
+    # every rate downstream is derived from these
     results_list[[as.character(yr)]] <- yr_processed %>%
+      arrange(sex, age) %>%
+      mutate(exposure_age = rows_to_ages(exposure), .by = sex) %>%
       select(
         year, sex, age,
-        pop = exposure,
-        expected = noc,
+        pop = exposure_age,
+        expected = mx,
         civilian = cvs,
         combatant_confirmed = cmb_confirmed,
         combatant_imputed = cmb_imputed
-      )
+      ) %>%
+      mutate(expected = expected * pop)
 
     # age the survivors on into next year's starting population
     if (yr < 2025) {
@@ -933,4 +976,143 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
   }
 
   bind_rows(results_list) %>% mutate(sim_id = sim_id)
+}
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# the simulation's draws ====
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Every disputed input of one set of n simulations, drawn in a fixed order from
+# one seed so that 11 and the PERT-shape check in 13g use the same random
+# numbers. Each draw is a Beta-PERT quantile of a uniform, with the given
+# shape (4 is the standard PERT):
+#   civilians   one uniform per year and simulation: each year's count comes
+#               from that year's own event reporting
+#   combatants  alpha once per simulation, which sets every year's total on
+#               09's line: at_alpha0 - alpha x residual
+#   migration   the western blend weight once per simulation, applied to every
+#               year's two readings; Russia and Belarus once
+# Returns the draws by simulation and year (draws_df), the same by role
+# (param_draws) and alpha by simulation (alpha_draws).
+simulation_draws <- function(param_table, alpha_range, alpha_lines, n, shape = 4, seed = 42) {
+  set.seed(seed)
+  q <- function(u, a, m, b) qpert(u, min = a, mode = m, max = b, shape = shape)
+
+  cvs <- param_table |> filter(role == "civilians") |> arrange(year)
+  draws_cvs_long <- map_dfr(seq_len(nrow(cvs)), function(i) {
+    tibble(role = "civilians", year = cvs$year[i], sim_id = seq_len(n),
+           draw = q(runif(n), cvs$min[i], cvs$mode[i], cvs$max[i]))
+  })
+
+  alpha_draws <- tibble(
+    sim_id = seq_len(n),
+    alpha = q(runif(n), alpha_range$alpha_min, alpha_range$alpha_mode, alpha_range$alpha_max)
+  )
+  draws_cmb_long <-
+    expand_grid(alpha_draws, alpha_lines |> select(year, at_alpha0, residual)) |>
+    transmute(role = "combatants", year, sim_id, draw = at_alpha0 - alpha * residual)
+
+  west <- param_table |> filter(role == "mig_west")
+  w <- q(runif(n), 0, 0.5, 1)
+  draws_west_long <-
+    expand_grid(sim_id = seq_len(n), west |> select(year, crossings, register)) |>
+    mutate(role = "mig_west", draw = crossings + w[sim_id] * (register - crossings)) |>
+    select(role, year, sim_id, draw)
+  ru <- param_table |> filter(role == "mig_ru_by")
+  u_ru <- runif(n)
+  draws_ru_long <-
+    expand_grid(sim_id = seq_len(n), ru |> select(year, min, mode, max)) |>
+    mutate(role = "mig_ru_by", draw = q(u_ru[sim_id], min, mode, max)) |>
+    select(role, year, sim_id, draw)
+
+  param_draws <- bind_rows(draws_cvs_long, draws_cmb_long, draws_west_long, draws_ru_long)
+  draws_df <-
+    param_draws |>
+    mutate(role = case_when(role == "civilians" ~ "draw_cvs", role == "combatants" ~ "draw_cmb",
+                            .default = "draw_mig")) |>
+    summarise(draw = sum(draw), .by = c(sim_id, year, role)) |>
+    pivot_wider(names_from = role, values_from = draw) |>
+    left_join(param_table |> filter(role == "combatants") |> select(year, conf_cmb = confirmed),
+              by = "year") |>
+    arrange(sim_id, year)
+  list(draws_df = draws_df, param_draws = param_draws, alpha_draws = alpha_draws)
+}
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# the deterministic projection at the mode, for the sensitivity steps ====
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Every input at its mode, set up as 13 sets it up: the conflict and migration
+# totals from the parameter table, the counterfactual, fertility carried
+# forward from 2023, and the age-sex profiles of civilian, registered and
+# imputed deaths. A sensitivity step changes one of these and projects again.
+mode_projection_inputs <- function() {
+  param_table <- read_rds("data_inter/ukr_param_table.rds")
+  exp_mort <- read_rds("data_inter/ukr_mxs_obs_plus_frcst_1989_2025.rds") |>
+    filter(year %in% 2022:2025, source == "frcst") |>
+    select(-source)
+  pop22_ini <- read_rds("data_inter/ukr_pop_sssu.rds") |>
+    filter(reg == "cnt", year == 2022) |>
+    select(-reg)
+  migs <- read_rds("data_inter/ukr_migrants_unchr_eurostat_sex_age_2022_2025.rds") |>
+    mutate(ems = -mix) |>
+    select(-mix)
+  asfr <- read_rds("data_inter/ukr_asfr_wpp_2022_2025.rds")
+  asfr <- bind_rows(asfr, asfr |> filter(year == 2023) |> mutate(year = 2024),
+                    asfr |> filter(year == 2023) |> mutate(year = 2025))
+  ohchr <- read_rds("data_inter/ukr_ohchr_civilian_casualties.rds") |>
+    select(year, sex, age, prop_cvs = cx)
+  ual <- read_rds("data_inter/ukr_ualosses_conflict_deaths_sex_age_2022_2025.rds")
+  profile <- function(keep, nm) {
+    ual |>
+      filter(status == keep, year %in% 2022:2025) |>
+      select(-status) |>
+      complete(year = 2022:2025, sex, age = 0:100, fill = list(dx = 0)) |>
+      summarise(dx = sum(dx), .by = c(year, sex, age)) |>
+      mutate("{nm}" := dx / sum(dx), .by = year) |>
+      select(-dx)
+  }
+  static_inputs <-
+    expand_grid(year = 2022:2025, sex = c("f", "m"), age = 0:100) |>
+    left_join(migs, by = c("year", "sex", "age")) |>
+    left_join(exp_mort, by = c("year", "sex", "age")) |>
+    left_join(asfr, by = c("year", "sex", "age")) |>
+    left_join(profile("dead", "prop_cmb_dead"), by = c("year", "sex", "age")) |>
+    left_join(profile("missing", "prop_cmb_miss"), by = c("year", "sex", "age")) |>
+    left_join(ohchr, by = c("year", "sex", "age")) |>
+    replace_na(list(ems = 0, w = 0, mx = 0, fx = 0, prop_cvs = 0,
+                    prop_cmb_dead = 0, prop_cmb_miss = 0))
+  stopifnot(all(static_inputs$mx > 0), !any(is.na(static_inputs)))
+  draws <-
+    param_table |>
+    mutate(role = if_else(str_starts(role, "mig_"), "migration", role)) |>
+    summarise(mode = sum(mode), .by = c(year, role)) |>
+    pivot_wider(names_from = role, values_from = mode) |>
+    transmute(year, draw_cmb = combatants, draw_cvs = civilians, draw_mig = migration) |>
+    left_join(param_table |> filter(role == "combatants") |> select(year, conf_cmb = confirmed),
+              by = "year") |>
+    mutate(sim_id = 1)
+  list(static_inputs = static_inputs, pop22_ini = pop22_ini, draws = draws,
+       param_table = param_table)
+}
+
+# The loss of life expectancy at birth by year and sex for one set of draws,
+# with the counterfactual and the with-war life expectancy it rests on.
+loss_at_mode <- function(draws, static_inputs, pop22_ini) {
+  sim <-
+    run_single_sim(1, draws, static_inputs, pop22_ini) |>
+    mutate(mx_all = (expected + civilian + combatant_confirmed + combatant_imputed) / pop,
+           mx_bsn = expected / pop)
+  stopifnot(min(sim$pop) >= 0)
+  e0 <- function(col) {
+    sim |>
+      select(year, sex, age, mx = all_of(col)) |>
+      group_by(year, sex) |>
+      do(lifetable(dt_in = .data)) |>
+      ungroup() |>
+      filter(age == 0) |>
+      select(year, sex, ex)
+  }
+  e0("mx_bsn") |>
+    rename(e0_bsn = ex) |>
+    left_join(e0("mx_all") |> rename(e0_all = ex), by = c("year", "sex")) |>
+    mutate(loss = e0_bsn - e0_all)
 }
