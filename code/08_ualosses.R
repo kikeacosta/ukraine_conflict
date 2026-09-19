@@ -4,12 +4,14 @@ source("code/00_setup.R")
 # data compiled by Olivier Hubert
 # in https://www.kaggle.com/datasets/ol4ubert/confirmed-ukrainian-military-personnel-losses
 #
-# The register is ~27 MB of individual records and is not tracked in git.
+# The register is ~31 MB of individual records and is not tracked in git.
 # Everything below the cache boundary is aggregated to status-year-sex-age
 # counts before being written out, so the cached extract is a few kB AND
 # carries no personal data (no names, no dates of birth).
 
-ual_file <- "data_input/260514_UKR_ualosses_Personnel.xlsx"
+# The most recent release, v19 of 19 September 2026. Every age-sex count comes
+# from it; the earlier releases are read only by 09, to follow the missing.
+ual_file <- "data_input/ualosses_hubert_datasets/260919_UKR_ualosses_Personnel_v19.xlsx"
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # sex from Ukrainian patronymics / first names.
@@ -199,7 +201,9 @@ dts3 <-
   dts2 |>
   filter(year %in% 2022:2025) %>%
   complete(status, year, sex, age, fill = list(dx = 0)) |>
-  mutate(status = factor(status, levels = c("missing", "dead", "prisoner")))
+  # released_prisoner (v19 onwards) is someone returned from captivity: alive,
+  # neither a death nor missing, and kept only so the counts stay complete
+  mutate(status = factor(status, levels = c("missing", "dead", "prisoner", "released_prisoner")))
 
 dts3 |>
   summarise(dx = sum(dx), .by = status)
@@ -217,7 +221,7 @@ cols <- c("#457b9d", "#e63946")
 
 # missing over time
 dts3 |>
-  filter(status != "prisoner") |>
+  filter(status %in% c("missing", "dead")) |>
   # 1. Summarize deaths by year and status
   summarise(dts = sum(dx), .by = c(year, status)) |>
   # 2. Calculate proportions and formatted percentage labels per year
@@ -243,7 +247,7 @@ dts3 |>
 ggsave("figures/exploratory/labtalk/missing_time.png", w = 6, h = 3)
 
 dts3 |>
-  filter(status != "prisoner") |>
+  filter(status %in% c("missing", "dead")) |>
   summarise(dts = sum(dx), .by = c(year, status)) |>
   ggplot() +
   geom_bar(

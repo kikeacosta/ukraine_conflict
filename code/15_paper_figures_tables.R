@@ -156,7 +156,7 @@ COL_MIG <- c("Western displacement" = "#0A9396", "Russia / Belarus" = "#EE9B00")
 # growing share of unresolved disappearances is visible.
 f1_dat <-
   ual |>
-  filter(status != "prisoner") |>
+  filter(status %in% c("dead", "missing")) |>
   summarise(dts = sum(dx), .by = c(year, status)) |>
   mutate(
     prop = dts / sum(dts),
@@ -1111,9 +1111,10 @@ print(tA5)
 # TABLE A6 / FIGURE A4 - Sensitivity to the missing-combatant imputation
 # ==============================================================================
 # The military death total is dominated by alpha, the share of the
-# never-resolved missing who are alive. The registers cannot estimate it; its
-# range comes from the number of prisoners of war Russia holds (09,
-# alpha_evidence() in 00_setup.R), and 11 draws alpha inside that range. 13b
+# never-resolved missing who are alive. Its range comes from comparing official
+# prisoner-of-war figures with the prisoners and released prisoners the register
+# records (09, alpha_evidence() in 00_setup.R), and 11 draws alpha inside that
+# range. 13b
 # re-runs the imputation chain and the downstream projection across alpha in
 # [0, 1], holding everything else at its mode, and this assembles the result
 # into a manuscript table and figure with the range marked on it.
@@ -1269,16 +1270,17 @@ figA4 <- figA4a + figA4b +
     title = "Sensitivity to the share of the missing who are alive",
     caption = sprintf(
       paste0(
-        "Light band: the range the evidence allows (α = %.3f to %.2f), within which ",
+        "Light band: the range the evidence allows (α = %s to %s), within which ",
         "every simulation draws α from a Beta-PERT. Dark band: the 95%% interval\n",
-        "of the simulated α (%.3f to %.3f). Dashed: the central value, %.3f (about %s ",
-        "prisoners of war held by Russia over %s never-resolved missing).\n",
+        "of the simulated α (%.3f to %.3f). Dashed: the central value, %.3f (%s ",
+        "prisoners of war the register does not record, over %s never-resolved missing).\n",
         "Labels: the value at the central α, and how far it moves at the two ends of ",
         "the dark band. Deterministic, at the mode of every other input - not a Monte ",
         "Carlo re-run at each point."
       ),
-      alpha_range$alpha_min, alpha_range$alpha_max, alpha_at("p2.5"), alpha_at("p97.5"),
-      alpha_range$alpha_mode, scales::comma(alpha_range$pow_held),
+      sub("\\.?0+$", "", sprintf("%.3f", alpha_range$alpha_min)), sprintf("%.2f", alpha_range$alpha_max),
+      alpha_at("p2.5"), alpha_at("p97.5"),
+      alpha_range$alpha_mode, scales::comma(round(alpha_range$unrecorded_prisoners)),
       scales::comma(round(alpha_range$residual, -2))
     )
   )

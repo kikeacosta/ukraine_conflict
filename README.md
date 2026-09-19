@@ -47,8 +47,8 @@ size every table was built at.
 | `07_ucdp_ukr_conflict_deaths` | Conflict death **totals** with low/high bounds | `ukr_ucdp_invals.rds` |
 | `07_ohchr` | Age-sex **profile** of civilian deaths | `ukr_ohchr_civilian_casualties.rds` |
 | `07_acled` | ACLED totals, comparison only | `ukr_acled.rds` |
-| `08` | Combatant deaths by age and sex from the ualosses register | `ukr_ualosses_..._sex_age_...rds` |
-| `09` | Linkage between register releases, Markov imputation of how the "missing" resolve, and the range of the share alive | `ukr_ualosses_..._imputed_...rds`, `ukr_alpha_missing.rds` |
+| `08` | Combatant deaths by age and sex from the ualosses register (release v19) | `ukr_ualosses_..._sex_age_...rds` |
+| `09` | Linkage of v14 to v19, Markov imputation of how the "missing" resolve, and the range of the share alive | `ukr_ualosses_..._imputed_...rds`, `ukr_alpha_missing.rds` |
 | `10` | min / mode / max parameter table | `ukr_param_table.rds` |
 | `11` | Monte Carlo cohort-component projection | `ukr_sim_draws_2022_2025_n<n_sim>.rds` |
 | `12` | Figures for the mortality estimates | `figures/mort_rates_*.png` |
@@ -93,7 +93,7 @@ expectancy gap.
 
 | Where | Assumption |
 |---|---|
-| `00_setup`, `09` | The share of the never-resolved missing who are alive cannot be estimated from the register, which records deaths but not returns. It is drawn between 0.009 and 0.203, centred on about 7,000 prisoners of war held by Russia over the 81,759 never-resolved (0.086), on the assumption that a long-term missing soldier who is alive is a prisoner. It carries about 90% of the imputed deaths; step 13b shows the results across [0, 1] (table A6, figure A4). |
+| `00_setup`, `09` | A missing soldier who is alive is taken to be a prisoner of war, held or released; prisoners are alive either way. The share of the 67,066 never-resolved missing who are alive is drawn between 0 and 0.252, centred on the 5,281 prisoners that official figures count and the register does not record, over the never-resolved (0.079). It carries about 85% of the imputed deaths; step 13b shows the results across [0, 1] (table A6, figure A4). |
 | `09` | A person recorded as missing who cannot be found in the later register release is treated as still missing, not as resurfaced alive. |
 | `11` | Imputed combatant deaths take the age–sex profile of the missing; registered deaths that of the confirmed dead. |
 | `00_setup` | Sex ratio at birth `srb = 1.06`. |

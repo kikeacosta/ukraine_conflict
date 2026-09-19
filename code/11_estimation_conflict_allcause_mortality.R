@@ -14,7 +14,7 @@
 #               combatant deaths (ualosses register), the latter further
 #               split into confirmed and imputed-from-missing
 #
-# Conflict death totals and net emigration are both uncertain, so both are
+# Conflict death totals and net migration are both uncertain, so both are
 # drawn n_sim times (00_setup.R) from PERT distributions built in 10. Every
 # draw is projected through the full 2022-2025 accounting, which is what gives
 # the results their uncertainty intervals.
@@ -82,7 +82,7 @@ pop22_ini <- read_rds("data_inter/ukr_pop_sssu.rds") %>%
   filter(reg == "cnt", year == 2022) %>%
   select(-reg)
 
-# --- net emigration (refugee outflow), positive = people leaving ------------
+# --- net migration (outflow), positive = people leaving ----------------------
 migs2 <- read_rds("data_inter/ukr_migrants_unchr_eurostat_sex_age_2022_2025.rds") %>%
   mutate(ems = -mix) |>
   select(-mix)
@@ -110,7 +110,7 @@ ohchr2 <- read_rds("data_inter/ukr_ohchr_civilian_casualties.rds") %>%
 
 # combatants: TWO age-sex distributions, not one. The register's confirmed dead
 # and its missing do not share an age profile - the missing are older, with
-# 6.4 points more of their mass in ages 40-49 and 5.6 points less in 20-29, and
+# 6.7 points more of their mass in ages 40-49 and 5.6 points less in 20-29, and
 # a mean age about a year higher. Spreading the whole combatant total over the
 # confirmed-dead profile therefore placed the imputed deaths at ages where they
 # did not occur, which matters because the Arriaga decomposition in 14 is
@@ -189,8 +189,8 @@ draws_cvs_long <- param_table %>%
 
 # COMBATANTS are not like that, although they look like a count. What is
 # uncertain about them is alpha, the share of the never-resolved missing who
-# are alive (00_setup.R, alpha_evidence(): the linking assumption, the
-# sources and the range). That is ONE property of the missing, not four
+# are alive (00_setup.R, alpha_evidence(): the evidence, the sources and the
+# range). That is ONE property of the missing, not four
 # separate facts, so alpha is drawn once per simulation and every year's total
 # follows from it: at_alpha0 - alpha x residual, the line 09's chain traces.
 # Drawing the years independently would let one simulation put 2022 at "none

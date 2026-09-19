@@ -5,24 +5,25 @@ source("code/00_setup.R")
 # data compiled by Olivier Hubert
 # in https://www.kaggle.com/datasets/ol4ubert/confirmed-ukrainian-military-personnel-losses
 #
-# What fraction of the personnel recorded as "missing" is eventually resolved
-# to "dead"? Estimated by following individuals from register v14 (Sep 2025)
-# into register v18 (May 2026).
+# How do the personnel recorded as "missing" resolve? Estimated by following
+# individuals from register v14 (16 Sep 2025) into register v19 (19 Sep 2026),
+# twelve months later - the same one-year spacing as the event-year cohorts the
+# chain below uses to stand in for duration since disappearance.
 #
-# Both registers are large individual-level files (44 MB and 27 MB) that are
+# Both registers are large individual-level files (44 MB and 31 MB) that are
 # not tracked in git. Only the anonymous count summaries below cross the cache
 # boundary, so the repository carries no names or dates of birth.
 
 file_v14 <- "data_input/ualosses_hubert_datasets/250916_UKR_ualosses_Personnel_v14.xlsx"
-file_v18 <- "data_input/260514_UKR_ualosses_Personnel.xlsx"
+file_v19 <- "data_input/ualosses_hubert_datasets/260919_UKR_ualosses_Personnel_v19.xlsx"
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # KEY ASSUMPTION
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # alpha, the share of the long-term missing (those still unresolved at the end
-# of the chain) who are alive, drives the combatant total. The registers
-# cannot estimate it; its range comes from alpha_evidence() in 00_setup.R,
-# which sets out the linking assumption and the sources. This script imputes
+# of the chain) who are alive, drives the combatant total. Its range comes from
+# alpha_evidence() in 00_setup.R, which compares the prisoners the register
+# records with official prisoner-of-war figures and sets out the sources. This script imputes
 # at the central value and records the range, 10 turns the range into the
 # combatant bounds, and 11 draws alpha within it.
 
@@ -51,38 +52,41 @@ transitions <- cache_rds(
     # event date or a shifted nationality field - about 460 people, some 360
     # of whom had been found dead - and counted them as still missing.
     v14 <- read_reg(file_v14) |> filter(year %in% 2022:2025, ukrainian)
-    v18 <- read_reg(file_v18)
+    v19 <- read_reg(file_v19)
 
     # one outcome per person: name + date of birth can collide, and a
     # many-to-many join would count those individuals more than once. Where
     # the same key appears under two statuses the most resolved one is kept:
-    # a death record is newer information than a missing one.
-    v18_lu <-
-      v18 |>
-      arrange(match(status, c("dead", "prisoner", "missing"))) |>
+    # a death record, or a return from captivity, is newer information than a
+    # missing one.
+    v19_lu <-
+      v19 |>
+      arrange(match(status, c("dead", "released_prisoner", "prisoner", "missing"))) |>
       distinct(name2, date_bth, .keep_all = TRUE)
     message(
-      "  v18 rows: ", nrow(v18),
-      " | unique name+dob keys: ", nrow(v18_lu),
-      " (", nrow(v18) - nrow(v18_lu), " collapsed)"
+      "  v19 rows: ", nrow(v19),
+      " | unique name+dob keys: ", nrow(v19_lu),
+      " (", nrow(v19) - nrow(v19_lu), " collapsed)"
     )
 
     cmp <-
       v14 |>
       select(name2, date_bth, date_evnt, status) |>
       left_join(
-        v18_lu |> select(name2, date_bth, status2 = status),
+        v19_lu |> select(name2, date_bth, status2 = status),
         by = c("name2", "date_bth")
       ) |>
-      # A name+DOB not found in v18 is treated as CENSORED (still missing),
+      # A name+DOB not found in v19 is treated as CENSORED (still missing),
       # not resolved alive. Absence is not a sign of survival: the dead
-      # vanish from the register as often as the missing do (1.4% against
-      # 1.2% with no trace of the name at all), and most of the people not
-      # found by an exact match are still in the later file under a
-      # corrected name or date of birth. Reading absence as "resurfaced
-      # alive" would lower the imputed dead by about 4,000.
+      # drop out of the register at least as often as the missing do (4.0%
+      # of v14's dead and 3.1% of its missing are not found in v19 under the
+      # same name and date of birth), and many of those not found are still
+      # listed under a corrected name or date of birth.
+      # v19 records returns from captivity as released_prisoner: an alive
+      # resolution, which the chain calls "alive".
       mutate(
         status2 = ifelse(is.na(status2), "missing", status2),
+        status2 = ifelse(status2 == "released_prisoner", "alive", status2),
         year = year(date_evnt)
       )
 
@@ -126,16 +130,19 @@ print(tasas_long |> arrange(year, status2))
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # impute_missing() (00_setup.R) holds the chain itself, extracted here so
 # this call and the alpha sensitivity in 13b share one formula instead of
-# two copies that could drift apart. A "step" in the chain is the ~8-month
-# window between two registers, not a calendar year; event-year cohorts
-# stand in for duration since disappearance.
+# two copies that could drift apart. A "step" in the chain is the twelve-month
+# window between v14 and v19, and event-year cohorts, one year apart, stand in
+# for duration since disappearance.
 stock_missing_2026 <-
   stocks |>
   filter(status == "missing") |>
   select(year, missing_stock = n)
 
-# the range of alpha the evidence allows (00_setup.R sets out the sources)
-alpha_range <- alpha_evidence(tasas_long, stock_missing_2026)
+# the range of alpha the evidence allows (00_setup.R sets out the sources).
+# Prisoners are alive whether still held or released, so both statuses count
+# as the prisoners the register knows of.
+register_alive <- sum(stocks$n[stocks$status %in% c("prisoner", "released_prisoner")])
+alpha_range <- alpha_evidence(tasas_long, stock_missing_2026, register_alive)
 print(as.data.frame(alpha_range))
 write_rds(alpha_range, "data_inter/ukr_alpha_missing.rds")
 

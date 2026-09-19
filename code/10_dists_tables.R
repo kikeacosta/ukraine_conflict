@@ -48,7 +48,8 @@ ual_imp <- read_rds(
 # complete the age-sex grid so the three bounds are built on the same support
 ual2 <-
   ual %>%
-  filter(status != "prisoner", year %in% 2022:2025) %>%
+  # dead and missing only: prisoners and released prisoners are alive
+  filter(status %in% c("dead", "missing"), year %in% 2022:2025) %>%
   summarise(dx = sum(dx), .by = c(status, year, sex, age)) |>
   arrange(status, year, sex, age) |>
   complete(status, year = 2022:2025, sex, age = 0:100, fill = list(dx = 0))

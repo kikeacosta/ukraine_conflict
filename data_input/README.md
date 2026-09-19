@@ -70,10 +70,10 @@ aggregates them to anonymous counts before anything is written to
 |---|---|
 | `sssu_ukr_data.xlsx` | State Statistics Service of Ukraine — population and deaths. "Continental" means the whole country without Crimea; the Donetsk and Luhansk sheets are subsets of it, not complements |
 | `LifeTables.xlsx` | Independent life tables. No longer read by any step — the SSSU-vs-life-table rate comparison in `01` was retired because nothing consumed its output. Kept for reference |
-| `DataDxEx.csv` | Deaths and exposures 1989–2021, for the Kannisto fit and Lee-Carter model |
-| `a0.csv` | Infant mortality separation factors |
-| `ohchr_civilian_deaths.xlsx` | OHCHR annual civilian death totals |
-| `UKR_2022-2025_OHCHR.xlsx` | OHCHR civilian deaths by age and sex, via UNICEF-IGME |
+| `DataDxEx.csv` | Deaths and exposures 1989–2021, for the Kannisto fit and Lee-Carter model; supplied by SSSU |
+| `a0.csv` | Infant mortality separation factors; supplied by SSSU |
+| `ohchr_civilian_deaths.xlsx` | OHCHR annual civilian death totals; supplied by OHCHR |
+| `UKR_2022-2025_OHCHR.xlsx` | OHCHR civilian deaths by age and sex, supplied by OHCHR |
 | `refugees_eurostat/` | Eurostat temporary protection stock by age and sex (read by 06), and the TP decisions series (evaluated, not used) |
 | `migration/` | UNHCR Data Finder extract, CES figures, Canada/USA placeholder anchors, and reference copies — see `migration/README.md` |
 | `Pozniak_migration.csv` | SBGSU border crossings 2022–2026. Not read by code; kept for reference |

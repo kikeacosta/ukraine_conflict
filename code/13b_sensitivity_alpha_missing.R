@@ -14,13 +14,12 @@
 #
 # WHY THIS MATTERS
 # -----------------
-# The military death total is dominated by alpha, not by a measurement. The
-# registers cannot estimate it: they record a missing soldier found dead but
-# have no way to record one who comes home. Its range is set from the number
-# of prisoners of war Russia holds (alpha_evidence(), 00_setup.R), which is a
-# linking assumption with one official figure behind it. So besides drawing
-# alpha inside that range, the pipeline shows what happens across the whole
-# of [0, 1].
+# The military death total is dominated by alpha, not by a measurement. Its
+# range comes from comparing official prisoner-of-war figures with the
+# prisoners and released prisoners the register records (alpha_evidence(),
+# 00_setup.R), with one official count of prisoners held behind it. So besides
+# drawing alpha inside that range, the pipeline shows what happens across the
+# whole of [0, 1].
 #
 # This re-runs 09's imputation chain (impute_missing(), 00_setup.R) across a
 # grid of alpha from 0 (none of the never-resolved are alive) to 1 (all of
@@ -318,11 +317,10 @@ ggsave("figures/exploratory/alpha_sensitivity_e0.png", p_e0, w = 9, h = 4.5)
 # central alpha, so the spread is attributable to rate sampling alone.
 #
 # WHY THIS IS REPORTED RATHER THAN PROPAGATED: the observed transitions carry
-# about a tenth of the imputed dead (see the decomposition printed below); the
-# terminal alpha assumption carries the rest. Sampling error on a tenth of the
-# quantity is correspondingly small, and folding a band of that size into the
-# spread that alpha produces would add machinery without changing any
-# reported figure.
+# about a sixth of the imputed dead (see the decomposition printed below); the
+# terminal alpha assumption carries the rest. The resulting band is about the
+# effect of moving alpha by 0.01, small next to the spread alpha produces, so
+# folding it in would add machinery without changing any reported figure.
 set.seed(42)
 B_rates <- 2000
 

@@ -247,8 +247,8 @@ arriaga_TE <- function(lb, lw) {
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # missing-combatant imputation ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# UALosses nationality. In the 14 May 2026 release about 1,170 records hold
-# the place of origin in the Nationality field ("Kyiv, None",
+# UALosses nationality. Some releases hold the place of origin in the
+# Nationality field (about 1,170 records in v18, 16 in v19) ("Kyiv, None",
 # "Zaporizhzhja, Zaporizka urban community", ...), with From = "Unknown": the
 # field is shifted, and the places are Ukrainian. Filtering on
 # Nationality == "Ukraine" silently dropped them. A value that is not a
@@ -284,9 +284,9 @@ excel_date <- function(x) {
 #                alive; 1 - alpha are dead. The one free parameter: its range
 #                comes from alpha_evidence(), 11 draws it, 13b sweeps it.
 #
-# A "step" in the chain is the ~8-month window between two register
-# releases, not a calendar year; event-year cohorts stand in for duration
-# since disappearance. Returns stock_missing with imputed_dead,
+# A "step" in the chain is the window between the two register releases,
+# twelve months from v14 to v19; event-year cohorts, one year apart, stand in
+# for duration since disappearance. Returns stock_missing with imputed_dead,
 # imputed_alive and imputed_prisoner added. Every output is linear in alpha.
 impute_missing <- function(alpha, tasas_long, stock_missing) {
   suelo_vivo <- alpha
@@ -366,24 +366,31 @@ impute_missing <- function(alpha, tasas_long, stock_missing) {
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # the range of alpha allowed by the evidence ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# The register cannot estimate alpha. It records a missing soldier found dead
-# (obituaries, identified remains) but has no way to record one who comes
-# home: 97.6% of the people it listed as prisoners in September 2025 were
-# still "prisoner" in May 2026 although exchanges ran in between, and the
-# missing drop out of it no more often than the dead do. So its own mix of
-# resolutions can only be a floor.
+# alpha is the share of the never-resolved missing who are alive. Prisoners
+# are alive whether still held or released, so the evidence on alpha is about
+# prisoners of war, compared across two sources:
 #
-# LINKING ASSUMPTION. A soldier missing for a long time who is alive is, in
-# practice, a prisoner of war. The number of prisoners Russia holds, over the
-# number of never-resolved missing, is then the share alive. It can be off in
-# both directions: some of those prisoners are already listed as prisoners in
-# the register (alpha lower), while people who came home and are still listed
-# as missing, and prisoners Kyiv does not know of, push it higher.
+#   the register  v19 records prisoners and, as released_prisoner, returns
+#                 from captivity; together they are the prisoners it knows of
+#   official      about 7,000 Ukrainian prisoners of war held, plus 9,606
+#   figures       people returned through exchanges: everyone ever taken
+#                 prisoner, whether held or released since
 #
-#   min   the register's own share of resolutions that are alive
-#   mode  pow_held / residual
-#   max   (pow_held + returned_from_captivity) / residual - every person ever
-#         returned still listed as missing: a bound, not a scenario
+# Prisoners the register does not record as such are either among its missing
+# or not in the register at all.
+#
+#   min   0 - every unrecorded prisoner is outside the register (it never
+#         listed 3,857 of the people it now records as returned)
+#   mode  (pow_held + returned_from_captivity - register_alive) / residual -
+#         every unrecorded prisoner is among the never-resolved missing
+#   max   the register's own share of resolutions that are alive (to prisoner
+#         or released), assuming the never-resolved are no more often alive
+#         than those resolved: a living prisoner is listed or exchanged more
+#         readily than a body is recovered
+#
+# The mode leans high: the returned figure includes civilians, whom the
+# register does not list, and prisoners held in February and released by June
+# appear in both figures. Captures after February are missing from it.
 #
 # residual is the number of missing never resolved at the end of the chain,
 # the quantity alpha applies to: impute_missing() is linear in alpha, so it is
@@ -395,12 +402,13 @@ impute_missing <- function(alpha, tasas_long, stock_missing) {
 #                            (Ukrinform, 14 Feb 2026).
 #   returned_from_captivity  9,606 military personnel and civilians returned
 #                            through exchanges by late June 2026 (Euromaidan
-#                            Press, 24 Aug 2026). Includes civilians, which
-#                            only makes the bound more generous.
+#                            Press, 24 Aug 2026).
 pow_held <- 7000
 returned_from_captivity <- 9606
 
-alpha_evidence <- function(tasas_long, stock_missing) {
+# register_alive: the register's prisoners plus released prisoners, events
+# 2022-2025, from 08's redistributed counts
+alpha_evidence <- function(tasas_long, stock_missing, register_alive) {
   imp0 <- impute_missing(0, tasas_long, stock_missing)
   imp1 <- impute_missing(1, tasas_long, stock_missing)
   residual <- sum(imp0$imputed_dead - imp1$imputed_dead)
@@ -408,20 +416,22 @@ alpha_evidence <- function(tasas_long, stock_missing) {
   resolved <- tasas_long |> filter(status2 != "missing")
   resolved_alive <- sum(resolved$n[resolved$status2 %in% c("alive", "prisoner")])
   resolved_all <- sum(resolved$n)
+  unrecorded <- pow_held + returned_from_captivity - register_alive
 
   out <- tibble(
-    alpha_min = resolved_alive / resolved_all,
-    alpha_mode = pow_held / residual,
-    alpha_max = (pow_held + returned_from_captivity) / residual,
+    alpha_min = 0,
+    alpha_mode = unrecorded / residual,
+    alpha_max = resolved_alive / resolved_all,
     residual = residual,
+    unrecorded_prisoners = unrecorded,
+    register_alive = register_alive,
     resolved_alive = resolved_alive,
     resolved_dead = resolved_all - resolved_alive,
     pow_held = pow_held,
     returned_from_captivity = returned_from_captivity
   )
   stopifnot(
-    out$alpha_min > 0,
-    out$alpha_min < out$alpha_mode,
+    out$alpha_mode > out$alpha_min,
     out$alpha_mode < out$alpha_max,
     out$alpha_max < 1
   )
