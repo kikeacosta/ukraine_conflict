@@ -60,6 +60,37 @@ linkage <- cache_rds(
     dead_absent <- dead14 |> anti_join(lu19, by = "key")
     dead_corrected <- ual_corrected_key(dead_absent, lu19, lu14)
 
+    # The same measured window by window: the dead followed through the
+    # releases exactly as the missing are, the two labels swapped, so a dead
+    # record that leaves the register shows as "no longer listed".
+    swap <- \(r) mutate(r, status = case_when(status == "dead" ~ "missing",
+                                               status == "missing" ~ "dead", .default = status))
+    hist_dead <- ual_follow_missing(map(regs, swap))
+
+    # Where the people v19 records as returned from captivity were listed
+    # before their return: as prisoners, as missing, as dead, or nowhere. By
+    # exact key in v14, v16 or v18, else by a corrected key among the records
+    # v19 no longer holds.
+    lu <- map(regs, ual_one_per_key)
+    returned <- lu$v19 |>
+      filter(status == "released_prisoner", year %in% 2022:2025, ukrainian) |>
+      select(key, name, dob, date_evnt, year)
+    earlier <- bind_rows(lu[c("v14", "v16", "v18")])
+    exact <- returned |> select(key) |> inner_join(earlier |> select(key, status), by = "key")
+    gone <- earlier |> anti_join(lu$v19 |> select(key), by = "key")
+    corrected <-
+      returned |>
+      anti_join(exact, by = "key") |>
+      transmute(key, name, dob, month = floor_date(date_evnt, "month")) |>
+      inner_join(gone |> transmute(name, dob_e = dob, month_e = floor_date(date_evnt, "month"), status),
+                 by = "name", relationship = "many-to-many") |>
+      filter((dob == dob_e) %in% TRUE | (month == month_e) %in% TRUE) |>
+      select(key, status)
+    prior <-
+      bind_rows(exact, corrected) |>
+      summarise(to = case_when(any(status == "prisoner") ~ "prisoner", any(status == "missing") ~ "missing",
+                               any(status == "dead") ~ "dead", .default = "other"), .by = key)
+
     bind_rows(
       ual_windows(hist, "alive") |>
         count(year, month = floor_date(date_evnt, "month"), entry, from_release, to) |>
@@ -67,6 +98,17 @@ linkage <- cache_rds(
       ual_windows(hist, "missing") |>
         count(year, month = floor_date(date_evnt, "month"), entry, from_release, to) |>
         mutate(table = "windows", rule = "missing"),
+      ual_windows(hist, "alive", released = "alive") |>
+        count(year, month = floor_date(date_evnt, "month"), entry, from_release, to) |>
+        mutate(table = "windows", rule = "released"),
+      ual_windows(hist_dead, "alive") |>
+        count(year, month = floor_date(date_evnt, "month"), entry, from_release, to) |>
+        mutate(table = "dead_windows"),
+      returned |>
+        left_join(prior, by = "key") |>
+        mutate(to = coalesce(to, "not listed")) |>
+        count(year, to) |>
+        mutate(table = "released_prior"),
       hist |> count(year, entry, release, to = status, found) |> mutate(table = "found"),
       # each person's sequence of statuses, for the documentation's counts of
       # people absent from one release and listed again
@@ -279,16 +321,32 @@ write_rds(tasas_long, "data_inter/ukr_ualosses_transition_rates.rds")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # how much the linkage rules and the chain matter
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# The military total under five alternatives, each at the central alpha its
-# own evidence gives: a person no longer listed held as still missing rather
-# than alive; rates from the people listed as missing in v14 only, without
-# those first listed later; the projection run to the longest duration
-# observed (about 55 months) instead of 48; the chain's projected captivity
-# counted among the unrecorded prisoners as well; and the earlier chain, in which
-# event-year cohorts stand in for duration. And how often records vanish: v14's
-# missing and v14's dead with no trace in v19 after both searches.
-military_under <- function(impute_fn, resolved, net = TRUE) {
-  a <- alpha_evidence(impute_fn, resolved, register_alive, net_projected_captivity = net)
+# The military total under alternatives, each at the central alpha its own
+# evidence gives:
+#   - a person no longer listed held as still missing rather than alive;
+#   - drop-outs at the rate at which the dead leave the register, window by
+#     window and cohort by cohort, taken as list maintenance and held as still
+#     missing; only the excess over that rate is found alive;
+#   - a return from captivity counted as a resolution to captivity, rather
+#     than the person being left out;
+#   - rates from the people listed as missing in v14 only, without those first
+#     listed later;
+#   - the projection run to the longest duration observed (about 55 months)
+#     instead of 48;
+#   - the unrecorded prisoners among the missing only in the proportion the
+#     register's returned prisoners had been: of those not recorded as
+#     prisoners before their return, the share listed as missing;
+#   - the chain's projected captivity counted among the unrecorded prisoners as
+#     well;
+#   - the alive among the never-resolved spread over event years in
+#     proportion to the prisoners the register records (held and released),
+#     rather than by one alpha: the same total, a different split by year;
+#   - the earlier chain, in which event-year cohorts stand in for duration.
+# And how often records vanish: v14's missing and v14's dead with no trace in
+# v19 after both searches.
+military_under <- function(impute_fn, resolved, net = TRUE, share = 1) {
+  a <- alpha_evidence(impute_fn, resolved, register_alive, net_projected_captivity = net,
+                      share_among_missing = share)
   by_year <-
     confirmados_df |>
     left_join(impute_fn(a$alpha_mode) |> select(year, imputed_dead), by = "year") |>
@@ -298,21 +356,71 @@ military_under <- function(impute_fn, resolved, net = TRUE) {
 }
 model_missing_rule <- fit_model(windows |> filter(rule == "missing"))
 model_v14_only <- fit_model(windows |> filter(rule == "alive", entry == "v14"))
+model_released <- fit_model(linkage |> filter(table == "windows", rule == "released") |>
+                              select(rule, year, month, entry, from_release, to, n))
 cohort_resolved <- with(tasas_long |> filter(status2 != "missing") |> summarise(n = sum(n), .by = status2),
                         set_names(n, status2))
+
+# list maintenance: the dead's drop-out rate by cohort and window
+dead_dropout <-
+  linkage |>
+  filter(table == "dead_windows") |>
+  summarise(at_risk = sum(n), dropped = sum(n[to == "no_longer_listed"]), .by = c(year, from_release)) |>
+  mutate(rate = dropped / at_risk)
+windows_maintenance <-
+  windows |>
+  filter(rule == "alive") |>
+  left_join(dead_dropout |> select(year, from_release, rate), by = c("year", "from_release")) |>
+  mutate(maint_share = pmin(1, rate * sum(n) / sum(n[to == "no_longer_listed"])), .by = c(year, from_release)) |>
+  mutate(n_maint = if_else(to == "no_longer_listed", n * maint_share, 0))
+windows_maintenance <-
+  bind_rows(windows_maintenance |> mutate(n = n - n_maint),
+            windows_maintenance |> filter(n_maint > 0) |> mutate(to = "missing", n = n_maint)) |>
+  summarise(n = sum(n), .by = c(rule, year, month, entry, from_release, to))
+model_maintenance <- fit_model(windows_maintenance)
+
+# the share of the unrecorded prisoners among the missing, from where the
+# register's returned prisoners had been listed before their return
+released_prior <- linkage |> filter(table == "released_prior") |> select(year, prior = to, n)
+share_listed_missing <- with(released_prior |> summarise(n = sum(n), .by = prior),
+                             n[prior == "missing"] / sum(n[prior %in% c("missing", "not listed")]))
+
+# the alive among the never-resolved, by event year in proportion to the
+# prisoners the register records, each year capped at its never-resolved
+prisoners_by_year <-
+  stocks |>
+  filter(status %in% c("prisoner", "released_prisoner")) |>
+  summarise(prisoners = sum(n), .by = year)
+by_year_alpha <-
+  military_alpha_lines |>
+  left_join(prisoners_by_year, by = "year") |>
+  mutate(alive = pmin(residual, alpha_range$alpha_mode * sum(residual) * prisoners / sum(prisoners)),
+         alpha_year = alive / residual,
+         total = at_alpha0 - alive)
+
 linkage_designs <-
   bind_rows(
     military_under(impute, model$resolved) |>
       mutate(design = "duration model, no longer listed = alive (production)"),
     military_under(\(a) impute(a, model_missing_rule), model_missing_rule$resolved) |>
       mutate(design = "no longer listed = still missing"),
+    military_under(\(a) impute(a, model_maintenance), model_maintenance$resolved) |>
+      mutate(design = "drop-outs at the dead's rate held as still missing"),
+    military_under(\(a) impute(a, model_released), model_released$resolved) |>
+      mutate(design = "returns from captivity counted as resolutions"),
     military_under(\(a) impute(a, model_v14_only), model_v14_only$resolved) |>
       mutate(design = "people listed as missing in v14 only"),
     military_under(\(a) impute(a, modifyList(model, list(horizon = max(model$fitted$d1)))),
                    model$resolved) |>
       mutate(design = "duration model to the longest duration observed"),
+    military_under(impute, model$resolved, share = share_listed_missing) |>
+      mutate(design = "unrecorded prisoners among the missing as the returned had been"),
     military_under(impute, model$resolved, net = FALSE) |>
       mutate(design = "projected captivity also counted among the unrecorded prisoners"),
+    tibble(alpha_mode = alpha_range$alpha_mode, alpha_max = alpha_range$alpha_max,
+           residual = alpha_range$residual, military = sum(by_year_alpha$total),
+           by_year = list(by_year_alpha |> select(year, confirmed, total)),
+           design = "alive spread over event years by the register's prisoners"),
     military_under(\(a) impute_missing_cohorts(a, tasas_long, stock_missing_2026), cohort_resolved) |>
       mutate(design = "event-year cohorts standing in for duration")
   ) |>
@@ -345,9 +453,32 @@ released_excluded <-
 print(as.data.frame(linkage_designs |> select(-by_year)))
 print(as.data.frame(no_trace))
 print(as.data.frame(released_excluded |> pivot_wider(names_from = entry, values_from = n, values_fill = 0)))
+cat("\n=== THE DEAD'S DROP-OUT BY WINDOW (%) ===\n")
+print(as.data.frame(dead_dropout |> mutate(rate = round(100 * rate, 2))))
+cat("\n=== WHERE THE RETURNED PRISONERS WERE LISTED BEFORE THEIR RETURN ===\n")
+print(as.data.frame(released_prior |> pivot_wider(names_from = prior, values_from = n, values_fill = 0)))
+cat(sprintf("share listed as missing, of those not recorded as prisoners: %.3f\n", share_listed_missing))
 write_rds(list(designs = linkage_designs, no_trace = no_trace, patterns = patterns,
-               released_excluded = released_excluded),
+               released_excluded = released_excluded, dead_dropout = dead_dropout,
+               released_prior = released_prior, share_listed_missing = share_listed_missing,
+               by_year_alpha = by_year_alpha),
           "data_inter/ukr_ualosses_linkage_checks.rds")
+
+# military deaths by event month at the central alpha, for 15's comparison
+# with official statements made at given dates: the registered dead, the dead
+# completed for registration lag, and the missing imputed as dead
+military_by_month <-
+  stock_month |>
+  filter(status == "dead") |>
+  select(month, year, registered_dead = registered, completed_dead = completed) |>
+  full_join(impute_missing(alpha_range$alpha_mode, model, stock_missing_month, by = c("month", "year")) |>
+              select(month, year, missing = missing_stock, imputed_dead),
+            by = c("month", "year")) |>
+  mutate(across(c(registered_dead, completed_dead, missing, imputed_dead), \(x) coalesce(x, 0)),
+         military = completed_dead + imputed_dead) |>
+  arrange(month)
+stopifnot(isTRUE(all.equal(sum(military_by_month$military), sum(combined_losses$total_estimado))))
+write_rds(military_by_month, "data_inter/ukr_military_by_month.rds")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # rescale the confirmed-dead age-sex profile up to the imputed total

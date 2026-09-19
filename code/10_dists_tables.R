@@ -32,7 +32,14 @@
 #          data_inter/ukr_ualosses_..._imputed_...rds         (from 09)
 #          data_inter/ukr_alpha_missing.rds, ukr_military_alpha_lines.rds (09)
 #          data_inter/ukr_migration_bounds.rds                (from 06)
+#          data_input/ohchr_civilian_deaths.xlsx (sheet "monthly"),
+#          data_input/migration/unhcr/unhcr_border_crossings_2022.csv and
+#          data_inter/ukr_registration_completion.rds (08b): the months of
+#          2022's events, for the timing within the year
 # OUTPUT   data_inter/ukr_param_table.rds
+#          data_inter/ukr_timing_absent.rds: the share of each year's net
+#          outflow and deaths removed before exposure, read by
+#          run_single_sim() (00_setup.R)
 # ==============================================================================
 
 rm(list = ls())
@@ -176,3 +183,57 @@ write_rds(param_table, "data_inter/ukr_param_table.rds")
 # totals implied by the table, for reference
 param_table |>
   summarise(across(c(min, mode, max), sum), .by = role)
+
+# --- timing within 2022 -------------------------------------------------------
+# The projection removes a share of each year's net outflow, civilian and
+# military deaths before counting the year's exposure (run_single_sim(),
+# 00_setup.R). Half is the mid-year convention, and 2023-2025 keep it. 2022
+# was not like that: the war began on 24 February, and most departures fell
+# in March and April. A person who leaves or dies at a fraction u of the year
+# lives u of it, so the share to remove is 1 - mean(u), with u taken at the
+# middle of each month (26 February for the war's first days) and the mean
+# weighted by the month's events:
+#   civilian deaths   OHCHR's monthly count of civilians killed in 2022
+#   military deaths   the register's dead and missing by month of the event
+#                     (v19, from 08b)
+#   net outflow       UNHCR's border crossings out of Ukraine less those into
+#                     it, by month, as a share of the year's net; the western
+#                     crossings stand for Russia and Belarus too, for which no
+#                     monthly series exists
+month_mid <- tibble(month = 2:12) |>
+  mutate(mid = if_else(month == 2, as.Date("2022-02-26"), as.Date(sprintf("2022-%02d-15", month))),
+         u = as.numeric(mid - as.Date("2022-01-01")) / 365)
+mean_u <- function(d) d |> left_join(month_mid, by = "month") |> with(sum(n * u) / sum(n))
+timing_civilian <-
+  read_xlsx("data_input/ohchr_civilian_deaths.xlsx", sheet = "monthly") |>
+  filter(Year == 2022) |>
+  transmute(month = match(Month, month.abb), n = Killed)
+timing_military <-
+  read_rds("data_inter/ukr_registration_completion.rds")$month |>
+  filter(year == 2022) |>
+  summarise(n = sum(n_v19), .by = m) |>
+  transmute(month = month(m), n)
+# cumulative since 24 February; the first row, on 1 March, is the war's
+# first days, entered as February
+timing_crossings <-
+  read_csv("data_input/migration/unhcr/unhcr_border_crossings_2022.csv", show_col_types = FALSE) |>
+  arrange(date) |>
+  mutate(net_cum = crossings_from_ukraine_cumulative - crossings_to_ukraine_cumulative,
+         n = net_cum - lag(net_cum, default = 0),
+         month = if_else(row_number() == 1, 2, month(date)))
+stopifnot(all(timing_crossings$n > 0))
+timing_2022 <- tibble(
+  component = c("civilian deaths", "military deaths", "net outflow"),
+  mean_u = c(mean_u(timing_civilian), mean_u(timing_military), mean_u(timing_crossings))
+) |>
+  mutate(absent = 1 - mean_u)
+timing_absent <-
+  tibble(year = 2022:2025, absent_cvs = 0.5, absent_cmb = 0.5, absent_mig = 0.5) |>
+  mutate(absent_cvs = if_else(year == 2022, timing_2022$absent[1], absent_cvs),
+         absent_cmb = if_else(year == 2022, timing_2022$absent[2], absent_cmb),
+         absent_mig = if_else(year == 2022, timing_2022$absent[3], absent_mig))
+stopifnot(all(between(unlist(timing_absent[-1]), 0, 1)))
+print(as.data.frame(timing_2022 |> mutate(across(where(is.numeric), \(x) round(x, 3)))))
+write_rds(list(timing_2022 = timing_2022, absent = timing_absent,
+               crossings = timing_crossings |> select(date, month, n)),
+          "data_inter/ukr_timing_absent.rds")

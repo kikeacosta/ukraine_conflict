@@ -339,6 +339,41 @@ flows <-
 
 stopifnot(!any(is.na(flows$D)))
 
+# Each year's stock is ungrouped on its own, so where a cohort crosses a
+# Eurostat band edge between two year ends, a change in the within-band shape
+# shows up as a flow. The flows are smoothed lightly across age by penalised
+# least squares on second differences, with each year's total by sex and
+# Eurostat band (ages 1-13, 14-17, 18-34, 35-64, 65+) held fixed, so every
+# migration total and both readings stay as they are. Age 0 stays at zero.
+# At this strength no single age moves by more than about a hundred people:
+# the flows are already smooth from year to year of age. What remains - the
+# step from zero at age 0 to the return of young children at age 1, and the
+# broad waves around 35 and 65, where the older women's returns in the 65+
+# band are spread by the ungrouping into the ages around it - is set by the
+# band totals themselves, which no smoothing that keeps them can remove. The
+# flows before smoothing are kept as D_raw.
+lambda_D <- 5
+smooth_flows <- function(D, age, lambda = lambda_D) {
+  keep <- age >= 1
+  x <- D[keep]
+  n <- length(x)
+  band <- cut(age[keep], c(1, 14, 18, 35, 65, Inf), right = FALSE)
+  C <- t(model.matrix(~ band - 1))
+  P <- diff(diag(n), differences = 2)
+  A <- rbind(cbind(diag(n) + lambda * crossprod(P), t(C)),
+             cbind(C, matrix(0, nrow(C), nrow(C))))
+  out <- D
+  out[keep] <- solve(A, c(x, C %*% x))[seq_len(n)]
+  out
+}
+flows <- flows |>
+  arrange(year, sex, age) |>
+  mutate(D_raw = D, D = smooth_flows(D, age), .by = c(year, sex))
+stopifnot(isTRUE(all.equal(
+  flows |> summarise(d = sum(D), .by = c(year, sex)) |> pull(d),
+  flows |> summarise(d = sum(D_raw), .by = c(year, sex)) |> pull(d)
+)))
+
 # ==============================================================================
 # 3-4. READINGS AND BOUNDS
 # ==============================================================================

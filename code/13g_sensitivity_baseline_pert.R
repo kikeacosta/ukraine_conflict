@@ -9,6 +9,8 @@
 # keep the COVID years in. Each is fitted as 04 fits its own, forecast to
 # 2025, and put through the deterministic projection at the mode of every
 # conflict and migration input. The window used must reproduce 13's loss.
+# The forecast's own uncertainty is shown as well: the rates one standard
+# deviation of the forecast index below and above its mean.
 #
 # 2. THE SHAPE OF THE PERT DISTRIBUTIONS
 # --------------------------------------
@@ -84,6 +86,33 @@ stopifnot(isTRUE(all.equal(
   read_rds("data_inter/ukr_migration_decomposition.rds") |> arrange(year, sex) |> pull(loss),
   tolerance = 1e-6
 )))
+
+# The forecast's own uncertainty, which the simulation does not carry: the
+# rates one standard deviation of the forecast index k below and above its
+# mean, window 2000-2019. log(mx) is linear in k, so the 15.9% and 84.1%
+# quantiles of each rate's forecast distribution are the rates at k -/+ 1 SD.
+fc_used <-
+  dt |>
+  filter(year %in% 2000:2019) |>
+  as_vital(index = year, key = c(sex, age), .age = "age", .sex = "sex",
+           .deaths = "deaths", .population = "pop") |>
+  model(lc = LC(log(mx), adjust = "e0", jump_choice = "fit")) |>
+  forecast(h = 6) |>
+  as_tibble() |>
+  filter(year %in% 2022:2025)
+k_band <-
+  tibble(window = c("2000-2019, forecast mortality one SD lower",
+                    "2000-2019, forecast mortality one SD higher"),
+         p = c(pnorm(-1), pnorm(1))) |>
+  mutate(res = map(p, function(pp) {
+    fc <- fc_used |> transmute(year, sex, age, mx = quantile(mx, pp))
+    st <- with_mx(fc)
+    stopifnot(all(st$mx > 0), !any(is.na(st$mx)))
+    loss_at_mode(mi$draws, st, mi$pop22_ini)
+  })) |>
+  select(-p) |>
+  unnest(res)
+baseline <- bind_rows(baseline, k_band)
 write_rds(baseline, "data_inter/ukr_baseline_window_e0.rds")
 
 cat("\n=== COUNTERFACTUAL e0 AND LOSS BY LEE-CARTER WINDOW ===\n")

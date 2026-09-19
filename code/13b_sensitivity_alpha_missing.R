@@ -10,7 +10,8 @@
 #      range;
 #   2. sampling error in the resolution hazards, which are estimated from
 #      finite counts and are not propagated (section 5);
-#   3. the linkage rules behind those rates (section 6).
+#   3. the linkage rules behind those rates, the resolution model and the
+#      reading of the prisoner-of-war evidence (section 6).
 # ==============================================================================
 #
 # WHY THIS MATTERS
@@ -31,7 +32,8 @@
 #
 # WHAT DOES NOT CHANGE ACROSS THE GRID
 # --------------------------------------
-#   - the individually confirmed dead (conf_cmb): observed, not imputed
+#   - the registered dead and their late registrations (conf_cmb): observed
+#     and completed for registration lag, not imputed
 #   - the age-sex profiles (prop_cmb_dead, prop_cmb_miss), civilian deaths,
 #     and migration: all held at their mode
 #
@@ -377,12 +379,11 @@ cat("which is several times the entire sampling band above.\n")
 # ==============================================================================
 # 6. THE LINKAGE RULES
 # ==============================================================================
-# 09 recomputes the military total under two alternatives to its linkage rules
-# - a person no longer listed held as still missing rather than alive, and
-# rates from the people listed as missing in v14 only - each at the central
-# alpha its own evidence gives. Each is projected here as the alpha grid is,
-# every other input at its mode. The rules used must reproduce the central
-# value of the grid.
+# 09 recomputes the military total under alternatives to its linkage rules,
+# its resolution model and its reading of the prisoner-of-war evidence, each
+# at the central alpha its own evidence gives (09 sets them out). Each is
+# projected here as the alpha grid is, every other input at its mode. The
+# rules used must reproduce the central value of the grid.
 linkage_e0 <-
   read_rds("data_inter/ukr_ualosses_linkage_checks.rds")$designs |>
   mutate(res = map(by_year, \(d) loss_for(d |> select(year, draw_cmb = total)))) |>

@@ -12,8 +12,8 @@
 # So the base is probably inflated, the rates too low and the loss understated.
 # No independent count says by how much. This step measures how much it
 # matters: the loss with the two oblasts' 2022 population lower than SSSU's by
-# a quarter, by half, and taken out altogether, every other input - conflict
-# deaths included - at its mode.
+# 0.5 and 1.0 million, by a quarter, by half, and taken out altogether, every
+# other input - conflict deaths included - at its mode.
 #
 # The conflict deaths are not changed. Taking the population out while keeping
 # its deaths is the upper end of the bias, not a scenario for the true count.
@@ -36,10 +36,14 @@ share_dl <- sum(pop_dl$pop_dl) / sum(mi$pop22_ini$pop)
 cat(sprintf("Donetsk and Luhansk: %.2f of %.2f million (%.1f%%)\n",
             sum(pop_dl$pop_dl) / 1e6, sum(mi$pop22_ini$pop) / 1e6, 100 * share_dl))
 
+# the two oblasts 0.5 and 1.0 million lower, a quarter and a half lower, and
+# taken out altogether
+dl_total <- sum(pop_dl$pop_dl)
 scenarios <- tibble(
-  scenario = c("SSSU (used)", "Donetsk and Luhansk a quarter lower",
+  scenario = c("SSSU (used)", "Donetsk and Luhansk 0.5 million lower",
+               "Donetsk and Luhansk 1.0 million lower", "Donetsk and Luhansk a quarter lower",
                "Donetsk and Luhansk half lower", "Donetsk and Luhansk taken out"),
-  keep = c(1, 0.75, 0.5, 0)
+  keep = c(1, 1 - 0.5e6 / dl_total, 1 - 1e6 / dl_total, 0.75, 0.5, 0)
 )
 base_with <- function(keep) {
   mi$pop22_ini |>

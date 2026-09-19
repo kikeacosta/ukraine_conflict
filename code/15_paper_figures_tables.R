@@ -22,6 +22,7 @@
 #   figA1_pert_draw_distributions.png                10, 11
 #   figA2_pert_draw_distributions_migration.png      10, 11 <- new
 #   figA3_cumulative_migration_draws.png             11   <- new
+#   figA6_duration_lexis.png                         09
 #
 # TABLES (written to tables/ as .csv)
 #   table1_source_totals.csv                         07_*, 08
@@ -48,6 +49,13 @@
 #   tableA13_pert_shape.csv                          13g
 #   tableA14_years_of_life_lost.csv                  14b
 #   tableA15_adult_mortality_45q15.csv               14b
+#   table8_structural_sensitivity.csv                13, 13b-13g
+#   tableA16_alpha_by_lag_horizon.csv                13d
+#   tableA17_military_triangulation.csv              09, data_input/official_figures.csv
+#   tableA18_returned_prisoners_prior_status.csv     09
+#   tableA19_register_dropout.csv                    09
+#   tableA20_resolution_hazards.csv                  09
+#   tableA21_civil_register_check.csv                11, data_input/official_figures.csv
 #
 # INPUTS   the .rds products of steps 07-14
 # ==============================================================================
@@ -750,10 +758,13 @@ print(tab_src)
 # ==============================================================================
 # TABLE 2 - Imputation of missing combatants
 # ==============================================================================
+# The missing imputed alive in their three parts: those projected into
+# captivity, those projected to leave the register (found alive), and the
+# alive share of those never resolved (alpha).
 tab_imput <-
   imput |>
   mutate(
-    imputed_alive_total = imputed_alive + imputed_prisoner,
+    imputed_alive_total = imputed_unlisted + alive_never_resolved + imputed_prisoner,
     pct_dead = imputed_dead / missing_stock,
     pct_alive = imputed_alive_total / missing_stock
   ) |>
@@ -764,27 +775,33 @@ tab_imput <-
     missing = missing_stock,
     imputed_dead,
     pct_dead,
-    imputed_alive = imputed_alive_total,
+    projected_captivity = imputed_prisoner,
+    projected_no_longer_listed = imputed_unlisted,
+    alive_among_never_resolved = alive_never_resolved,
     pct_alive,
     total_deaths = total_estimado
   )
+stopifnot(isTRUE(all.equal(
+  imput$imputed_dead + imput$imputed_alive + imput$imputed_prisoner, imput$missing_stock
+)))
 
 # The Total row sums the rounded years, as tables 1 and 3 do, so the tables
 # print the same totals; rounding the four-year sum once can differ by one.
+count_cols <- c("registered_deaths", "late_registrations", "missing", "imputed_dead",
+                "projected_captivity", "projected_no_longer_listed", "alive_among_never_resolved",
+                "total_deaths")
 tab_imput <- bind_rows(
   tab_imput,
   tab_imput |>
-    summarise(across(c(registered_deaths, late_registrations, missing, imputed_dead,
-                       imputed_alive, total_deaths), ~ sum(round(.x)))) |>
+    summarise(across(all_of(count_cols), ~ sum(round(.x)))) |>
     mutate(
       year = NA_integer_,
       pct_dead = imputed_dead / missing,
-      pct_alive = imputed_alive / missing
+      pct_alive = (projected_captivity + projected_no_longer_listed + alive_among_never_resolved) / missing
     )
 ) |>
   mutate(
-    across(c(registered_deaths, late_registrations, missing, imputed_dead,
-             imputed_alive, total_deaths), ~round(.x)),
+    across(all_of(count_cols), ~round(.x)),
     across(c(pct_dead, pct_alive), ~scales::percent(.x, accuracy = 0.1)),
     year = if_else(is.na(year), "Total", as.character(year))
   )
@@ -1479,7 +1496,7 @@ print(tA9)
 lag <- read_rds("data_inter/ukr_registration_lag.rds")
 tA10 <-
   lag$loss |>
-  left_join(lag$military |> summarise(military_deaths = round(sum(total)), .by = scenario),
+  left_join(lag$military |> summarise(military_deaths = sum(round(total)), .by = scenario),
             by = "scenario") |>
   mutate(scenario = factor(scenario, levels = unique(lag$military$scenario))) |>
   loss_wide(c("scenario", "military_deaths")) |>
@@ -1587,6 +1604,290 @@ tA2 <-
 
 save_tab(tA2, "tableA2_status_transitions.csv")
 print(tA2)
+
+# ==============================================================================
+# TABLE 8 - How far the results move with each structural choice
+# ==============================================================================
+# The simulation's intervals cover the drawn inputs only. Each row here is a
+# set of deterministic projections, every input not under study at its mode,
+# and gives the range its alternatives span: the military total, the male loss
+# in 2022 and 2025, and the female loss in 2025. The rows behind each range are
+# in the supplementary table named.
+# Military totals are summed over rounded years, as tables 3 and A6 build theirs.
+mil_total <- function(d) d |> summarise(military = sum(round(total_military)), .by = c(alpha, range_point))
+mode_military <- alpha_mil |> filter(range_point %in% "mode") |> summarise(m = sum(round(total_military))) |> pull(m)
+alpha_rows <- function(points) {
+  alpha_e0 |>
+    filter(range_point %in% points) |>
+    left_join(mil_total(alpha_mil), by = c("alpha", "range_point")) |>
+    select(military, year, sex, loss)
+}
+mig_sens_t8 <- read_rds("data_inter/ukr_migration_sensitivity_e0.rds")
+spec_t8 <- read_rds("data_inter/ukr_migration_specification_e0.rds")
+lag_t8 <- read_rds("data_inter/ukr_registration_lag.rds")
+alternatives <- bind_rows(
+  alpha_rows(c("p2.5", "p97.5")) |>
+    mutate(analysis = "Share of the never-resolved missing alive: 95% interval of its distribution", table = "A6"),
+  alpha_rows(c("min", "max")) |>
+    mutate(analysis = "Share of the never-resolved missing alive: floor to cap", table = "A6"),
+  lag_t8$loss |>
+    filter(scenario != "to 48 months (used)") |>
+    left_join(lag_t8$military |> summarise(military = sum(round(total)), .by = scenario), by = "scenario") |>
+    select(military, year, sex, loss) |>
+    mutate(analysis = "Registration lag: no correction, or corrected to 60 or 72 months", table = "A10, A16"),
+  read_rds("data_inter/ukr_linkage_rules_e0.rds") |>
+    filter(!str_detect(design, "production")) |>
+    select(military, year, sex, loss) |>
+    mutate(analysis = "Linkage rules, resolution model and prisoner-of-war evidence: nine alternatives",
+           table = "A9"),
+  read_rds("data_inter/ukr_denominator_donetsk_luhansk.rds")$loss |>
+    filter(scenario != "SSSU (used)") |>
+    transmute(military = mode_military, year, sex, loss,
+              analysis = "Population base of Donetsk and Luhansk: 0.5 million lower to taken out",
+              table = "A11"),
+  read_rds("data_inter/ukr_timing_2022.rds")$loss |>
+    filter(scenario != "months of the events (used)") |>
+    transmute(military = mode_military, year, sex, loss,
+              analysis = "Timing within 2022: mid-year convention, or net outflow by 1 April", table = "A11"),
+  read_rds("data_inter/ukr_baseline_window_e0.rds") |>
+    filter(window != "2000-2019 (used)") |>
+    transmute(military = mode_military, year, sex, loss,
+              analysis = "Counterfactual: Lee-Carter window, and the forecast one SD lower or higher",
+              table = "A12"),
+  mig_sens_t8 |>
+    filter(point %in% c("min", "max")) |>
+    transmute(military = mode_military, year, sex, loss,
+              analysis = "Net migration: each component across its range", table = "A7"),
+  spec_t8 |>
+    filter(scenario != "Mode") |>
+    transmute(military = mode_military, year, sex, loss,
+              analysis = "Specification of the net migration input", table = "A8"),
+  mig |>
+    transmute(military = mode_military, year, sex, loss = loss_nomig,
+              analysis = "No net migration", table = "A7")
+)
+fmt_range <- function(x, f) {
+  lo <- f(min(x)); hi <- f(max(x))
+  if (lo == hi) lo else paste0(lo, " - ", hi)
+}
+f_mil <- \(x) scales::comma(round(x))
+f_m <- \(x) formatC(x, format = "f", digits = 2)
+f_f <- \(x) formatC(x, format = "f", digits = 3)
+cells_t8 <- function(d) {
+  tibble(
+    military_deaths = fmt_range(d$military, f_mil),
+    male_loss_2022 = fmt_range(d$loss[d$sex == "m" & d$year == 2022], f_m),
+    male_loss_2025 = fmt_range(d$loss[d$sex == "m" & d$year == 2025], f_m),
+    female_loss_2025 = fmt_range(d$loss[d$sex == "f" & d$year == 2025], f_f)
+  )
+}
+mode_rows <- alpha_e0 |> filter(range_point %in% "mode") |> mutate(military = mode_military)
+tab8 <-
+  bind_rows(
+    cells_t8(mode_rows) |> mutate(analysis = "Every input at its mode", table = "", .before = 1),
+    alternatives |>
+      mutate(analysis = factor(analysis, levels = unique(analysis))) |>
+      nest(.by = c(analysis, table)) |>
+      mutate(cells = map(data, cells_t8)) |>
+      select(-data) |>
+      unnest(cells) |>
+      mutate(analysis = as.character(analysis))
+  ) |>
+  rename(supplementary_table = table)
+save_tab(tab8, "table8_structural_sensitivity.csv")
+print(tab8)
+
+# ==============================================================================
+# TABLE A16 - The share alive and the registration-lag horizon together
+# ==============================================================================
+tA16 <-
+  lag_t8$grid |>
+  filter(year == 2025, sex == "m") |>
+  transmute(alpha_point = factor(point, levels = unique(lag_t8$grid$point)),
+            alpha = round(alpha, 3),
+            scenario = factor(scenario, levels = unique(lag_t8$grid$scenario)),
+            cell = sprintf("%s / %.2f", scales::comma(round(military)), loss)) |>
+  arrange(scenario) |>
+  pivot_wider(names_from = scenario, values_from = cell) |>
+  arrange(alpha_point)
+save_tab(tA16, "tableA16_alpha_by_lag_horizon.csv")
+print(tA16)
+
+# ==============================================================================
+# TABLE A17 - The military estimate against official statements and other
+# estimates, at the dates they were made
+# ==============================================================================
+# Each statement counts the deaths known at its date. The register (v19, as
+# registered) and this study (at the mode) count the deaths among events up
+# to that date, as known in September 2026.
+official <- read_csv("data_input/official_figures.csv", show_col_types = FALSE)
+mil_month <- read_rds("data_inter/ukr_military_by_month.rds")
+through <- function(d, col) {
+  d <- as.Date(d)
+  full <- sum(mil_month[[col]][mil_month$month < floor_date(d, "month")])
+  part <- sum(mil_month[[col]][mil_month$month == floor_date(d, "month")])
+  full + part * day(d) / days_in_month(d)
+}
+tA17 <-
+  official |>
+  filter(key %in% c("military_killed_official", "military_killed_estimate")) |>
+  mutate(
+    date = as.Date(date),
+    kind = if_else(key == "military_killed_official", "Official Ukrainian statement", "Other estimate"),
+    stated = if_else(is.na(value), sprintf("%s - %s", scales::comma(low), scales::comma(high)),
+                     scales::comma(value)),
+    register_named_dead = round(map_dbl(date, \(d) through(d, "registered_dead"))),
+    this_study = round(map_dbl(date, \(d) through(d, "military")))
+  ) |>
+  arrange(date) |>
+  select(date, kind, source, stated, register_named_dead, this_study)
+save_tab(tA17, "tableA17_military_triangulation.csv")
+print(tA17)
+
+# ==============================================================================
+# TABLE A18 - Where the returned prisoners had been listed before their return
+# ==============================================================================
+linkage_checks <- read_rds("data_inter/ukr_ualosses_linkage_checks.rds")
+tA18 <-
+  linkage_checks$released_prior |>
+  mutate(prior = factor(prior, levels = c("prisoner", "missing", "dead", "not listed"),
+                        labels = c("as prisoner", "as missing", "as dead", "in no earlier release"))) |>
+  pivot_wider(names_from = prior, values_from = n, values_fill = 0) |>
+  arrange(year) |>
+  mutate(year = as.character(year))
+tA18 <-
+  bind_rows(tA18, tA18 |> summarise(across(-year, sum)) |> mutate(year = "Total")) |>
+  mutate(total = rowSums(across(-year)),
+         listed_as_missing_of_those_not_recorded_as_prisoners =
+           scales::percent(`as missing` / (`as missing` + `in no earlier release`), accuracy = 0.1))
+save_tab(tA18, "tableA18_returned_prisoners_prior_status.csv")
+print(tA18)
+
+# ==============================================================================
+# TABLE A19 - How often the missing and the dead leave the register
+# ==============================================================================
+# Window by window, the share of those at risk at the window's start who are
+# in no later release: the missing no longer listed, and the dead, who cannot
+# have been found alive and leave only through list maintenance.
+windows_cache <- read_rds("data_inter/ualosses_window_transitions.rds")
+missing_dropout <-
+  windows_cache |>
+  filter(table == "windows", rule == "alive") |>
+  summarise(missing_at_risk = sum(n), missing_no_longer_listed = sum(n[to == "no_longer_listed"]),
+            .by = c(year, from_release))
+tA19 <-
+  missing_dropout |>
+  left_join(linkage_checks$dead_dropout |>
+              select(year, from_release, dead_at_risk = at_risk, dead_dropped = dropped),
+            by = c("year", "from_release")) |>
+  mutate(window = paste0(from_release, "-", ual_releases$release[match(from_release, ual_releases$release) + 1]),
+         missing_pct = round(100 * missing_no_longer_listed / missing_at_risk, 2),
+         dead_pct = round(100 * dead_dropped / dead_at_risk, 2)) |>
+  arrange(year, match(from_release, ual_releases$release)) |>
+  select(cohort = year, window, missing_at_risk, missing_no_longer_listed, missing_pct,
+         dead_at_risk, dead_dropped, dead_pct)
+save_tab(tA19, "tableA19_register_dropout.csv")
+print(tA19)
+
+# ==============================================================================
+# TABLE A20 - Hazards of resolution by months since disappearance
+# ==============================================================================
+# Monthly hazards (%) of leaving "missing" for each outcome, as projected: the
+# first window's hazards times each outcome's average multiplier over the
+# three windows. Below them, each window's multiplier against the first.
+model_09 <- read_rds("data_inter/ukr_ualosses_resolution_model.rds")
+mult <- model_09$window_multipliers
+colnames(mult) <- ual_resolutions
+tA20 <-
+  bind_rows(
+    read_rds("data_inter/ukr_ualosses_resolution_hazards.rds") |>
+      mutate(across(-band, \(x) round(100 * x, 3)), row = "monthly hazard (%)", .before = 1) |>
+      rename(months_since_event = band),
+    as_tibble(round(mult, 3)) |>
+      mutate(row = "multiplier against the first window",
+             months_since_event = c("v14-v16", "v16-v18", "v18-v19"), .before = 1)
+  )
+save_tab(tA20, "tableA20_resolution_hazards.csv")
+print(tA20)
+
+# ==============================================================================
+# TABLE A21 - The projection against the civil register
+# ==============================================================================
+# The Ministry of Justice counts the deaths and births registered on the
+# territory the government controls. The projection covers continental
+# Ukraine, occupied parts included. Dividing the registrations by the
+# projection's crude rates gives the population they imply at those rates, a
+# check on the denominator rather than on the deaths themselves.
+fx_by_age <-
+  read_rds("data_inter/ukr_asfr_wpp_2022_2025.rds") |>
+  select(year, age, fx) |>
+  bind_rows(read_rds("data_inter/ukr_asfr_wpp_2022_2025.rds") |> filter(year == 2023) |>
+              select(age, fx) |> expand_grid(year = c(2024, 2025)))
+vital <-
+  sim_wide |>
+  left_join(fx_by_age |> mutate(sex = "f"), by = c("year", "sex", "age")) |>
+  summarise(population = sum(pop),
+            expected = sum(expected),
+            conflict = sum(civilian + combatant_confirmed + combatant_imputed),
+            births = sum(coalesce(fx, 0) * pop),
+            .by = c(sim_id, year)) |>
+  mutate(deaths = expected + conflict) |>
+  summarise(across(c(population, expected, conflict, deaths, births), median), .by = year)
+registered <-
+  official |>
+  filter(key %in% c("registered_deaths", "registered_births")) |>
+  mutate(year = year(as.Date(date))) |>
+  select(year, key, value) |>
+  pivot_wider(names_from = key, values_from = value)
+tA21 <-
+  vital |>
+  left_join(registered, by = "year") |>
+  mutate(population_implied_by_deaths = registered_deaths / (deaths / population),
+         population_implied_by_births = registered_births / (births / population)) |>
+  transmute(year,
+            population_millions = round(population / 1e6, 2),
+            projected_deaths = round(deaths), projected_conflict_deaths = round(conflict),
+            projected_births = round(births),
+            registered_deaths, registered_births,
+            population_implied_by_deaths_millions = round(population_implied_by_deaths / 1e6, 2),
+            population_implied_by_births_millions = round(population_implied_by_births / 1e6, 2))
+save_tab(tA21, "tableA21_civil_register_check.csv")
+print(tA21)
+
+# ==============================================================================
+# FIGURE A6 - The durations each event month is observed at
+# ==============================================================================
+# One vertical segment per event month and window between releases, from the
+# months since the event at the window's start to those at its end; the
+# projection carries each month from its duration in v19 to the horizon.
+cells_lexis <-
+  model_09$fitted |>
+  distinct(month, from_release, d0, d1) |>
+  mutate(window = paste0(from_release, "-", ual_releases$release[match(from_release, ual_releases$release) + 1]))
+projection_lexis <-
+  cells_lexis |>
+  distinct(month) |>
+  mutate(d19 = ual_months_since(ual_releases$date[nrow(ual_releases)], month)) |>
+  filter(d19 < model_09$horizon)
+figA6 <-
+  ggplot() +
+  geom_segment(data = projection_lexis,
+               aes(x = month, xend = month, y = d19, yend = model_09$horizon),
+               colour = "grey65", linewidth = 0.5, linetype = "22") +
+  geom_segment(data = cells_lexis,
+               aes(x = month, xend = month, y = d0, yend = d1, colour = window),
+               linewidth = 1.1) +
+  geom_hline(yintercept = model_09$horizon, linewidth = 0.3) +
+  scale_colour_manual(values = c("v14-v16" = "#0A9396", "v16-v18" = "#EE9B00", "v18-v19" = "#AE2012")) +
+  scale_y_continuous(breaks = seq(0, 60, 6)) +
+  scale_x_date(date_breaks = "6 months", date_labels = "%b\n%Y") +
+  labs(x = "Month of the event", y = "Months since the event", colour = "Window",
+       caption = paste0("Solid: the durations observed in each window between register releases. Dashed: ",
+                        "the projection from each month's duration in v19 to ", model_09$horizon,
+                        " months (line).")) +
+  theme_paper()
+save_fig(figA6, "figA6_duration_lexis.png", 9, 4.6)
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # provenance stamp for the whole table set

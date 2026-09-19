@@ -15,15 +15,25 @@
 # METHOD - a chain-ladder on the four releases
 # --------------------------------------------
 # For each event month m, each status s (dead, missing) and each consecutive
-# pair of releases r -> r+1:
-#   net additions = records listed with status s in r+1 whose key is absent
-#                   from r in any status
-#                   - records with status s in r whose key is absent from r+1
-#                   in any status
+# pair of releases r -> r+1, the growth of the register:
+#   dead      net additions = records listed as dead in r+1 whose key is
+#             absent from r in any status
+#             - records listed as dead in r whose key is absent from r+1 in
+#             any status
+#   missing   new persons = records listed as missing in r+1 whose key is
+#             absent from every release up to r, and that are not a
+#             corrected key of a record those releases held (same surname
+#             and first name, and the same date of birth or event month)
 # A key present in both releases is left out whatever its status, so a missing
 # person who is found dead, taken prisoner or released is a resolution, not a
-# registration or a de-registration. The monthly growth rate
-#   lambda = log(1 + net additions / N_r) / (months between the releases)
+# registration or a de-registration. The dead leave the register only through
+# list maintenance - corrections and merged duplicates - so their drops are
+# netted out. The missing are different: a missing person who drops off the
+# register is a resolution in 09's model, counted there as found alive, so
+# netting the drops here as well would take them out twice. Their growth is
+# therefore new persons only; a record re-keyed or listed again after a gap is
+# not new. The monthly growth rate
+#   lambda = log(1 + growth / N_r) / (months between the releases)
 # is attached to the lag since the event (midpoint of the pair), and pooled
 # by lag band, weighting by N_r x months.
 #
@@ -51,27 +61,42 @@ releases <- ual_releases
 
 # 1. AGGREGATE COUNTS FROM THE RELEASES (cached; no names leave this block) ====
 reg_counts <- cache_rds("data_inter/ualosses_registration_by_month.rds", {
-  rd <- function(p) {
-    ual_read_release(p) |>
+  regs <- map(set_names(releases$path, releases$release), ual_read_release)
+  rd <- function(r) {
+    r |>
       mutate(m = floor_date(date_evnt, "month")) |>
       filter(ukrainian, !is.na(m), m >= as.Date("2022-02-01"), m <= as.Date("2025-12-01")) |>
       ual_one_per_key() |>
-      select(key, m, status)
+      select(key, name, dob, m, status)
   }
-  d <- set_names(map(releases$path, rd), releases$release)
+  d <- map(regs, rd)
   losses <- \(x) filter(x, status %in% c("dead", "missing"))
 
   # one long table: stocks by release, and additions and drops between
   # consecutive releases. A record counts as added or dropped only if its key
   # is absent from the other release in ANY status, so a missing person who
   # becomes a prisoner or is released is a resolution, not a de-registration.
+  # added_new: the missing who are new persons (see METHOD). The corrected-key
+  # test looks among the earlier records whose key the later release no
+  # longer holds, as the linkage in 09 does.
   stock <- imap_dfr(d, \(x, r) count(losses(x), m, status, name = "n") |>
                       mutate(kind = "stock", from = r, to = NA_character_))
   flows <- map_dfr(1:3, function(i) {
     a <- d[[i]]; b <- d[[i + 1]]
+    earlier <- bind_rows(regs[1:i]) |>
+      transmute(key, name, dob, m = floor_date(date_evnt, "month")) |>
+      distinct()
+    gone <- earlier |> anti_join(regs[[i + 1]] |> distinct(key), by = "key")
+    new_missing <-
+      losses(b) |>
+      filter(status == "missing") |>
+      anti_join(earlier, by = "key") |>
+      anti_join(gone |> filter(!is.na(dob)) |> distinct(name, dob), by = c("name", "dob")) |>
+      anti_join(gone |> filter(!is.na(m)) |> distinct(name, m), by = c("name", "m"))
     bind_rows(
       losses(b) |> anti_join(a, by = "key") |> count(m, status, name = "n") |> mutate(kind = "added"),
-      losses(a) |> anti_join(b, by = "key") |> count(m, status, name = "n") |> mutate(kind = "dropped")
+      losses(a) |> anti_join(b, by = "key") |> count(m, status, name = "n") |> mutate(kind = "dropped"),
+      new_missing |> count(m, status, name = "n") |> mutate(kind = "added_new")
     ) |> mutate(from = releases$release[i], to = releases$release[i + 1])
   })
   bind_rows(stock, flows)
@@ -91,9 +116,14 @@ growth <-
   mutate(
     L0 = lag_months(rel_date[from], m), L1 = lag_months(rel_date[to], m),
     dL = L1 - L0, Lmid = (L0 + L1) / 2,
-    lambda = log1p((added - dropped) / n_from) / dL
+    growth = if_else(status == "missing", added_new, added - dropped),
+    lambda = log1p(growth / n_from) / dL
   ) |>
-  filter(L0 >= 1, n_from >= 50)
+  # February 2022 holds five days of events and takes the register's batch
+  # operations on the start of the war - v18 added 221 missing to it at once,
+  # v19 deleted 335 - so it is left out of the rates. At its lag it is past
+  # the horizon and needs no factor itself.
+  filter(L0 >= 1, n_from >= 50, m != as.Date("2022-02-01"))
 
 bands <- c(1, 3, 6, 9, 12, 18, 24, 30, 36, 42, 48, 56)
 lambda_band <-

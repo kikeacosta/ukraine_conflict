@@ -182,7 +182,8 @@ run_scenario <- function(comp, u) {
     left_join(e0_of(sim, "mx_all") |> rename(ex_all = ex), by = c("year", "sex")) |>
     mutate(
       loss = ex_bsn - ex_all,
-      cumulative_net_migration = sum(swept$value),
+      # summed over rounded years, as table 3 builds its totals, so the two agree
+      cumulative_net_migration = sum(round(swept$value)),
       min_exposure = min(sim$pop)
     )
 }

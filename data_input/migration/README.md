@@ -11,6 +11,7 @@ is catalogued in `documents/data_sources.md`.
 |---|---|
 | `unhcr/unhcr_population_coo_UKR_2021_2025.csv` | UNHCR Refugee Data Finder: refugees, asylum seekers and other populations originating from Ukraine, by country of asylum and year. Flattened from the raw API response next to it |
 | `unhcr/unhcr_population_coo_UKR_2021_2025_page1.json` | Raw API response, retrieved 2026-09-16 |
+| `unhcr/unhcr_border_crossings_2022.csv` | UNHCR Operational Data Portal, Ukraine refugee situation: border crossings out of Ukraine and into it, cumulative since 24 February 2022 (population groups 5460 and 5472), at 1 March and each month end of 2022, read on 2026-09-19. Step 10 takes the timing of 2022's net outflow from it |
 | `ces_2026_figures.csv` | Figures transcribed from the CES fifth-wave report, with printed page and quote. `used_by_code = yes` marks the ones step 06 reads |
 | `national_programme_arrivals_PLACEHOLDER.csv` | **Placeholder.** Dated cumulative arrivals for Canada (CUAET) and the USA (Uniting for Ukraine), interpolated to year ends |
 
