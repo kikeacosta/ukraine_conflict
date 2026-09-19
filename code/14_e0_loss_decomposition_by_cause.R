@@ -10,7 +10,8 @@
 # Two decompositions are produced:
 #
 #   TWO-WAY    civilian  vs  combatant
-#   THREE-WAY  civilian  vs  registered combatant  vs  imputed missing combatant
+#   BY CAUSE   civilian  vs  registered combatant  vs  late registration
+#              vs  imputed missing combatant
 #
 # METHOD
 # ------
@@ -33,7 +34,8 @@
 #
 # SIGN CONVENTION: positive = years of life expectancy LOST.
 #
-# INPUT    data_inter/ukr_sim_draws_2022_2025_n<n_sim>.rds   (from 11)
+# INPUTS   data_inter/ukr_sim_draws_2022_2025_n<n_sim>.rds   (from 11)
+#          data_inter/ukr_ualosses_imputation_table.rds      (from 09)
 # OUTPUTS  data_inter/ukr_e0_loss_by_cause_draws_2022_2025.rds
 #          data_inter/ukr_e0_loss_by_cause_summary_2022_2025.rds
 #          data_inter/ukr_conflict_deaths_by_cause_summary_2022_2025.rds
@@ -106,6 +108,21 @@ sims <- cbind(
 sims[, loss_combatant := loss_cmb_confirmed + loss_cmb_imputed]
 sims[, dx_combatant := dx_cmb_confirmed + dx_cmb_imputed]
 
+# The confirmed deaths are the register's dead completed for registration lag
+# (08b, 09): they include deaths not yet registered. Those late registrations
+# share the registered dead's age-sex profile, so within each year they are
+# the same fraction of the confirmed deaths at every age, and splitting the
+# confirmed component - deaths and loss alike - by that fraction is exact.
+late_share <-
+  read_rds("data_inter/ukr_ualosses_imputation_table.rds") |>
+  transmute(year = as.numeric(year), late_share = late_registrations / confirmados_stock)
+sims <- merge(sims, as.data.table(late_share), by = "year", sort = FALSE)
+sims[, `:=`(loss_cmb_late = loss_cmb_confirmed * late_share,
+            dx_cmb_late = dx_cmb_confirmed * late_share)]
+sims[, `:=`(loss_cmb_registered = loss_cmb_confirmed - loss_cmb_late,
+            dx_cmb_registered = dx_cmb_confirmed - dx_cmb_late)]
+sims[, late_share := NULL]
+
 # ==============================================================================
 # 2. VALIDATION
 # ==============================================================================
@@ -137,6 +154,7 @@ write_rds(sims, "data_inter/ukr_e0_loss_by_cause_draws_2022_2025.rds")
 CAUSE_LEVELS <- c(
   "Civilians",
   "Registered combatants",
+  "Late registrations (estimated)",
   "Missing combatants (imputed)",
   "Combatants",
   "Total"
@@ -150,7 +168,8 @@ e0_loss_by_cause <-
     Total = loss_total,
     Civilians = loss_civilian,
     Combatants = loss_combatant,
-    `Registered combatants` = loss_cmb_confirmed,
+    `Registered combatants` = loss_cmb_registered,
+    `Late registrations (estimated)` = loss_cmb_late,
     `Missing combatants (imputed)` = loss_cmb_imputed
   ) |>
   pivot_longer(-c(sim_id, year, sex), names_to = "cause", values_to = "loss") |>
@@ -179,7 +198,8 @@ deaths_by_cause <-
     sim_id, year, sex,
     Civilians = dx_civilian,
     Combatants = dx_combatant,
-    `Registered combatants` = dx_cmb_confirmed,
+    `Registered combatants` = dx_cmb_registered,
+    `Late registrations (estimated)` = dx_cmb_late,
     `Missing combatants (imputed)` = dx_cmb_imputed
   ) |>
   pivot_longer(-c(sim_id, year, sex), names_to = "cause", values_to = "dx") |>

@@ -41,7 +41,8 @@
 #
 # INPUTS   data_inter/ukr_ualosses_transition_rates.rds            (from 09)
 #          data_inter/ukr_ualosses_window_counts.rds               (from 09)
-#          data_inter/ukr_alpha_missing.rds, ukr_ualosses_linkage_checks.rds (from 09)
+#          data_inter/ukr_alpha_missing.rds, ukr_ualosses_linkage_checks.rds,
+#          ukr_ualosses_imputation_table.rds                       (from 09)
 #          data_inter/ukr_ualosses_conflict_deaths_sex_age_2022_2025.rds (08)
 #          the same static inputs as step 13 (param_table, forecast
 #          mortality, population, migration, fertility, age-sex profiles)
@@ -134,15 +135,11 @@ conf_cmb_by_year <- param_table |> filter(role == "combatants") |> select(year, 
 # different set of empirical rates than 09 actually used.
 tasas_long <- read_rds("data_inter/ukr_ualosses_transition_rates.rds")
 
-status_stocks <-
-  ual_raw |>
-  summarise(n = sum(dx), .by = c(year, status))
-
-stock_missing_2026 <-
-  status_stocks |> filter(status == "missing") |> select(year, missing_stock = n)
-
-confirmados_df <-
-  status_stocks |> filter(status == "dead") |> select(year, confirmados_stock = n)
+# the dead and the missing exactly as 09 imputed them: v19 completed for
+# registration lag (08b)
+imputation_table <- read_rds("data_inter/ukr_ualosses_imputation_table.rds")
+stock_missing_2026 <- imputation_table |> select(year, missing_stock)
+confirmados_df <- imputation_table |> select(year, confirmados_stock)
 
 # A regular grid, rounded to 2dp so seq()'s floating-point accumulation cannot
 # leave 0.30000000000000004 in a manuscript column, plus the three points of

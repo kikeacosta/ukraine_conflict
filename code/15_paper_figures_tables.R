@@ -91,6 +91,7 @@ COL_STATUS <- c("dead" = "#e63946", "missing" = "#457b9d")
 COL_CAUSE <- c(
   "Civilians" = "#66C2A5",
   "Registered combatants" = "#FC8D62",
+  "Late registrations (estimated)" = "#E5C494",
   "Missing combatants (imputed)" = "#8DA0CB"
 )
 COL_EFFECT <- c("Mortality" = "#555555", "Migration" = "#FF4D4D")
@@ -318,7 +319,8 @@ save_fig(fig4, "fig4_decomposition_migration_mortality.png", 7, 4)
 # FIGURE 5 - Decomposition by cause of conflict death  (NEW)
 # ==============================================================================
 three_way <- c(
-  "Civilians", "Registered combatants", "Missing combatants (imputed)"
+  "Civilians", "Registered combatants", "Late registrations (estimated)",
+  "Missing combatants (imputed)"
 )
 
 f5_share <-
@@ -750,7 +752,8 @@ tab_imput <-
   ) |>
   select(
     year,
-    registered_deaths = confirmados_stock,
+    registered_deaths = registered,
+    late_registrations,
     missing = missing_stock,
     imputed_dead,
     pct_dead,
@@ -764,7 +767,7 @@ tab_imput <-
 tab_imput <- bind_rows(
   tab_imput,
   tab_imput |>
-    summarise(across(c(registered_deaths, missing, imputed_dead,
+    summarise(across(c(registered_deaths, late_registrations, missing, imputed_dead,
                        imputed_alive, total_deaths), ~ sum(round(.x)))) |>
     mutate(
       year = NA_integer_,
@@ -773,8 +776,8 @@ tab_imput <- bind_rows(
     )
 ) |>
   mutate(
-    across(c(registered_deaths, missing, imputed_dead, imputed_alive,
-             total_deaths), ~round(.x)),
+    across(c(registered_deaths, late_registrations, missing, imputed_dead,
+             imputed_alive, total_deaths), ~round(.x)),
     across(c(pct_dead, pct_alive), ~scales::percent(.x, accuracy = 0.1)),
     year = if_else(is.na(year), "Total", as.character(year))
   )
@@ -830,7 +833,8 @@ d4_draws <-
   select(
     sim_id, year, sex,
     Civilians = dx_civilian,
-    `Registered combatants` = dx_cmb_confirmed,
+    `Registered combatants` = dx_cmb_registered,
+    `Late registrations (estimated)` = dx_cmb_late,
     `Missing combatants (imputed)` = dx_cmb_imputed
   ) |>
   pivot_longer(
@@ -1036,8 +1040,9 @@ print(tA1)
 # bounds, and its best estimate for Ukraine sits BELOW the register's
 # individually named dead - so the gap between it and this study is not only a
 # disagreement about the missing. This table sets the three side by side and
-# splits the gap into the part that is UCDP short of the named dead and the part
-# that is the imputed dead among the missing, whom an event-based count does not
+# splits the gap into three parts: UCDP short of the named dead; the deaths
+# not yet registered (08b), which the named count will still grow to include;
+# and the imputed dead among the missing, whom an event-based count does not
 # see.
 #
 # Two columns test the obvious alternative explanations:
@@ -1081,7 +1086,7 @@ recon_year <-
   dyad |>
   left_join(ucdp_ukr, by = "year") |>
   left_join(
-    param_table |> filter(role == "combatants") |> select(year, registered = confirmed),
+    imput |> select(year, registered, late = late_registrations),
     by = "year"
   ) |>
   left_join(cmb_draws |> reframe(q3(draw), .by = year), by = "year") |>
@@ -1090,7 +1095,7 @@ recon_year <-
 
 recon_total <-
   recon_year |>
-  summarise(across(c(ukr, rus, ucdp, ucdp_lo, ucdp_hi, even_split, registered), sum)) |>
+  summarise(across(c(ukr, rus, ucdp, ucdp_lo, ucdp_hi, even_split, registered, late), sum)) |>
   bind_cols(cmb_draws |> summarise(draw = sum(draw), .by = sim_id) |> reframe(q3(draw)))
 
 tA5 <-
@@ -1109,7 +1114,8 @@ tA5 <-
     ucdp_as_pct_of_registered = scales::percent(ucdp / registered, accuracy = 0.1),
     gap_to_ucdp = round(med - ucdp),
     of_which_ucdp_below_registered = round(registered - ucdp),
-    of_which_imputed_missing = round(med - registered)
+    of_which_late_registrations = round(late),
+    of_which_imputed_missing = round(med - registered - late)
   )
 
 save_tab(tA5, "tableA5_military_reconciliation.csv")

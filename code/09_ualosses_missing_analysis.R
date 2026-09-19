@@ -107,11 +107,25 @@ chain_rates <- function(w) {
 # them, so the confirmed-death total used in this script would fall short of
 # the one used everywhere downstream by those records, and the manuscript
 # tables built in 15 would disagree with each other.
-stocks <-
+stocks_registered <-
   read_rds("data_inter/ukr_ualosses_conflict_deaths_sex_age_2022_2025.rds") |>
   summarise(n = sum(dx), .by = c(year, status)) |>
   mutate(status = as.character(status)) |>
   arrange(year, status)
+
+# Registration lag (08b): v19's dead and missing brought to the completeness
+# events reach at four years, each year by the ratio of its completed to its
+# registered count. The deaths added are late registrations: people not yet in
+# the register at all. Prisoners and released prisoners are left as recorded.
+completion <-
+  read_rds("data_inter/ukr_registration_completion.rds")$year |>
+  select(year, status, ratio)
+stocks <-
+  stocks_registered |>
+  left_join(completion, by = c("year", "status")) |>
+  mutate(n = n * coalesce(ratio, 1)) |>
+  select(-ratio)
+stopifnot(nrow(stocks) == nrow(stocks_registered))
 
 print(stocks |> pivot_wider(names_from = status, values_from = n))
 
@@ -161,10 +175,19 @@ imputation_final <- impute_missing(alpha_range$alpha_mode, tasas_long, stock_mis
 
 print(imputation_final)
 
+# the dead, registered and completed for registration lag; downstream the
+# completed count is the "confirmed" military deaths, spread over the
+# registered dead's age-sex profile, and 14 and 15 report the late
+# registrations within it apart
 confirmados_df <-
   stocks |>
   filter(status == "dead") |>
-  select(year, confirmados_stock = n)
+  select(year, confirmados_stock = n) |>
+  left_join(
+    stocks_registered |> filter(status == "dead") |> select(year, registered = n),
+    by = "year"
+  ) |>
+  mutate(late_registrations = confirmados_stock - registered)
 
 # The military total in each year is linear in alpha: at_alpha0 - alpha x
 # residual. 10 builds the combatant bounds from these two columns and 11

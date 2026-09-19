@@ -1,12 +1,12 @@
 component,point,cumulative_net_migration_2022_2025,male_e0_loss_2025,female_e0_loss_2025
-Western,min,4290000,5.54,0.124
-Western,p2.5,4434325,5.54,0.126
-Western,mode,4782132,5.54,0.129
-Western,p97.5,5129938,5.54,0.132
-Western,max,5274264,5.54,0.133
-Russia and Belarus,min,700000,5.49,0.125
-Russia and Belarus,p2.5,861576,5.51,0.126
-Russia and Belarus,mode,1284402,5.54,0.129
-Russia and Belarus,p97.5,1778110,5.58,0.132
-Russia and Belarus,max,2000000,5.6,0.133
-None,no migration,0,4.93,0.102
+Western,min,4290000,5.76,0.126
+Western,p2.5,4434325,5.77,0.127
+Western,mode,4782132,5.77,0.13
+Western,p97.5,5129938,5.77,0.134
+Western,max,5274264,5.77,0.135
+Russia and Belarus,min,700000,5.72,0.127
+Russia and Belarus,p2.5,861576,5.73,0.128
+Russia and Belarus,mode,1284402,5.77,0.13
+Russia and Belarus,p97.5,1778110,5.81,0.134
+Russia and Belarus,max,2000000,5.83,0.135
+None,no migration,0,5.13,0.103

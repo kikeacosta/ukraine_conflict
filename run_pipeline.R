@@ -24,6 +24,7 @@ steps_to_run <- list(
   # stops on a missing ukr_rus_acled_source_comparison.rds
   list(name = "07c", file = "code/07_acled_ukr_conflict_deaths.R"),
   list(name = "08", file = "code/08_ualosses.R"),
+  list(name = "08b", file = "code/08b_registration_lag.R"),
   list(name = "09", file = "code/09_ualosses_missing_analysis.R"),
   list(name = "10", file = "code/10_dists_tables.R"),
   list(name = "11", file = "code/11_estimation_conflict_allcause_mortality.R"),

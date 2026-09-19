@@ -71,20 +71,20 @@ cmb <-
     listed = confirmed + missing
   )
 
-# the mode must be the total 09 imputed at the central alpha, and the
-# register columns must match the counts the profiles are built from
+# the mode must be the total 09 imputed at the central alpha; the register
+# columns must be 09's counts completed for registration lag (08b), and those
+# must rest on the registered counts the profiles are built from
+imp_tab <- read_rds("data_inter/ukr_ualosses_imputation_table.rds") |> arrange(year)
 stopifnot(
   isTRUE(all.equal(
     cmb$mode,
     ual_imp |> summarise(d = sum(dx), .by = year) |> arrange(year) |> pull(d)
   )),
+  isTRUE(all.equal(cmb$confirmed, imp_tab$confirmados_stock)),
+  isTRUE(all.equal(cmb$listed, imp_tab$confirmados_stock + imp_tab$missing_stock)),
   isTRUE(all.equal(
-    cmb$confirmed,
+    imp_tab$registered,
     ual2 |> filter(status == "dead") |> summarise(d = sum(dx), .by = year) |> arrange(year) |> pull(d)
-  )),
-  isTRUE(all.equal(
-    cmb$listed,
-    ual2 |> summarise(d = sum(dx), .by = year) |> arrange(year) |> pull(d)
   ))
 )
 
