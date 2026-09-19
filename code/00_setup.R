@@ -762,24 +762,23 @@ prop_female_birth <- 1 / (1 + srb)
 # reads that cache and stamps the number into the tables, and the figures
 # carry it in their captions.
 #
-#   1000   CONSTRUCTION (current). ~1.5 min in 11. Monte Carlo error of the
-#          reported quantiles is about 0.08 years in the worst cell, the 2.5%
-#          quantile of the male loss in 2025, so individual bounds move in the
-#          second decimal between runs. Medians stay good to roughly 0.05.
-#          Because the seed is fixed, two runs of the SAME size draw the same
-#          PERT quantiles, so differences between pipeline states are far more
-#          precise than either state on its own - which is what makes this
-#          size usable for comparing changes.
+#   1000   CONSTRUCTION. ~2 min in 11. The bootstrap standard error of the
+#          reported quantiles is about 0.02 years in the worst cell, the upper
+#          bound of the 2022 male loss, so individual bounds move in the
+#          second decimal between runs. Because the seed is fixed, two runs of
+#          the SAME size draw the same PERT quantiles, so differences between
+#          pipeline states are far more precise than either state on its own -
+#          which is what makes this size usable for comparing changes.
 #
-#   20000  PRODUCTION, for the estimates that get reported. ~28 min in 11.
-#          Brings that worst cell to about 0.018 years, inside the two decimal
-#          places the intervals are printed to.
+#   20000  PRODUCTION (current), for the estimates that get reported. About
+#          half an hour in 11. Brings that worst cell to about 0.004 years, so
+#          bounds are reproducible to about +/-0.01 years; strict
+#          reproducibility of the second decimal would need about 60,000.
 #
-# SET THIS TO 20000 BEFORE GENERATING THE FINAL ESTIMATES. Nothing silently
-# depends on remembering: the cache file name carries the size, 15 refuses a
-# cache that does not match, and tables/_run_provenance.csv records what every
-# table was built from.
-n_sim <- 1000
+# Nothing silently depends on remembering the size: the cache file name
+# carries it, 15 refuses a cache that does not match, and
+# tables/_run_provenance.csv records what every table was built from.
+n_sim <- 20000
 
 # One-off override that does not need the file edited, e.g. a quick check at
 # another size: UKR_N_SIM=20000 Rscript code/11_...R
