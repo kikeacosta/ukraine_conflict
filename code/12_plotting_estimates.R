@@ -194,7 +194,8 @@ lt3_summary <-
 lt3 |>
   ggplot(aes(x = sex, y = loss)) +
   geom_boxplot(outlier.shape = NA, alpha = 0.6, fill = "white") +
-  geom_jitter(width = 0.2, alpha = 0.05, size = 0.1, color = "black") +
+  # seeded, so the figure is the same in every run
+  geom_point(position = position_jitter(width = 0.2, seed = 1), alpha = 0.05, size = 0.1, color = "black") +
   geom_text(
     data = lt3_summary,
     aes(y = Median, label = sprintf("%.2f", Median)),

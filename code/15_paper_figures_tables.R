@@ -266,7 +266,8 @@ fig3 <-
   f3_dat |>
   ggplot(aes(x = sex, y = chg)) +
   geom_boxplot(outlier.shape = NA, alpha = 0.6, fill = "white") +
-  geom_jitter(width = 0.2, alpha = 0.04, size = 0.1, colour = "black") +
+  # seeded, so the figure is the same in every run
+  geom_point(position = position_jitter(width = 0.2, seed = 1), alpha = 0.04, size = 0.1, colour = "black") +
   geom_text(
     data = f3_sum,
     aes(y = Median, label = sprintf("%.2f", Median)),
@@ -1210,7 +1211,9 @@ end_labels <- function(d, side = c("right", "left")) {
     # labels move only vertically, so each keeps its own x in every panel
     xlim = c(-Inf, Inf),
     size = 2.7, segment.colour = NA,
-    box.padding = 0.15, min.segment.length = Inf, show.legend = FALSE
+    box.padding = 0.15, min.segment.length = Inf, show.legend = FALSE,
+    # seeded, so the labels land in the same place in every run
+    seed = 1
   )
 }
 # breaks only over the data when the axis is widened for labels: ggplot
