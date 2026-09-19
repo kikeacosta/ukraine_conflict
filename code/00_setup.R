@@ -666,19 +666,24 @@ impute_missing_cohorts <- function(alpha, tasas_long, stock_missing) {
 #
 #   min   0 - every unrecorded prisoner is outside the register (it never
 #         listed 3,857 of the people it now records as returned)
-#   mode  (pow_held + returned_from_captivity - register_alive) / residual -
-#         every unrecorded prisoner is among the never-resolved missing
+#   mode  (pow_held + returned_from_captivity - register_alive
+#          - projected captivity) / residual -
+#         every unrecorded prisoner is among the missing, and those the chain
+#         itself projects into captivity are not among the never-resolved
 #   max   the register's own share of resolutions that are alive (to
 #         prisoner or no longer listed), assuming the never-resolved are no
 #         more often alive than those resolved: a living prisoner is listed
 #         or exchanged more readily than a body is recovered
 #
-# The chain resolves nobody to a release - released prisoners are outside the
-# population at risk (ual_windows) - so a prisoner among today's missing who
-# is later exchanged is left to alpha, as the mode assumes, and not counted
-# twice. The mode leans high: the returned figure includes civilians, whom the
-# register does not list, and prisoners held in February and released by June
-# appear in both figures. Captures after February are missing from it.
+# Each unrecorded prisoner is counted once. Those among today's missing whom
+# the chain projects into captivity are resolved alive by the chain, so they
+# are taken out of the unrecorded prisoners before the rest are set against
+# the never-resolved. The chain resolves nobody to a release - released
+# prisoners are outside the population at risk (ual_windows) - so a prisoner
+# later exchanged is left to alpha. The mode leans high: the returned figure
+# includes civilians, whom the register does not list, and prisoners held in
+# February and released by June appear in both figures. Captures after
+# February are missing from it.
 #
 # residual is the number of missing never resolved at the end of the chain,
 # the quantity alpha applies to: impute_missing() is linear in alpha, so it is
@@ -703,7 +708,7 @@ returned_from_captivity <- 9606
 # net_projected_captivity  whether the chain's own projected transitions to
 #                 captivity are taken out of the unrecorded prisoners before
 #                 they are set against the never-resolved
-alpha_evidence <- function(impute, resolved, register_alive, net_projected_captivity = FALSE) {
+alpha_evidence <- function(impute, resolved, register_alive, net_projected_captivity = TRUE) {
   imp0 <- impute(0)
   imp1 <- impute(1)
   residual <- sum(imp0$imputed_dead - imp1$imputed_dead)

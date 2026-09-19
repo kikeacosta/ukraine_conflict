@@ -1,12 +1,12 @@
 alpha,evidence_range,total_military_deaths,male_e0_loss_2025,female_e0_loss_2025
 0,floor,172568,6.13,0.131
-0.016,2.5th percentile of draws,171479,6.09,0.131
+0.01,2.5th percentile of draws,171919,6.1,0.131
 0.05,NA,169168,5.99,0.131
-0.078,central,167287,5.91,0.131
+0.052,central,169061,5.99,0.131
 0.1,NA,165768,5.85,0.13
 0.15,NA,162369,5.71,0.13
 0.2,NA,158969,5.57,0.13
-0.234,97.5th percentile of draws,156660,5.48,0.13
+0.216,97.5th percentile of draws,157890,5.53,0.13
 0.25,NA,155569,5.43,0.13
 0.3,NA,152170,5.29,0.13
 0.331,cap,150045,5.2,0.13

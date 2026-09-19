@@ -279,15 +279,16 @@ write_rds(tasas_long, "data_inter/ukr_ualosses_transition_rates.rds")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # how much the linkage rules and the chain matter
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# The military total under four alternatives, each at the central alpha its
+# The military total under five alternatives, each at the central alpha its
 # own evidence gives: a person no longer listed held as still missing rather
 # than alive; rates from the people listed as missing in v14 only, without
 # those first listed later; the projection run to the longest duration
-# observed (about 55 months) instead of 48; and the earlier chain, in which
+# observed (about 55 months) instead of 48; the chain's projected captivity
+# counted among the unrecorded prisoners as well; and the earlier chain, in which
 # event-year cohorts stand in for duration. And how often records vanish: v14's
 # missing and v14's dead with no trace in v19 after both searches.
-military_under <- function(impute_fn, resolved) {
-  a <- alpha_evidence(impute_fn, resolved, register_alive)
+military_under <- function(impute_fn, resolved, net = TRUE) {
+  a <- alpha_evidence(impute_fn, resolved, register_alive, net_projected_captivity = net)
   by_year <-
     confirmados_df |>
     left_join(impute_fn(a$alpha_mode) |> select(year, imputed_dead), by = "year") |>
@@ -310,6 +311,8 @@ linkage_designs <-
     military_under(\(a) impute(a, modifyList(model, list(horizon = max(model$fitted$d1)))),
                    model$resolved) |>
       mutate(design = "duration model to the longest duration observed"),
+    military_under(impute, model$resolved, net = FALSE) |>
+      mutate(design = "projected captivity also counted among the unrecorded prisoners"),
     military_under(\(a) impute_missing_cohorts(a, tasas_long, stock_missing_2026), cohort_resolved) |>
       mutate(design = "event-year cohorts standing in for duration")
   ) |>
