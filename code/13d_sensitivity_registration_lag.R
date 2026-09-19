@@ -25,7 +25,7 @@
 #
 # INPUTS   data_inter/ukr_registration_completion.rds (08b)
 #          data_inter/ukr_ualosses_conflict_deaths_sex_age_2022_2025.rds (08)
-#          data_inter/ukr_ualosses_transition_rates.rds (09)
+#          data_inter/ukr_ualosses_resolution_model.rds, ukr_alpha_missing.rds (09)
 #          data_inter/ukr_alpha_sensitivity_e0.rds (13b)
 #          the static inputs of 13b
 # OUTPUTS  data_inter/ukr_registration_lag.rds
@@ -51,9 +51,13 @@ chain_factor <- function(L_from, s, horizon) {
   lb <- extend_bands(horizon) |> filter(status == s)
   exp(sum(pmax(0, pmin(lb$hi, horizon) - pmax(lb$lo, L_from)) * lb$lambda))
 }
-ratio_under <- function(horizon) {
+# each event month's completion factor under a horizon (none: 1)
+factors_under <- function(horizon) {
   completion$month |>
-    mutate(f = if (is.na(horizon)) 1 else map2_dbl(lag, status, \(l, s) chain_factor(l, s, horizon))) |>
+    mutate(f = if (is.na(horizon)) 1 else map2_dbl(lag, status, \(l, s) chain_factor(l, s, horizon)))
+}
+ratio_under <- function(horizon) {
+  factors_under(horizon) |>
     summarise(n_completed = sum(n_v19 * f), n_v19 = sum(n_v19), .by = c(year, status)) |>
     transmute(year, status, ratio = n_completed / n_v19)
 }
@@ -79,23 +83,27 @@ stocks_registered <-
   summarise(n = sum(dx), .by = c(year, status)) |>
   mutate(status = as.character(status))
 register_alive <- sum(stocks_registered$n[stocks_registered$status %in% c("prisoner", "released_prisoner")])
-tasas_long <- read_rds("data_inter/ukr_ualosses_transition_rates.rds")
+model <- read_rds("data_inter/ukr_ualosses_resolution_model.rds")
+alpha_used <- read_rds("data_inter/ukr_alpha_missing.rds")
 
-military_under <- function(r) {
-  st <- stocks_registered |>
-    filter(status %in% c("dead", "missing")) |>
-    left_join(r, by = c("year", "status")) |>
-    mutate(n = n * ratio)
-  dead <- st |> filter(status == "dead") |> select(year, confirmed = n)
-  miss <- st |> filter(status == "missing") |> select(year, missing_stock = n)
-  a <- alpha_evidence(tasas_long, miss, register_alive)
-  impute_missing(a$alpha_mode, tasas_long, miss) |>
+# each year's registered count spread over its months as v19 lists them, as
+# in 09, and each month completed by its factor under the horizon
+military_under <- function(horizon) {
+  st <- factors_under(horizon) |>
+    mutate(share = n_v19 / sum(n_v19), .by = c(year, status)) |>
+    left_join(stocks_registered |> rename(n_year = n), by = c("year", "status")) |>
+    mutate(completed = n_year * share * f)
+  dead <- st |> filter(status == "dead") |> summarise(confirmed = sum(completed), .by = year)
+  miss <- st |> filter(status == "missing") |> select(month = m, year, missing_stock = completed)
+  impute_fn <- \(a) impute_missing(a, model, miss)
+  a <- alpha_evidence(impute_fn, model$resolved, register_alive,
+                      net_projected_captivity = alpha_used$net_projected_captivity)
+  impute_fn(a$alpha_mode) |>
     left_join(dead, by = "year") |>
     transmute(year, alpha = a$alpha_mode, confirmed, missing = missing_stock, imputed_dead,
               total = confirmed + imputed_dead)
 }
-military <- ratios |> nest(.by = c(scenario, horizon)) |>
-  mutate(res = map(data, military_under)) |> select(-data) |> unnest(res)
+military <- scenarios |> mutate(res = map(horizon, military_under)) |> unnest(res)
 
 # 3. THE DETERMINISTIC PROJECTION, AS IN 13b ===================================
 param_table <- read_rds("data_inter/ukr_param_table.rds")

@@ -431,27 +431,149 @@ ual_chain_state <- function(to) {
   case_when(to == "no_longer_listed" ~ "alive", .default = to)
 }
 
-# Synthetic-cohort Markov imputation of the long-term missing. Defined once
-# so that 09 (the central value of alpha), 13b (the sweep over alpha) and the
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# resolution of the missing by duration since disappearance ====
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# How fast the missing are resolved depends on how long they have been
+# missing. The cause-specific hazards of leaving "missing" - to death, to
+# captivity, out of the register - are taken as constant within bands of
+# months since the event and the same for every event month: duration, not
+# cohort, carries the pattern. They are fitted by maximum likelihood to the
+# windows between releases, one cell per event month and window, and each
+# event month's missing are then carried forward from the duration they have
+# reached in v19.
+ual_duration_breaks <- c(0, 3, 6, 9, 12, 18, 24, 30, 36, 42, 48, 60)
+ual_resolutions <- c("dead", "prisoner", "no_longer_listed")
+
+# months from the middle of an event month to a date
+ual_months_since <- function(date, month) as.numeric(date - (month + 14)) / 30.44
+
+# For someone missing at duration d0, the probability of each outcome by d1:
+# still missing, or first resolved to each of ual_resolutions, under hazards
+# h[band, outcome] per month (competing risks, piecewise constant).
+ual_resolve <- function(h, d0, d1, breaks = ual_duration_breaks) {
+  still <- rep(1, length(d0))
+  p <- matrix(0, length(d0), ncol(h), dimnames = list(NULL, colnames(h)))
+  for (b in seq_len(nrow(h))) {
+    exposure <- pmax(0, pmin(d1, breaks[b + 1]) - pmax(d0, breaks[b]))
+    total <- sum(h[b, ])
+    leave <- 1 - exp(-exposure * total)
+    if (total > 0) p <- p + outer(still * leave, h[b, ] / total)
+    still <- still * (1 - leave)
+  }
+  cbind(missing = still, p)
+}
+
+# One row per event month and window between consecutive releases: the
+# durations at its start and end, and how many of those missing at its start
+# are in each outcome at its end. counts: month, from_release, to, n.
+ual_duration_cells <- function(counts) {
+  rel_date <- set_names(ual_releases$date, ual_releases$release)
+  next_rel <- set_names(ual_releases$release[-1], ual_releases$release[-nrow(ual_releases)])
+  counts |>
+    summarise(n = sum(n), .by = c(month, from_release, to)) |>
+    complete(nesting(month, from_release), to = c("missing", ual_resolutions), fill = list(n = 0)) |>
+    pivot_wider(names_from = to, values_from = n) |>
+    mutate(d0 = pmax(0, ual_months_since(rel_date[from_release], month)),
+           d1 = ual_months_since(rel_date[next_rel[from_release]], month)) |>
+    filter(d1 > d0)
+}
+
+# Maximum-likelihood hazards from the cells: each cell's counts are
+# multinomial over still missing and the three resolutions, with the
+# probabilities ual_resolve() gives for its durations.
+#
+# A release can record one kind of resolution in a batch - v19 added
+# prisoners and removed records wholesale - which a duration pattern alone
+# would read as belonging to whatever durations were at risk in that window.
+# So each window has its own multiplier per outcome (the first window is the
+# reference), and the projection uses their average over the year the windows
+# span, weighted by each window's length: the hazard at duration d is
+# h(d) x that average.
+#
+# theta holds the log-hazards by band and outcome, then the log-multipliers of
+# the later windows by outcome. Log-hazards are bounded below, so an outcome
+# never seen in a band gets a hazard of effectively zero and no variance.
+# horizon: the duration the projection runs to.
+ual_window_months <- diff(ual_releases$date) |> as.numeric() / 30.44
+ual_theta_hazards <- function(theta, nb, k, windows = ual_window_months) {
+  nw <- length(windows)
+  h <- matrix(exp(theta[seq_len(nb * k)]), nb, k, dimnames = list(NULL, ual_resolutions))
+  mult <- rbind(1, matrix(exp(theta[nb * k + seq_len((nw - 1) * k)]), nw - 1, k))
+  list(h = h, mult = mult,
+       projection = sweep(h, 2, colSums(mult * windows) / sum(windows), "*"))
+}
+ual_fit_durations <- function(cells, horizon, breaks = ual_duration_breaks) {
+  nb <- length(breaks) - 1
+  k <- length(ual_resolutions)
+  nw <- length(ual_window_months)
+  window <- match(cells$from_release, ual_releases$release)
+  y <- as.matrix(cells[, c("missing", ual_resolutions)])
+  cell_probs <- function(theta) {
+    hz <- ual_theta_hazards(theta, nb, k)
+    p <- matrix(0, nrow(cells), k + 1, dimnames = list(NULL, c("missing", ual_resolutions)))
+    for (w in seq_len(nw)) {
+      i <- window == w
+      p[i, ] <- ual_resolve(sweep(hz$h, 2, hz$mult[w, ], "*"), cells$d0[i], cells$d1[i], breaks)
+    }
+    p
+  }
+  nll <- function(theta) -sum(y * log(pmax(cell_probs(theta)[, colnames(y)], 1e-300)))
+  n_par <- nb * k + (nw - 1) * k
+  fit <- optim(c(rep(log(0.003), nb * k), rep(0, (nw - 1) * k)), nll, method = "L-BFGS-B",
+               lower = c(rep(-20, nb * k), rep(-10, (nw - 1) * k)),
+               upper = c(rep(0, nb * k), rep(10, (nw - 1) * k)),
+               hessian = TRUE, control = list(maxit = 5000, factr = 1e5))
+  stopifnot(fit$convergence == 0)
+  free <- c(fit$par[seq_len(nb * k)] > -19.9, rep(TRUE, (nw - 1) * k))
+  vcov <- matrix(0, n_par, n_par)
+  vcov[free, free] <- solve(fit$hessian[free, free])
+  hz <- ual_theta_hazards(fit$par, nb, k)
+  list(breaks = breaks, h = hz$projection, h_reference = hz$h, window_multipliers = hz$mult,
+       theta = fit$par, vcov = vcov, nb = nb, k = k, horizon = horizon,
+       resolved = colSums(y[, ual_resolutions]),
+       fitted = cells |> bind_cols(as_tibble(cell_probs(fit$par), .name_repair = \(x) paste0("p_", x))))
+}
+
+# Imputation of the long-term missing. Defined once so that 09 (the central
+# value of alpha), 13b (the sweep over alpha, and rate sampling), 13d and the
 # range computed by alpha_evidence() below all use the SAME formula.
 #
-# tasas_long     twelve-month resolution probabilities by event-year cohort
-#                and destination status (alive, dead, prisoner, missing), in
-#                `prop`, as built in 09 with ual_compose(); `n` is prop times
-#                the cohort's missing in v14, the weight alpha_evidence()
-#                gives each cohort.
-# stock_missing  tibble(year, missing_stock) - the missing stock by event
-#                year, from step 08's output.
-# alpha          share of the NEVER-RESOLVED long-term missing who are
-#                alive; 1 - alpha are dead. The one free parameter: its range
-#                comes from alpha_evidence(), 11 draws it, 13b sweeps it.
+# model          the fitted durations (ual_fit_durations()): hazards by band
+#                and the horizon
+# stock_missing  tibble(month, year, missing_stock): v19's missing by event
+#                month, completed for registration lag (09)
+# alpha          share of the NEVER-RESOLVED long-term missing who are alive;
+#                1 - alpha are dead. The one free parameter: its range comes
+#                from alpha_evidence(), 11 draws it, 13b sweeps it.
 #
-# A "step" in the chain is twelve months, v14 to v19, composed from the three
-# windows between the four releases; event-year cohorts, one year apart, stand
-# in for duration since disappearance. Returns stock_missing with
-# imputed_dead, imputed_alive and imputed_prisoner added. Every output is
-# linear in alpha.
-impute_missing <- function(alpha, tasas_long, stock_missing) {
+# Each event month's missing move from the duration they have reached in v19
+# to the horizon, resolving along the way to death, to captivity or out of the
+# register; those still missing at the horizon are the never-resolved, and a
+# share alpha of them is alive. A month already past the horizon is not moved.
+# Returns, by event year, missing_stock, imputed_dead, imputed_alive (no longer
+# listed, and the alive share of the never-resolved) and imputed_prisoner.
+# Every output is linear in alpha.
+impute_missing <- function(alpha, model, stock_missing) {
+  d_v19 <- ual_months_since(ual_releases$date[nrow(ual_releases)], stock_missing$month)
+  p <- ual_resolve(model$h, pmin(d_v19, model$horizon), model$horizon, model$breaks)
+  stock_missing |>
+    mutate(
+      never_resolved = missing_stock * p[, "missing"],
+      imputed_dead = missing_stock * p[, "dead"] + never_resolved * (1 - alpha),
+      imputed_alive = missing_stock * p[, "no_longer_listed"] + never_resolved * alpha,
+      imputed_prisoner = missing_stock * p[, "prisoner"]
+    ) |>
+    summarise(across(c(missing_stock, imputed_dead, imputed_alive, imputed_prisoner), sum),
+              .by = year)
+}
+
+# The earlier form of the chain, kept for comparison (09): twelve-month steps,
+# with event-year cohorts, one year apart, standing in for duration since
+# disappearance. tasas_long holds the twelve-month probabilities by cohort
+# and state (alive, dead, prisoner, missing) in `prop`, and stock_missing the
+# missing by event year.
+impute_missing_cohorts <- function(alpha, tasas_long, stock_missing) {
   suelo_vivo <- alpha
   suelo_muerto <- 1 - alpha
 
@@ -572,24 +694,34 @@ impute_missing <- function(alpha, tasas_long, stock_missing) {
 pow_held <- 7000
 returned_from_captivity <- 9606
 
-# register_alive: the register's prisoners plus released prisoners, events
-# 2022-2025, from 08's redistributed counts
-alpha_evidence <- function(tasas_long, stock_missing, register_alive) {
-  imp0 <- impute_missing(0, tasas_long, stock_missing)
-  imp1 <- impute_missing(1, tasas_long, stock_missing)
+# impute          function(alpha) giving impute_missing()'s output for the
+#                 chain in use
+# resolved        the first resolutions the chain rests on, as counts named
+#                 dead and by the alive outcomes (prisoner, no longer listed)
+# register_alive  the register's prisoners plus released prisoners, events
+#                 2022-2025, from 08's redistributed counts
+# net_projected_captivity  whether the chain's own projected transitions to
+#                 captivity are taken out of the unrecorded prisoners before
+#                 they are set against the never-resolved
+alpha_evidence <- function(impute, resolved, register_alive, net_projected_captivity = FALSE) {
+  imp0 <- impute(0)
+  imp1 <- impute(1)
   residual <- sum(imp0$imputed_dead - imp1$imputed_dead)
+  projected_captivity <- sum(imp0$imputed_prisoner)
 
-  resolved <- tasas_long |> filter(status2 != "missing")
-  resolved_alive <- sum(resolved$n[resolved$status2 %in% c("alive", "prisoner")])
-  resolved_all <- sum(resolved$n)
+  resolved_alive <- sum(resolved[names(resolved) != "dead"])
+  resolved_all <- sum(resolved)
   unrecorded <- pow_held + returned_from_captivity - register_alive
+  among_never_resolved <- unrecorded - if (net_projected_captivity) projected_captivity else 0
 
   out <- tibble(
     alpha_min = 0,
-    alpha_mode = unrecorded / residual,
+    alpha_mode = among_never_resolved / residual,
     alpha_max = resolved_alive / resolved_all,
     residual = residual,
     unrecorded_prisoners = unrecorded,
+    projected_captivity = projected_captivity,
+    net_projected_captivity = net_projected_captivity,
     register_alive = register_alive,
     resolved_alive = resolved_alive,
     resolved_dead = resolved_all - resolved_alive,

@@ -8,9 +8,9 @@ source("code/00_setup.R")
 # How do the personnel recorded as "missing" resolve? Estimated by following
 # everyone listed as missing through the four register releases - v14 (16 Sep
 # 2025), v16 (4 Dec 2025), v18 (23 Apr 2026) and v19 (19 Sep 2026) - and
-# composing the three windows between them into the twelve months from v14 to
-# v19: the same one-year spacing as the event-year cohorts the chain below uses
-# to stand in for duration since disappearance.
+# fitting, to the three windows between them, how fast the missing leave that
+# status by months since the event. Each event month's missing in v19 are then
+# carried forward from the duration they have reached.
 #
 # The releases are large individual-level files that are not tracked in git.
 # Only the anonymous count summaries below cross the cache boundary, so the
@@ -61,9 +61,11 @@ linkage <- cache_rds(
     dead_corrected <- ual_corrected_key(dead_absent, lu19, lu14)
 
     bind_rows(
-      ual_windows(hist, "alive") |> count(year, entry, from_release, to) |>
+      ual_windows(hist, "alive") |>
+        count(year, month = floor_date(date_evnt, "month"), entry, from_release, to) |>
         mutate(table = "windows", rule = "alive"),
-      ual_windows(hist, "missing") |> count(year, entry, from_release, to) |>
+      ual_windows(hist, "missing") |>
+        count(year, month = floor_date(date_evnt, "month"), entry, from_release, to) |>
         mutate(table = "windows", rule = "missing"),
       hist |> count(year, entry, release, to = status, found) |> mutate(table = "found"),
       # each person's sequence of statuses, for the documentation's counts of
@@ -83,7 +85,7 @@ linkage <- cache_rds(
   }
 )
 
-windows <- linkage |> filter(table == "windows") |> select(rule, year, entry, from_release, to, n)
+windows <- linkage |> filter(table == "windows") |> select(rule, year, month, entry, from_release, to, n)
 at_risk_v14 <-
   windows |>
   filter(rule == "alive", from_release == "v14") |>
@@ -113,19 +115,27 @@ stocks_registered <-
   mutate(status = as.character(status)) |>
   arrange(year, status)
 
-# Registration lag (08b): v19's dead and missing brought to the completeness
-# events reach at four years, each year by the ratio of its completed to its
-# registered count. The deaths added are late registrations: people not yet in
-# the register at all. Prisoners and released prisoners are left as recorded.
-completion <-
-  read_rds("data_inter/ukr_registration_completion.rds")$year |>
-  select(year, status, ratio)
+# By event month, and completed for registration lag (08b). Each year's
+# registered count is spread over its months as v19 lists them, and each month
+# is brought to the completeness events reach at four years by its own factor.
+# The deaths added are late registrations: people not yet in the register at
+# all. Prisoners and released prisoners are left as recorded.
+completion <- read_rds("data_inter/ukr_registration_completion.rds")
+stock_month <-
+  completion$month |>
+  mutate(share = n_v19 / sum(n_v19), .by = c(year, status)) |>
+  left_join(stocks_registered |> rename(n_year = n), by = c("year", "status")) |>
+  transmute(month = m, year, status, registered = n_year * share, completed = registered * factor)
+stopifnot(isTRUE(all.equal(
+  stock_month |> summarise(r = sum(registered), .by = c(year, status)) |> arrange(year, status) |> pull(r),
+  stocks_registered |> filter(status %in% c("dead", "missing")) |> arrange(year, status) |> pull(n)
+)))
 stocks <-
-  stocks_registered |>
-  left_join(completion, by = c("year", "status")) |>
-  mutate(n = n * coalesce(ratio, 1)) |>
-  select(-ratio)
-stopifnot(nrow(stocks) == nrow(stocks_registered))
+  bind_rows(
+    stocks_registered |> filter(!status %in% c("dead", "missing")),
+    stock_month |> summarise(n = sum(completed), .by = c(year, status))
+  ) |>
+  arrange(year, status)
 
 print(stocks |> pivot_wider(names_from = status, values_from = n))
 
@@ -146,32 +156,65 @@ resolution_12m <-
   select(year, at_risk_v14 = at_risk, later_entrants, all_of(ual_outcomes))
 print(as.data.frame(resolution_12m |> mutate(across(all_of(ual_outcomes), \(x) round(100 * x, 2)))))
 
+# the same composed by event-year cohort, in the states of the earlier chain,
+# kept for the comparison of designs below
 tasas_long <- chain_rates(windows |> filter(rule == "alive"))
 stopifnot(tasas_long |> summarise(p = sum(prop), .by = year) |> with(all(abs(p - 1) < 1e-9)))
-print(tasas_long |> arrange(year, status2))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# synthetic-cohort Markov imputation of the missing
+# resolution by duration since disappearance
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# impute_missing() (00_setup.R) holds the chain itself, extracted here so
-# this call and the alpha sensitivity in 13b share one formula instead of
-# two copies that could drift apart. A "step" in the chain is the twelve
-# months from v14 to v19, and event-year cohorts, one year apart, stand in
-# for duration since disappearance.
-stock_missing_2026 <-
-  stocks |>
+# Hazards of leaving "missing" by months since the event (00_setup.R,
+# ual_fit_durations), fitted to one cell per event month and window. The
+# projection runs to the horizon 08b settled for registration lag, 48 months:
+# the longest duration measured on at least a year of event months. Beyond it
+# the data rest on a few months of 2022 events and on v19's one-off deletion
+# of a batch of February 2022 records.
+fit_model <- function(w) {
+  ual_fit_durations(ual_duration_cells(w), horizon = completion$L_ref)
+}
+model <- fit_model(windows |> filter(rule == "alive"))
+
+hazards <-
+  as_tibble(model$h) |>
+  mutate(band = paste0(head(model$breaks, -1), "-", model$breaks[-1]), .before = 1)
+cat("\n=== MONTHLY HAZARDS OF RESOLUTION BY MONTHS SINCE THE EVENT (%) ===\n")
+print(as.data.frame(hazards |> mutate(across(-band, \(x) round(100 * x, 3)))))
+
+# the fit against the counts, by event year and window
+fit_check <-
+  model$fitted |>
+  mutate(year = year(month), at_risk = missing + dead + prisoner + no_longer_listed,
+         across(c(p_dead, p_prisoner, p_no_longer_listed), \(p) p * at_risk, .names = "fit_{.col}")) |>
+  summarise(across(c(at_risk, dead, prisoner, no_longer_listed, starts_with("fit_")), sum),
+            .by = c(year, from_release))
+cat("\n=== OBSERVED AND FITTED RESOLUTIONS BY COHORT AND WINDOW ===\n")
+print(as.data.frame(fit_check |> mutate(across(where(is.double), round))))
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# imputation of the missing
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# impute_missing() (00_setup.R) holds the projection itself, so this call,
+# the alpha sensitivity in 13b and the lag sensitivity in 13d share one
+# formula instead of copies that could drift apart.
+stock_missing_month <-
+  stock_month |>
   filter(status == "missing") |>
-  select(year, missing_stock = n)
+  select(month, year, missing_stock = completed)
+stock_missing_2026 <-
+  stock_missing_month |>
+  summarise(missing_stock = sum(missing_stock), .by = year)
+impute <- function(a, m = model) impute_missing(a, m, stock_missing_month)
 
 # the range of alpha the evidence allows (00_setup.R sets out the sources).
 # Prisoners are alive whether still held or released, so both statuses count
 # as the prisoners the register knows of.
 register_alive <- sum(stocks$n[stocks$status %in% c("prisoner", "released_prisoner")])
-alpha_range <- alpha_evidence(tasas_long, stock_missing_2026, register_alive)
+alpha_range <- alpha_evidence(impute, model$resolved, register_alive)
 print(as.data.frame(alpha_range))
 write_rds(alpha_range, "data_inter/ukr_alpha_missing.rds")
 
-imputation_final <- impute_missing(alpha_range$alpha_mode, tasas_long, stock_missing_2026)
+imputation_final <- impute(alpha_range$alpha_mode)
 
 print(imputation_final)
 
@@ -195,14 +238,8 @@ confirmados_df <-
 military_alpha_lines <-
   confirmados_df |>
   left_join(stock_missing_2026, by = "year") |>
-  left_join(
-    impute_missing(0, tasas_long, stock_missing_2026) |> select(year, dead0 = imputed_dead),
-    by = "year"
-  ) |>
-  left_join(
-    impute_missing(1, tasas_long, stock_missing_2026) |> select(year, dead1 = imputed_dead),
-    by = "year"
-  ) |>
+  left_join(impute(0) |> select(year, dead0 = imputed_dead), by = "year") |>
+  left_join(impute(1) |> select(year, dead1 = imputed_dead), by = "year") |>
   transmute(
     year,
     confirmed = confirmados_stock,
@@ -230,42 +267,53 @@ write_rds(
   combined_losses |> mutate(year = as.integer(as.character(year))),
   "data_inter/ukr_ualosses_imputation_table.rds"
 )
-write_rds(tasas_long, "data_inter/ukr_ualosses_transition_rates.rds")
-# the window counts behind them, for the sampling check in 13b, and every
-# outcome kept apart, for table A2
-write_rds(windows |> filter(rule == "alive") |> select(-rule), "data_inter/ukr_ualosses_window_counts.rds")
+# the fitted model and the missing by event month, for 13b and 13d
+write_rds(model, "data_inter/ukr_ualosses_resolution_model.rds")
+write_rds(stock_missing_month, "data_inter/ukr_ualosses_missing_by_month.rds")
+write_rds(hazards, "data_inter/ukr_ualosses_resolution_hazards.rds")
+# the twelve-month rates by event-year cohort, every outcome kept apart, for
+# table A2, and in the earlier chain's states
 write_rds(resolution_12m, "data_inter/ukr_ualosses_resolution_12m.rds")
+write_rds(tasas_long, "data_inter/ukr_ualosses_transition_rates.rds")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# how much the linkage rules matter
+# how much the linkage rules and the chain matter
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# The military total under two alternatives, each at the central alpha its own
-# evidence gives: a person no longer listed held as still missing rather than
-# alive; and rates from the people listed as missing in v14 only, without
-# those first listed later. And how often records vanish: v14's missing and
-# v14's dead with no trace in v19 after both searches.
-military_under <- function(tl) {
-  a <- alpha_evidence(tl, stock_missing_2026, register_alive)
+# The military total under four alternatives, each at the central alpha its
+# own evidence gives: a person no longer listed held as still missing rather
+# than alive; rates from the people listed as missing in v14 only, without
+# those first listed later; the projection run to the longest duration
+# observed (about 55 months) instead of 48; and the earlier chain, in which
+# event-year cohorts stand in for duration. And how often records vanish: v14's
+# missing and v14's dead with no trace in v19 after both searches.
+military_under <- function(impute_fn, resolved) {
+  a <- alpha_evidence(impute_fn, resolved, register_alive)
   by_year <-
     confirmados_df |>
-    left_join(impute_missing(a$alpha_mode, tl, stock_missing_2026) |> select(year, imputed_dead),
-              by = "year") |>
+    left_join(impute_fn(a$alpha_mode) |> select(year, imputed_dead), by = "year") |>
     transmute(year, confirmed = confirmados_stock, total = confirmados_stock + imputed_dead)
   tibble(alpha_mode = a$alpha_mode, alpha_max = a$alpha_max, residual = a$residual,
          military = sum(by_year$total), by_year = list(by_year))
 }
+model_missing_rule <- fit_model(windows |> filter(rule == "missing"))
+model_v14_only <- fit_model(windows |> filter(rule == "alive", entry == "v14"))
+cohort_resolved <- with(tasas_long |> filter(status2 != "missing") |> summarise(n = sum(n), .by = status2),
+                        set_names(n, status2))
 linkage_designs <-
-  tibble(
-    design = c("no longer listed = alive (production)",
-               "no longer listed = still missing",
-               "people listed as missing in v14 only"),
-    rates = list(tasas_long,
-                 chain_rates(windows |> filter(rule == "missing")),
-                 chain_rates(windows |> filter(rule == "alive", entry == "v14")))
+  bind_rows(
+    military_under(impute, model$resolved) |>
+      mutate(design = "duration model, no longer listed = alive (production)"),
+    military_under(\(a) impute(a, model_missing_rule), model_missing_rule$resolved) |>
+      mutate(design = "no longer listed = still missing"),
+    military_under(\(a) impute(a, model_v14_only), model_v14_only$resolved) |>
+      mutate(design = "people listed as missing in v14 only"),
+    military_under(\(a) impute(a, modifyList(model, list(horizon = max(model$fitted$d1)))),
+                   model$resolved) |>
+      mutate(design = "duration model to the longest duration observed"),
+    military_under(\(a) impute_missing_cohorts(a, tasas_long, stock_missing_2026), cohort_resolved) |>
+      mutate(design = "event-year cohorts standing in for duration")
   ) |>
-  mutate(out = map(rates, military_under)) |>
-  select(-rates) |>
-  unnest(out)
+  relocate(design)
 stopifnot(isTRUE(all.equal(linkage_designs$military[1], sum(combined_losses$total_estimado))))
 
 no_trace <-

@@ -8,8 +8,8 @@
 #      inside the range the evidence allows; here it is swept over [0, 1], so
 #      the reader can see how far the results move across and beyond that
 #      range;
-#   2. sampling error in the observed transition rates, which are proportions
-#      estimated from finite counts and are not propagated (section 5);
+#   2. sampling error in the resolution hazards, which are estimated from
+#      finite counts and are not propagated (section 5);
 #   3. the linkage rules behind those rates (section 6).
 # ==============================================================================
 #
@@ -39,8 +39,8 @@
 # at the ends and the centre of the range, so the grid points at those three
 # values reproduce them exactly.
 #
-# INPUTS   data_inter/ukr_ualosses_transition_rates.rds            (from 09)
-#          data_inter/ukr_ualosses_window_counts.rds               (from 09)
+# INPUTS   data_inter/ukr_ualosses_resolution_model.rds            (from 09)
+#          data_inter/ukr_ualosses_missing_by_month.rds            (from 09)
 #          data_inter/ukr_alpha_missing.rds, ukr_ualosses_linkage_checks.rds,
 #          ukr_ualosses_imputation_table.rds                       (from 09)
 #          data_inter/ukr_ualosses_conflict_deaths_sex_age_2022_2025.rds (08)
@@ -129,16 +129,14 @@ draw_mig_by_year <- param_table |> filter(str_starts(role, "mig_")) |>
 conf_cmb_by_year <- param_table |> filter(role == "combatants") |> select(year, conf_cmb = confirmed)
 
 # 2. THE MISSING-COMBATANT IMPUTATION, RE-RUN ACROSS A GRID OF alpha ==========
-# tasas_long is 09's own saved output: the twelve-month resolution rates the
-# chain is built from. Re-reading it here (rather than re-deriving it from
-# the raw registers) means this script cannot silently drift onto a
-# different set of empirical rates than 09 actually used.
-tasas_long <- read_rds("data_inter/ukr_ualosses_transition_rates.rds")
-
-# the dead and the missing exactly as 09 imputed them: v19 completed for
-# registration lag (08b)
+# 09's own saved model and stocks: the resolution hazards the imputation is
+# built from, and the dead and the missing exactly as 09 imputed them - v19
+# completed for registration lag (08b), the missing by event month. Re-reading
+# them here (rather than re-deriving them from the raw registers) means this
+# script cannot silently drift onto different rates or counts than 09 used.
+model <- read_rds("data_inter/ukr_ualosses_resolution_model.rds")
+stock_missing_month <- read_rds("data_inter/ukr_ualosses_missing_by_month.rds")
 imputation_table <- read_rds("data_inter/ukr_ualosses_imputation_table.rds")
-stock_missing_2026 <- imputation_table |> select(year, missing_stock)
 confirmados_df <- imputation_table |> select(year, confirmados_stock)
 
 # A regular grid, rounded to 2dp so seq()'s floating-point accumulation cannot
@@ -163,7 +161,7 @@ point_label <- function(a) {
 }
 
 military_by_alpha <- map_dfr(alpha_grid, function(a) {
-  impute_missing(a, tasas_long, stock_missing_2026) |>
+  impute_missing(a, model, stock_missing_month) |>
     left_join(confirmados_df, by = "year") |>
     mutate(
       alpha = a,
@@ -308,55 +306,42 @@ ggsave("figures/exploratory/alpha_sensitivity_e0.png", p_e0, w = 9, h = 4.5)
 # ==============================================================================
 # 5. SAMPLING ERROR IN THE OBSERVED TRANSITION RATES
 # ==============================================================================
-# The rates in ukr_ualosses_transition_rates.rds are proportions estimated from
-# finite counts, so they carry sampling error that the pipeline does not
-# propagate. This measures it rather than asserting it is small.
+# The hazards in 09's model are estimated from finite counts, so they carry
+# sampling error that the pipeline does not propagate. This measures it rather
+# than asserting it is small.
 #
-# Each cohort-year and window between releases is treated as an independent
-# multinomial sample over the outcomes, with its observed number at risk (09's
-# window counts). Draws come from the Dirichlet posterior with a Jeffreys
-# prior, counts + 1/2, generated from independent Gammas so no extra package
-# is needed; each draw is composed into twelve-month rates by the same
-# ual_compose() as 09 and goes through the same impute_missing() chain at the
-# central alpha, so the spread is attributable to rate sampling alone.
+# Draws of the log-hazards and window multipliers come from the normal
+# approximation to their sampling distribution - the maximum-likelihood
+# estimate and the inverse of the observed information 09 saved with the
+# model. Each draw goes through the same impute_missing() at the central alpha,
+# so the spread is attributable to sampling alone.
 #
 # WHY THIS IS REPORTED RATHER THAN PROPAGATED: the observed transitions carry
-# about a sixth of the imputed dead (see the decomposition printed below); the
+# a minority of the imputed dead (see the decomposition printed below); the
 # terminal alpha assumption carries the rest. The resulting band is about the
 # effect of moving alpha by 0.01, small next to the spread alpha produces, so
 # folding it in would add machinery without changing any reported figure.
 set.seed(42)
 B_rates <- 2000
 
-rdirich <- function(a) {
-  g <- rgamma(length(a), shape = a, rate = 1)
-  g / sum(g)
+theta_draws <- {
+  z <- matrix(rnorm(B_rates * length(model$theta)), B_rates)
+  sweep(z %*% chol(model$vcov + diag(1e-12, length(model$theta)), pivot = FALSE), 2, model$theta, "+")
 }
-
-window_counts <-
-  read_rds("data_inter/ukr_ualosses_window_counts.rds") |>
-  summarise(n = sum(n), .by = c(year, from_release, to)) |>
-  complete(nesting(year, from_release), to = ual_outcomes, fill = list(n = 0))
-
-boot_total <- vapply(seq_len(B_rates), function(b) {
-  resampled <-
-    window_counts |>
-    mutate(n = rdirich(n + 0.5), .by = c(year, from_release)) |>
-    ual_compose() |>
-    mutate(status2 = ual_chain_state(to)) |>
-    summarise(prop = sum(prop), .by = c(year, status2))
-  imp <- impute_missing(alpha_mode, resampled, stock_missing_2026) |>
+boot_total <- apply(theta_draws, 1, function(theta) {
+  drawn <- modifyList(model, list(h = ual_theta_hazards(theta, model$nb, model$k)$projection))
+  imp <- impute_missing(alpha_mode, drawn, stock_missing_month) |>
     left_join(confirmados_df, by = "year") |>
     mutate(total = confirmados_stock + imputed_dead)
   sum(imp$total)
-}, numeric(1))
+})
 
 point_total <- sum(at_point("mode"))
 ci_rates <- quantile(boot_total, c(0.025, 0.975))
 
 # where the imputed dead actually come from: observed transitions carry the
 # chain terms, the terminal assumption carries the residual
-imputed_dead_total <- sum(impute_missing(alpha_mode, tasas_long, stock_missing_2026)$imputed_dead)
+imputed_dead_total <- sum(impute_missing(alpha_mode, model, stock_missing_month)$imputed_dead)
 terminal_total <- (1 - alpha_mode) * alpha_range$residual
 observed_part <- imputed_dead_total - terminal_total
 
