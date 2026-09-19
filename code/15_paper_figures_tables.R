@@ -50,7 +50,8 @@
 #   tableA13_pert_shape.csv                          13g
 #   tableA14_years_of_life_lost.csv                  14b
 #   tableA15_adult_mortality_45q15.csv               14b
-#   table8_structural_sensitivity.csv                13, 13b-13g
+#   tableA25_civilian_age_profile.csv                13h
+#   table8_structural_sensitivity.csv                13, 13b-13h
 #   tableA16_missing_alive_by_lag_horizon.csv        13d
 #   tableA17_military_triangulation.csv              09, data_input/official_figures.csv
 #   tableA18_returned_prisoners_prior_status.csv     09
@@ -1595,6 +1596,29 @@ tA13 <-
 save_tab(tA13, "tableA13_pert_shape.csv")
 print(tA13)
 
+# A25: the age profile of civilian deaths (13h). The deaths beyond OHCHR's
+# verified count given an older profile, with the share aged 60 or more and
+# the mean age of all civilian deaths in 2022, and the loss in 2022, when
+# nearly all of those deaths fall, and in 2025
+civ_age <- read_rds("data_inter/ukr_civilian_age_profile_e0.rds")
+tA25 <-
+  civ_age$loss |>
+  filter(year %in% c(2022, 2025)) |>
+  mutate(col = paste0(if_else(sex == "m", "male_", "female_"), year),
+         loss = round(loss, if_else(sex == "f" & year == 2025, 3, 2))) |>
+  select(scenario, col, loss) |>
+  pivot_wider(names_from = col, values_from = loss) |>
+  left_join(civ_age$stats |>
+              filter(year == 2022) |>
+              transmute(scenario, civilian_60_plus_2022 = round(share_60_plus, 3),
+                        civilian_mean_age_2022 = round(mean_age, 1)),
+            by = "scenario") |>
+  mutate(scenario = factor(scenario, levels = unique(civ_age$loss$scenario))) |>
+  arrange(scenario) |>
+  select(scenario, civilian_60_plus_2022, civilian_mean_age_2022, female_2022, male_2022, female_2025, male_2025)
+save_tab(tA25, "tableA25_civilian_age_profile.csv")
+print(tA25)
+
 # A14: years of life lost and 45q15 (14b), medians and 95% intervals
 yq <- read_rds("data_inter/ukr_yll_45q15_summary.rds")
 fmt_ui <- function(m, lo, hi, digits = 0) {
@@ -1661,8 +1685,8 @@ print(tA2)
 # ==============================================================================
 # The simulation's intervals cover the drawn inputs only. Each row here is a
 # set of deterministic projections, every input not under study at its mode,
-# and gives the range its alternatives span: the military total, the male loss
-# in 2022 and 2025, and the female loss in 2025. The rows behind each range are
+# and gives the range its alternatives span: the military total, and the male
+# and female loss in 2022 and 2025. The rows behind each range are
 # in the supplementary table named.
 # Military totals are summed over rounded years, as tables 3 and A6 build theirs.
 mil_total <- function(d) d |> summarise(military = sum(round(total_military)), .by = c(point, alive))
@@ -1702,6 +1726,11 @@ alternatives <- bind_rows(
     filter(scenario != "months of the events (used)") |>
     transmute(military = mode_military, year, sex, loss,
               analysis = "Timing within 2022: mid-year convention, or net outflow by 1 April", table = "A11"),
+  civ_age$loss |>
+    filter(scenario != "OHCHR's profile (used)") |>
+    transmute(military = mode_military, year, sex, loss,
+              analysis = "Civilian age profile: deaths beyond OHCHR's verified count with half over 60, or aged as pre-war deaths",
+              table = "A25"),
   read_rds("data_inter/ukr_baseline_window_e0.rds") |>
     filter(window != "2000-2019 (used)") |>
     transmute(military = mode_military, year, sex, loss,
@@ -1730,6 +1759,7 @@ cells_t8 <- function(d) {
   tibble(
     military_deaths = fmt_range(d$military, f_mil),
     male_loss_2022 = fmt_range(d$loss[d$sex == "m" & d$year == 2022], f_m),
+    female_loss_2022 = fmt_range(d$loss[d$sex == "f" & d$year == 2022], f_m),
     male_loss_2025 = fmt_range(d$loss[d$sex == "m" & d$year == 2025], f_m),
     female_loss_2025 = fmt_range(d$loss[d$sex == "f" & d$year == 2025], f_f)
   )
