@@ -9,21 +9,24 @@
 # keep the COVID years in. Each is fitted as 04 fits its own, forecast to
 # 2025, and put through the deterministic projection at the mode of every
 # conflict and migration input. The window used must reproduce 13's loss.
-# The forecast's own uncertainty is shown as well: the rates one standard
-# deviation of the forecast index below and above its mean.
+# The forecast's own uncertainty, which 11 carries by drawing the forecast
+# index, is shown here on its own as well: the rates one standard deviation
+# of the index below and above its mean.
 #
 # 2. THE SHAPE OF THE PERT DISTRIBUTIONS
 # --------------------------------------
-# Every drawn input - civilian deaths, alpha, the western blend weight, Russia
-# and Belarus - is a Beta-PERT with shape 4, the standard choice. A flatter
-# shape (2) puts more weight towards the bounds, a sharper one (8) less. The
-# simulation is re-run at each shape with the same random numbers
-# (simulation_draws(), 00_setup.R), so the differences in the intervals come
-# from the shape alone.
+# Every disputed input - civilian deaths, the three inputs on the missing
+# alive (the share of the unrecorded prisoners among the missing, the
+# prisoners held, the share of the unresolved alive for other reasons), the
+# western blend weight, Russia and Belarus - is a Beta-PERT with shape 4, the
+# standard choice. A flatter shape (2) puts more weight towards the bounds, a
+# sharper one (8) less. The simulation is re-run at each shape with the same
+# random numbers (simulation_draws(), 00_setup.R), so the differences in the
+# intervals come from the shape alone.
 #
 # INPUTS   data_inter/ukr_life_tables_1989_2021.rds (03), data_input/DataDxEx.csv
-#          the static inputs at the mode; the parameter table, the range of
-#          alpha and the military lines (09, 10)
+#          the static inputs at the mode; the parameter table (10), the
+#          military inputs (09) and the forecast error (04)
 # OUTPUTS  data_inter/ukr_baseline_window_e0.rds
 #          data_inter/ukr_pert_shape_e0.rds
 # ==============================================================================
@@ -87,9 +90,9 @@ stopifnot(isTRUE(all.equal(
   tolerance = 1e-6
 )))
 
-# The forecast's own uncertainty, which the simulation does not carry: the
-# rates one standard deviation of the forecast index k below and above its
-# mean, window 2000-2019. log(mx) is linear in k, so the 15.9% and 84.1%
+# The forecast's own uncertainty on its own: the rates one standard deviation
+# of the forecast index k below and above its mean, window 2000-2019. 11
+# draws the index, so its intervals carry this. log(mx) is linear in k, so the 15.9% and 84.1%
 # quantiles of each rate's forecast distribution are the rates at k -/+ 1 SD.
 fc_used <-
   dt |>
@@ -125,13 +128,19 @@ print(as.data.frame(
 
 # 2. PERT SHAPES ===============================================================
 param_table <- read_rds("data_inter/ukr_param_table.rds")
-alpha_range <- read_rds("data_inter/ukr_alpha_missing.rds")
-alpha_lines <- read_rds("data_inter/ukr_military_alpha_lines.rds")
+mil <- read_rds("data_inter/ukr_military_inputs.rds")
+lc_error <- read_rds("data_inter/ukr_lc_forecast_error.rds")
 n_shape <- 1000
+# as 11: the draws carry their own counterfactual, so the static inputs carry
+# the forecast's loading and variance
+static_shape <-
+  mi$static_inputs |>
+  left_join(lc_error$bx, by = c("sex", "age")) |>
+  left_join(lc_error$variance |> select(sex, year, vk), by = c("sex", "year"))
 
 loss_by_draw <- function(draws_df) {
   sims <- map_dfr(split(draws_df, draws_df$sim_id), function(d) {
-    run_single_sim(d$sim_id[1], d, mi$static_inputs, mi$pop22_ini)
+    run_single_sim(d$sim_id[1], d, static_shape, mi$pop22_ini)
   })
   d <- as.data.table(sims)
   setorder(d, sim_id, year, sex, age)
@@ -147,7 +156,7 @@ loss_by_draw <- function(draws_df) {
 shapes <- c(2, 4, 8)
 pert_shape <-
   map_dfr(shapes, function(s) {
-    draws <- simulation_draws(param_table, alpha_range, alpha_lines, n = n_shape, shape = s)$draws_df
+    draws <- simulation_draws(param_table, mil, lc_error, n = n_shape, shape = s)$draws_df
     loss_by_draw(draws) |>
       summarise(median = median(loss), lo = quantile(loss, 0.025), hi = quantile(loss, 0.975),
                 .by = c(year, sex)) |>

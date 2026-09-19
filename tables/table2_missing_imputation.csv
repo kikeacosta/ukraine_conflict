@@ -1,6 +1,6 @@
-year,registered_deaths,late_registrations,missing,imputed_dead,pct_dead,projected_captivity,projected_no_longer_listed,alive_among_never_resolved,pct_alive,total_deaths
-2022,21685,21,8141,7990,98.1%,5,25,121,1.9%,29696
-2023,25375,538,11142,10441,93.7%,103,445,153,6.3%,36354
-2024,25674,1480,27889,25364,90.9%,534,1652,340,9.1%,52517
-2025,16980,1964,42826,38306,89.4%,1253,2810,456,10.6%,57251
-Total,89714,4003,89998,82101,91.2%,1895,4932,1070,8.8%,175818
+year,registered_deaths,late_registrations,missing,imputed_dead,pct_dead,prisoners_of_war,projected_no_longer_listed,alive_other,pct_alive,total_deaths
+2022,21685,21,8141,8114,99.7%,3,24,0,0.3%,29821
+2023,25375,538,11142,10640,95.5%,79,423,0,4.5%,36553
+2024,25674,1480,27889,25865,92.7%,460,1565,0,7.3%,53019
+2025,16980,1964,42826,39281,91.7%,870,2675,0,8.3%,58225
+Total,89714,4003,89998,83900,93.2%,1412,4687,0,6.8%,177618

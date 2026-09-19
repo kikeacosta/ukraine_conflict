@@ -36,6 +36,7 @@
 #
 # INPUTS   data_inter/ukr_sim_draws_2022_2025_n<n_sim>.rds   (from 11)
 #          data_inter/ukr_ualosses_imputation_table.rds      (from 09)
+#          data_inter/ukr_sim_param_draws.rds               (from 11)
 # OUTPUTS  data_inter/ukr_e0_loss_by_cause_draws_2022_2025.rds
 #          data_inter/ukr_e0_loss_by_cause_summary_2022_2025.rds
 #          data_inter/ukr_conflict_deaths_by_cause_summary_2022_2025.rds
@@ -113,10 +114,10 @@ sims[, dx_combatant := dx_cmb_confirmed + dx_cmb_imputed]
 # share the registered dead's age-sex profile, so within each year they are
 # the same fraction of the confirmed deaths at every age, and splitting the
 # confirmed component - deaths and loss alike - by that fraction is exact.
-late_share <-
-  read_rds("data_inter/ukr_ualosses_imputation_table.rds") |>
-  transmute(year = as.numeric(year), late_share = late_registrations / confirmados_stock)
-sims <- merge(sims, as.data.table(late_share), by = "year", sort = FALSE)
+# Each draw has its own completion factors (11), so its own fraction.
+late_share <- late_share_draws()
+sims <- merge(sims, as.data.table(late_share), by = c("sim_id", "year"), sort = FALSE)
+stopifnot(nrow(sims) == nrow(key), !anyNA(sims$late_share))
 sims[, `:=`(loss_cmb_late = loss_cmb_confirmed * late_share,
             dx_cmb_late = dx_cmb_confirmed * late_share)]
 sims[, `:=`(loss_cmb_registered = loss_cmb_confirmed - loss_cmb_late,

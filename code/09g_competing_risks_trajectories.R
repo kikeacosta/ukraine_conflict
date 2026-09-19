@@ -15,8 +15,8 @@
 #
 # THE TEST, agreed before the model was re-run (2026-09-18). The model may be
 # reconsidered for production - at least for cohort-specific bounds - only if
-# BOTH hold, with prisoners and people no longer listed kept apart (released
-# prisoners, held rather than disappeared, are outside the population at risk):
+# BOTH hold, with prisoners and people no longer listed kept apart (a return
+# from captivity counts as a resolution to captivity, as in production):
 #   1. the longest-missing cohort (2022) has the highest probability of
 #      death, read from its cumulative incidence at its own maximum follow-up;
 #   2. the cohort hazard ratios are plausible. Fixed here, before looking:

@@ -16,6 +16,7 @@
 #
 # INPUTS   data_inter/ukr_sim_draws_2022_2025_n<n_sim>.rds   (from 11)
 #          data_inter/ukr_ualosses_imputation_table.rds      (from 09)
+#          data_inter/ukr_sim_param_draws.rds               (from 11)
 # OUTPUTS  data_inter/ukr_yll_45q15_summary.rds
 # ==============================================================================
 
@@ -50,10 +51,10 @@ key[, q4515_diff := q4515_war - q4515_bsn]
 
 # the counterfactual life expectancy at the mean age of death in each interval
 e_mid <- (lb$ex + rbind(lb$ex[-1, , drop = FALSE], lb$ex[n_age, ])) / 2
-late_share <-
-  read_rds("data_inter/ukr_ualosses_imputation_table.rds") |>
-  transmute(year = as.numeric(year), late_share = late_registrations / confirmados_stock)
-ls_vec <- late_share$late_share[match(key$year, late_share$year)]
+# each draw's share of late registrations in its confirmed deaths, as in 14
+late_share <- late_share_draws()
+ls_vec <- late_share$late_share[match(paste(key$sim_id, key$year), paste(late_share$sim_id, late_share$year))]
+stopifnot(!anyNA(ls_vec))
 yll_civ <- colSums(DCV * e_mid)
 yll_conf <- colSums(DCC * e_mid)
 key[, `:=`(yll_civilian = yll_civ,

@@ -28,6 +28,7 @@
 #   table1_source_totals.csv                         07_*, 08
 #   table2_missing_imputation.csv                    09
 #   table3_pert_input_bounds.csv                     10
+#   table3b_missing_alive_inputs.csv                 09
 #   table4_conflict_deaths_by_cause.csv              14   <- new
 #   table5_life_expectancy_loss.csv                  14
 #   tableA1_source_reconciliation.csv                07_ucdp, 07_acled
@@ -37,8 +38,8 @@
 #   tableA3_e0_loss_by_cause.csv                     14
 #   tableA4_uncertainty_shares.csv                   11, 14 <- new
 #   tableA5_military_reconciliation.csv              07_ucdp, 08, 10, 11
-#   tableA6_alpha_sensitivity.csv                    09, 13b
-#   figA4_alpha_sensitivity_missing.png              09, 13b
+#   tableA6_missing_alive_sensitivity.csv            09, 13b
+#   figA4_missing_alive_sensitivity.png              09, 13b
 #   tableA7_migration_sensitivity.csv                13, 13c
 #   figA5_migration_sensitivity.png                  13, 13c
 #   tableA8_migration_specification.csv              13c
@@ -50,7 +51,7 @@
 #   tableA14_years_of_life_lost.csv                  14b
 #   tableA15_adult_mortality_45q15.csv               14b
 #   table8_structural_sensitivity.csv                13, 13b-13g
-#   tableA16_alpha_by_lag_horizon.csv                13d
+#   tableA16_missing_alive_by_lag_horizon.csv        13d
 #   tableA17_military_triangulation.csv              09, data_input/official_figures.csv
 #   tableA18_returned_prisoners_prior_status.csv     09
 #   tableA19_register_dropout.csv                    09
@@ -137,9 +138,9 @@ loss_draws <- read_rds("data_inter/ukr_e0_loss_by_cause_draws_2022_2025.rds")
 loss_sum <- read_rds("data_inter/ukr_e0_loss_by_cause_summary_2022_2025.rds")
 deaths_sum <- read_rds("data_inter/ukr_conflict_deaths_by_cause_summary_2022_2025.rds")
 mig <- read_rds("data_inter/ukr_migration_decomposition.rds")
-alpha_mil <- read_rds("data_inter/ukr_alpha_sensitivity_military.rds")
-alpha_e0 <- read_rds("data_inter/ukr_alpha_sensitivity_e0.rds")
-alpha_range <- read_rds("data_inter/ukr_alpha_missing.rds")
+alive_mil <- read_rds("data_inter/ukr_alive_sensitivity_military.rds")
+alive_e0 <- read_rds("data_inter/ukr_alive_sensitivity_e0.rds")
+evidence <- read_rds("data_inter/ukr_alive_missing.rds")
 
 # The draws file is named for the simulation size, so 15 reads the one matching
 # the n_sim it was configured with rather than whatever the last run left behind.
@@ -380,27 +381,38 @@ save_fig(fig5, "fig5_decomposition_by_cause.png", 8, 4.4)
 # much of the SPREAD in that loss is migration - a different question, and the
 # one that decides which input is worth more data.
 #
-# The three inputs are drawn independently of one another, so the variance of
-# the loss partitions additively across them: each share is the variance the
-# input carries through its own slope. What linear terms do not account for is
-# reported as its own category rather than distributed over the others.
-# Civilians and combatants are kept apart rather than summed into one
-# "conflict" term. Combatant draws are an order of magnitude larger, so a
+# The inputs are drawn independently of one another, so the variance of the
+# loss partitions additively across them: each share is the variance the
+# input carries through its own first-order effect. What that does not
+# account for is reported as its own category rather than distributed over
+# the others. Civilians and combatants are kept apart rather than summed into
+# one "conflict" term. Combatant draws are an order of magnitude larger, so a
 # combined term is dominated by combatant variation - which is nearly
-# irrelevant to the female loss, where civilians drive almost all of it.
+# irrelevant to the female loss, where civilians drive almost all of it. The
+# combatants are split by what moves them: the evidence on the missing alive,
+# the resolution model's estimates and the registration-lag factors, each
+# summarised by the military total it gives with the other two at their point
+# values (simulation_draws(), 00_setup.R). The counterfactual enters through
+# the draw's forecast index for the sex and year.
 UNC_LAB <- c(
   cvs   = "Civilian deaths",
-  cmb   = "Combatant deaths",
+  alive = "Missing alive",
+  model = "Resolution model",
+  lag   = "Registration lag",
+  lc    = "Counterfactual forecast",
   mig_w = "Migration: western",
   mig_r = "Migration: Russia / Belarus",
   resid = "Interaction"
 )
 COL_UNC <- c(
   "Civilian deaths"             = "#AE2012",
-  "Combatant deaths"            = "#333333",
+  "Missing alive"               = "#333333",
+  "Resolution model"            = "#7F7F7F",
+  "Registration lag"            = "#B8B8B8",
+  "Counterfactual forecast"     = "#94D2BD",
   "Migration: western"          = "#0A9396",
   "Migration: Russia / Belarus" = "#EE9B00",
-  "Interaction"                 = "#CCCCCC"
+  "Interaction"                 = "#E9E9E9"
 )
 
 # The loss in year y is that year's death RATES: its own deaths over a
@@ -411,18 +423,23 @@ COL_UNC <- c(
 unc_inputs <-
   param_draws |>
   mutate(bucket = case_when(
-    role == "civilians"  ~ "cvs",
-    role == "combatants" ~ "cmb",
-    role == "mig_west"   ~ "mig_w",
-    role == "mig_ru_by"  ~ "mig_r"
+    role == "civilians" ~ "cvs",
+    role == "mil_alive" ~ "alive",
+    role == "mil_model" ~ "model",
+    role == "mil_lag"   ~ "lag",
+    role == "lc_f"      ~ "lc_f",
+    role == "lc_m"      ~ "lc_m",
+    role == "mig_west"  ~ "mig_w",
+    role == "mig_ru_by" ~ "mig_r"
   )) |>
+  filter(!is.na(bucket)) |>
   summarise(draw = sum(draw), .by = c(sim_id, year, bucket)) |>
   # mig_ru_by is entered once, in 2022, but the people it removes are still
   # absent in 2025, so the grid is filled with zeros before accumulating
   complete(sim_id, year, bucket, fill = list(draw = 0)) |>
   arrange(sim_id, bucket, year) |>
   mutate(
-    val = if_else(bucket %in% c("cvs", "cmb"), draw, cumsum(draw)),
+    val = if_else(bucket %in% c("mig_w", "mig_r"), cumsum(draw), draw),
     .by = c(sim_id, bucket)
   ) |>
   select(sim_id, year, bucket, val) |>
@@ -454,10 +471,13 @@ unc_shares <-
   select(sim_id, year, sex, loss_total) |>
   left_join(unc_inputs, by = c("sim_id", "year")) |>
   nest(.by = c(year, sex)) |>
-  mutate(sh = map(data, function(d) {
+  mutate(sh = map2(data, sex, function(d, sx) {
     s <- c(
       cvs   = first_order(d$loss_total, d$cvs),
-      cmb   = first_order(d$loss_total, d$cmb),
+      alive = first_order(d$loss_total, d$alive),
+      model = first_order(d$loss_total, d$model),
+      lag   = first_order(d$loss_total, d$lag),
+      lc    = first_order(d$loss_total, if (sx == "f") d$lc_f else d$lc_m),
       mig_w = first_order(d$loss_total, d$mig_w),
       mig_r = first_order(d$loss_total, d$mig_r)
     )
@@ -485,7 +505,7 @@ fig6 <-
   ) +
   theme_paper() +
   guides(fill = guide_legend(nrow = 2))
-save_fig(fig6, "fig6_uncertainty_shares.png", 8, 4.6)
+save_fig(fig6, "fig6_uncertainty_shares.png", 9, 4.8)
 
 save_tab(
   unc_shares |>
@@ -537,10 +557,11 @@ figA1 <-
   labs(
     x = "Death counts", y = "Density", colour = "Role", fill = "Role",
     caption = paste0(
-      "Beta-PERT draws (n = ", scales::comma(n_sim),
-      "). Dashed line: mode. Dotted lines: min and max. Combatant totals ",
-      "follow from one draw of alpha\n(the share of the never-resolved ",
-      "missing who are alive) per simulation, so their four years move together."
+      "Draws (n = ", scales::comma(n_sim),
+      "). Dashed line: mode. Dotted lines: min and max, for combatants the evidence on the missing alive ",
+      "at its ends.\nCombatant totals follow from one draw of that evidence per simulation, so their four ",
+      "years move together;\nthe resolution model and the registration-lag factors are drawn too, so a draw ",
+      "can pass the dotted lines."
     )
   ) +
   theme_paper() +
@@ -759,15 +780,15 @@ print(tab_src)
 # ==============================================================================
 # TABLE 2 - Imputation of missing combatants
 # ==============================================================================
-# The missing imputed alive in their three parts: those projected into
-# captivity, those projected to leave the register (found alive), and the
-# alive share of those never resolved (alpha).
+# The missing imputed alive in their three parts: the prisoners of war among
+# them, set by the official figures; those projected to leave the register
+# (found alive); and those alive for other reasons, none at the central
+# values.
 tab_imput <-
   imput |>
   mutate(
-    imputed_alive_total = imputed_unlisted + alive_never_resolved + imputed_prisoner,
     pct_dead = imputed_dead / missing_stock,
-    pct_alive = imputed_alive_total / missing_stock
+    pct_alive = imputed_alive / missing_stock
   ) |>
   select(
     year,
@@ -776,20 +797,19 @@ tab_imput <-
     missing = missing_stock,
     imputed_dead,
     pct_dead,
-    projected_captivity = imputed_prisoner,
+    prisoners_of_war = captives,
     projected_no_longer_listed = imputed_unlisted,
-    alive_among_never_resolved = alive_never_resolved,
+    alive_other = alive_other,
     pct_alive,
     total_deaths = total_estimado
   )
-stopifnot(isTRUE(all.equal(
-  imput$imputed_dead + imput$imputed_alive + imput$imputed_prisoner, imput$missing_stock
-)))
+stopifnot(isTRUE(all.equal(imput$imputed_dead + imput$imputed_alive, imput$missing_stock)),
+          isTRUE(all.equal(imput$captives + imput$imputed_unlisted + imput$alive_other, imput$imputed_alive)))
 
 # The Total row sums the rounded years, as tables 1 and 3 do, so the tables
 # print the same totals; rounding the four-year sum once can differ by one.
 count_cols <- c("registered_deaths", "late_registrations", "missing", "imputed_dead",
-                "projected_captivity", "projected_no_longer_listed", "alive_among_never_resolved",
+                "prisoners_of_war", "projected_no_longer_listed", "alive_other",
                 "total_deaths")
 tab_imput <- bind_rows(
   tab_imput,
@@ -798,7 +818,7 @@ tab_imput <- bind_rows(
     mutate(
       year = NA_integer_,
       pct_dead = imputed_dead / missing,
-      pct_alive = (projected_captivity + projected_no_longer_listed + alive_among_never_resolved) / missing
+      pct_alive = (prisoners_of_war + projected_no_longer_listed + alive_other) / missing
     )
 ) |>
   mutate(
@@ -842,6 +862,33 @@ tab_pert <- bind_rows(
 
 save_tab(tab_pert, "table3_pert_input_bounds.csv")
 print(tab_pert)
+
+# The inputs on the missing alive behind the combatant bounds, each drawn once
+# per simulation from a Beta-PERT (alive_evidence(), 00_setup.R), with the two
+# counts they give: the prisoners of war the register does not record as such,
+# and those among its missing.
+tab_alive <-
+  tibble(
+    input = c("Share of the unrecorded prisoners of war among the missing",
+              "Prisoners of war held, February 2026",
+              "Prisoners of war the register does not record (held + returned − recorded)",
+              "Prisoners of war among the missing",
+              "Share of the unresolved missing alive for other reasons"),
+    min = with(evidence, c(s_min, held_min, unrecorded_min, captives_min, other_min)),
+    mode = with(evidence, c(s_mode, held_mode, unrecorded_mode, captives_mode, other_mode)),
+    max = with(evidence, c(s_max, held_max, unrecorded_max, captives_max, other_max)),
+    basis = c(
+      "Returned prisoners listed as missing before their return: every event year (min), 2024–2025 events (mode), all (max)",
+      "\"About 7,000\" (President of Ukraine, 14 February 2026), rounded to the thousand",
+      sprintf("Held plus %s military personnel returned, less the %s the register records as prisoners or released",
+              scales::comma(evidence$returned_military), scales::comma(round(evidence$register_alive))),
+      "Share among the missing times the unrecorded prisoners",
+      "None (min and mode); the share of the register's first resolutions that leave it (max)"
+    )
+  ) |>
+  mutate(across(c(min, mode, max), \(x) if_else(x < 1, round(x, 3), round(x))))
+save_tab(tab_alive, "table3b_missing_alive_inputs.csv")
+print(tab_alive)
 
 # ==============================================================================
 # TABLE 4 - Conflict deaths by cause, sex and year  (NEW)
@@ -1149,42 +1196,41 @@ print(tA5)
 # ==============================================================================
 # TABLE A6 / FIGURE A4 - Sensitivity to the missing-combatant imputation
 # ==============================================================================
-# The military death total is dominated by alpha, the share of the
-# never-resolved missing who are alive. Its range comes from comparing official
-# prisoner-of-war figures with the prisoners and released prisoners the register
-# records (09, alpha_evidence() in 00_setup.R), and 11 draws alpha inside that
-# range. 13b
-# re-runs the imputation chain and the downstream projection across alpha in
-# [0, 1], holding everything else at its mode, and this assembles the result
+# The military death total is dominated by how many of the missing are
+# alive. The evidence (09, alive_evidence() in 00_setup.R) sets the prisoners
+# of war among them within a range, and allows a share of the rest to be alive
+# for other reasons; 11 draws both inside that range. 13b sweeps the missing
+# alive along one path, from the fewest alive the evidence allows to all but
+# the projected deaths, re-running the imputation and the downstream
+# projection with everything else at its mode, and this assembles the result
 # into a manuscript table and figure with the range marked on it.
-range_label <- c(
-  min = "floor", mode = "central", max = "cap",
-  p2.5 = "2.5th percentile of draws", p97.5 = "97.5th percentile of draws"
-)
-
 tA6 <-
-  alpha_mil |>
+  alive_mil |>
   # summed over rounded years, as table 3 builds its totals, so the two agree
-  summarise(total_military_deaths = sum(round(total_military)), .by = c(alpha, range_point)) |>
+  summarise(total_military_deaths = sum(round(total_military)),
+            .by = c(point, alive, share_alive, captives, other)) |>
   left_join(
-    alpha_e0 |>
+    alive_e0 |>
       summarise(
         male_loss_2025 = loss[year == 2025 & sex == "m"],
         female_loss_2025 = loss[year == 2025 & sex == "f"],
-        .by = alpha
+        .by = alive
       ),
-    by = "alpha"
+    by = "alive"
   ) |>
-  arrange(alpha) |>
+  arrange(alive) |>
   transmute(
-    alpha = round(alpha, 3),
-    evidence_range = unname(range_label[range_point]),
+    share_of_missing_alive = round(share_alive, 3),
+    evidence = point,
+    missing_alive = round(alive),
+    prisoners_of_war_among_missing = round(captives),
+    share_of_unresolved_alive_otherwise = round(other, 3),
     total_military_deaths,
     male_e0_loss_2025 = round(male_loss_2025, 2),
     female_e0_loss_2025 = round(female_loss_2025, 3)
   )
 
-save_tab(tA6, "tableA6_alpha_sensitivity.csv")
+save_tab(tA6, "tableA6_missing_alive_sensitivity.csv")
 print(tA6)
 
 # "central (-down / +up)": the value at the central input and how far it moves
@@ -1228,80 +1274,82 @@ data_breaks <- function(left, right) {
   }
 }
 
-alpha_at <- function(p) alpha_mil$alpha[which(alpha_mil$range_point == p)[1]]
+P_LO <- "2.5th percentile of draws"
+P_HI <- "97.5th percentile of draws"
+share_at <- function(p) alive_mil$share_alive[which(alive_mil$point == p)[1]]
 
-# the range as a light band, the 95% interval of the simulated alpha as a
-# darker one inside it, the central value as a dashed line
-alpha_band <- list(
+# the range as a light band, the 95% interval of the draws as a darker one
+# inside it, the central values as a dashed line
+alive_band <- list(
   annotate(
     "rect",
-    xmin = alpha_range$alpha_min, xmax = alpha_range$alpha_max,
+    xmin = share_at("floor"), xmax = share_at("cap"),
     ymin = -Inf, ymax = Inf, fill = "#0A9396", alpha = 0.14
   ),
   annotate(
     "rect",
-    xmin = alpha_at("p2.5"), xmax = alpha_at("p97.5"),
+    xmin = share_at(P_LO), xmax = share_at(P_HI),
     ymin = -Inf, ymax = Inf, fill = "#0A9396", alpha = 0.18
   ),
-  geom_vline(xintercept = alpha_range$alpha_mode, linetype = "dashed", colour = "grey30")
+  geom_vline(xintercept = share_at("central"), linetype = "dashed", colour = "grey30")
 )
-alpha_x <- scale_x_continuous(
-  "Share of the never-resolved missing who are alive (α)",
-  breaks = seq(0, 1, 0.25), labels = c("0", "0.25", "0.5", "0.75", "1"),
+alive_x <- scale_x_continuous(
+  "Share of the missing who are alive",
+  labels = scales::percent, breaks = seq(0, 0.8, 0.2),
   expand = expansion(mult = c(0.85, 0.02))
 )
 
 mil_curve <-
-  alpha_mil |>
-  summarise(total_military = sum(round(total_military)), .by = c(alpha, range_point))
-mil_at <- function(p) mil_curve$total_military[which(mil_curve$range_point == p)[1]]
-mil_lo <- min(mil_at("p2.5"), mil_at("p97.5"))
-mil_hi <- max(mil_at("p2.5"), mil_at("p97.5"))
-# labels at alpha = 0, the left end, where the lines are furthest apart
+  alive_mil |>
+  summarise(total_military = sum(round(total_military)), .by = c(point, share_alive))
+mil_at <- function(p) mil_curve$total_military[which(mil_curve$point == p)[1]]
+mil_lo <- min(mil_at(P_LO), mil_at(P_HI))
+mil_hi <- max(mil_at(P_LO), mil_at(P_HI))
+# labels at the floor, the left end, where the lines are furthest apart
 lab4a <- tibble(
-  x = 0,
-  y = mil_curve$total_military[mil_curve$alpha == 0],
+  x = share_at("floor"),
+  y = mil_at("floor"),
   colour_key = "military",
   label = sprintf(
-    "%s (−%s / +%s)", scales::comma(mil_at("mode")),
-    scales::comma(mil_at("mode") - mil_lo), scales::comma(mil_hi - mil_at("mode"))
+    "%s (−%s / +%s)", scales::comma(mil_at("central")),
+    scales::comma(mil_at("central") - mil_lo), scales::comma(mil_hi - mil_at("central"))
   )
 )
 
 figA4a <-
   mil_curve |>
-  ggplot(aes(alpha, total_military)) +
-  alpha_band +
+  ggplot(aes(share_alive, total_military)) +
+  alive_band +
   geom_line(linewidth = 1, colour = "#B23A48") +
   end_labels(lab4a, "left") +
   scale_colour_manual(values = c(military = "#B23A48"), guide = "none") +
-  alpha_x +
+  alive_x +
   scale_y_continuous(labels = scales::comma) +
   labs(y = "Total military deaths, 2022–2025") +
   theme_paper()
 
 lab4b <-
-  alpha_e0 |>
-  filter(range_point %in% c("mode", "p2.5", "p97.5")) |>
-  select(year, sex, range_point, loss) |>
-  pivot_wider(names_from = range_point, values_from = loss) |>
-  left_join(alpha_e0 |> filter(alpha == 0) |> select(year, sex, y = loss), by = c("year", "sex")) |>
+  alive_e0 |>
+  filter(point %in% c("central", P_LO, P_HI)) |>
+  select(year, sex, point, loss) |>
+  pivot_wider(names_from = point, values_from = loss) |>
+  left_join(alive_e0 |> filter(point %in% "floor") |> select(year, sex, y = loss), by = c("year", "sex")) |>
   mutate(
-    x = 0,
+    x = share_at("floor"),
     colour_key = factor(year),
-    label = pm_label(mode, p2.5, p97.5, if_else(sex == "m", 2, 3))
+    label = pm_label(central, .data[[P_LO]], .data[[P_HI]], if_else(sex == "m", 2, 3))
   ) |>
   nice_sex()
 
 figA4b <-
-  alpha_e0 |>
+  alive_e0 |>
   nice_sex() |>
-  ggplot(aes(alpha, loss, colour = factor(year))) +
-  alpha_band +
+  ggplot(aes(share_alive, loss, colour = factor(year))) +
+  alive_band +
   geom_line(linewidth = 1) +
   end_labels(lab4b, "left") +
   facet_wrap(~sex, scales = "free_y") +
-  alpha_x +
+  alive_x +
   labs(y = "Life expectancy loss (years)", colour = "Year") +
   theme_paper()
 
@@ -1311,21 +1359,20 @@ figA4 <- figA4a + figA4b +
     title = "Sensitivity to the share of the missing who are alive",
     caption = sprintf(
       paste0(
-        "Light band: the range the evidence allows (α = %s to %s), within which ",
-        "every simulation draws α from a Beta-PERT. Dark band: the 95%% interval\n",
-        "of the simulated α (%.3f to %.3f). Dashed: the central value, %.3f (%s ",
-        "prisoners of war the register does not record, over %s never-resolved missing).\n",
-        "Labels: the value at the central α, and how far it moves at the two ends of ",
+        "Light band: the range the evidence allows (%s to %s of the missing alive), within which ",
+        "every simulation draws the evidence. Dark band: the 95%% interval of the draws\n",
+        "(%s to %s). Dashed: the central values, %s: the %s prisoners of war the official figures ",
+        "place among the missing, and those projected to leave the register.\n",
+        "Labels: the value at the central values, and how far it moves at the two ends of ",
         "the dark band. Deterministic, at the mode of every other input - not a Monte ",
         "Carlo re-run at each point."
       ),
-      sub("\\.?0+$", "", sprintf("%.3f", alpha_range$alpha_min)), sprintf("%.2f", alpha_range$alpha_max),
-      alpha_at("p2.5"), alpha_at("p97.5"),
-      alpha_range$alpha_mode, scales::comma(round(alpha_range$unrecorded_prisoners)),
-      scales::comma(round(alpha_range$residual, -2))
+      scales::percent(share_at("floor"), 0.1), scales::percent(share_at("cap"), 0.1),
+      scales::percent(share_at(P_LO), 0.1), scales::percent(share_at(P_HI), 0.1),
+      scales::percent(share_at("central"), 0.1), scales::comma(round(evidence$captives_mode))
     )
   )
-save_fig(figA4, "figA4_alpha_sensitivity_missing.png", 14, 5)
+save_fig(figA4, "figA4_missing_alive_sensitivity.png", 14, 5)
 
 # ==============================================================================
 # TABLE A7 / FIGURE A5 - Sensitivity to net migration
@@ -1490,8 +1537,8 @@ loss_wide <- function(d, keep_cols) {
 # A9: the linkage rules and the design of the chain (09, 13b)
 tA9 <-
   read_rds("data_inter/ukr_linkage_rules_e0.rds") |>
-  mutate(alpha_central = round(alpha_mode, 3), military_deaths = round(military)) |>
-  loss_wide(c("design", "alpha_central", "military_deaths"))
+  mutate(prisoners_of_war_among_missing = round(captives), military_deaths = round(military)) |>
+  loss_wide(c("design", "prisoners_of_war_among_missing", "military_deaths"))
 save_tab(tA9, "tableA9_linkage_and_chain.csv")
 print(tA9)
 
@@ -1559,7 +1606,7 @@ yll_labels <- c(yll_civilian = "Civilians", yll_registered = "Registered combata
                 yll_total = "Total")
 tA14_yll <-
   bind_rows(yq$both_sexes |> mutate(year = as.character(year)),
-            yq$all_years_both |> mutate(year = "2022-2025")) |>
+            yq$all_years_both |> mutate(year = "2022–2025")) |>
   filter(measure %in% names(yll_labels)) |>
   mutate(cause = factor(yll_labels[as.character(measure)], levels = yll_labels),
          yll = fmt_ui(median, lo, hi)) |>
@@ -1586,20 +1633,21 @@ print(tA14_q)
 # ==============================================================================
 # From 09: everyone listed as missing in v14, v16 or v18, followed to v19, the
 # three windows between the four releases composed into the twelve months
-# from v14 to v19. People whose first resolution was a return from captivity
-# were held, not disappeared, and are left out. Shares of the cohort's missing.
+# from v14 to v19. A return from captivity is a resolution to captivity; the
+# people whose first resolution it was are counted apart. Shares of the
+# cohort's missing.
 res12 <- read_rds("data_inter/ukr_ualosses_resolution_12m.rds")
-released_out <-
-  read_rds("data_inter/ukr_ualosses_linkage_checks.rds")$released_excluded |>
-  summarise(released_left_out = sum(n), .by = year)
+returned_first <-
+  read_rds("data_inter/ukr_ualosses_linkage_checks.rds")$released_first |>
+  summarise(returned_from_captivity = sum(n), .by = year)
 tA2 <-
   res12 |>
-  left_join(released_out, by = "year") |>
+  left_join(returned_first, by = "year") |>
   transmute(
     year,
     missing_v14 = at_risk_v14,
     first_listed_v16_v18 = later_entrants,
-    released_left_out,
+    returned_from_captivity,
     across(c(dead, prisoner, no_longer_listed, still_missing = missing),
            \(x) scales::percent(x, accuracy = 0.1))
   ) |>
@@ -1617,22 +1665,22 @@ print(tA2)
 # in 2022 and 2025, and the female loss in 2025. The rows behind each range are
 # in the supplementary table named.
 # Military totals are summed over rounded years, as tables 3 and A6 build theirs.
-mil_total <- function(d) d |> summarise(military = sum(round(total_military)), .by = c(alpha, range_point))
-mode_military <- alpha_mil |> filter(range_point %in% "mode") |> summarise(m = sum(round(total_military))) |> pull(m)
-alpha_rows <- function(points) {
-  alpha_e0 |>
-    filter(range_point %in% points) |>
-    left_join(mil_total(alpha_mil), by = c("alpha", "range_point")) |>
+mil_total <- function(d) d |> summarise(military = sum(round(total_military)), .by = c(point, alive))
+mode_military <- alive_mil |> filter(point %in% "central") |> summarise(m = sum(round(total_military))) |> pull(m)
+alive_rows <- function(points) {
+  alive_e0 |>
+    filter(point %in% points) |>
+    left_join(mil_total(alive_mil), by = c("point", "alive")) |>
     select(military, year, sex, loss)
 }
 mig_sens_t8 <- read_rds("data_inter/ukr_migration_sensitivity_e0.rds")
 spec_t8 <- read_rds("data_inter/ukr_migration_specification_e0.rds")
 lag_t8 <- read_rds("data_inter/ukr_registration_lag.rds")
 alternatives <- bind_rows(
-  alpha_rows(c("p2.5", "p97.5")) |>
-    mutate(analysis = "Share of the never-resolved missing alive: 95% interval of its distribution", table = "A6"),
-  alpha_rows(c("min", "max")) |>
-    mutate(analysis = "Share of the never-resolved missing alive: floor to cap", table = "A6"),
+  alive_rows(c("2.5th percentile of draws", "97.5th percentile of draws")) |>
+    mutate(analysis = "The missing alive: 95% interval of the draws", table = "A6"),
+  alive_rows(c("floor", "cap")) |>
+    mutate(analysis = "The missing alive: floor to cap", table = "A6"),
   lag_t8$loss |>
     filter(scenario != "to 48 months (used)") |>
     left_join(lag_t8$military |> summarise(military = sum(round(total)), .by = scenario), by = "scenario") |>
@@ -1640,9 +1688,11 @@ alternatives <- bind_rows(
     mutate(analysis = "Registration lag: no correction, or corrected to 60 or 72 months", table = "A10, A16"),
   read_rds("data_inter/ukr_linkage_rules_e0.rds") |>
     filter(!str_detect(design, "production")) |>
-    select(military, year, sex, loss) |>
-    mutate(analysis = "Linkage rules, resolution model and prisoner-of-war evidence: nine alternatives",
-           table = "A9"),
+    mutate(analysis = paste0("Linkage rules, resolution model and prisoner-of-war evidence: ",
+                             c("one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+                               "ten", "eleven", "twelve")[n_distinct(design)], " alternatives"),
+           table = "A9") |>
+    select(military, year, sex, loss, analysis, table),
   read_rds("data_inter/ukr_denominator_donetsk_luhansk.rds")$loss |>
     filter(scenario != "SSSU (used)") |>
     transmute(military = mode_military, year, sex, loss,
@@ -1655,7 +1705,7 @@ alternatives <- bind_rows(
   read_rds("data_inter/ukr_baseline_window_e0.rds") |>
     filter(window != "2000-2019 (used)") |>
     transmute(military = mode_military, year, sex, loss,
-              analysis = "Counterfactual: Lee-Carter window, and the forecast one SD lower or higher",
+              analysis = "Counterfactual: Lee–Carter window, and the forecast one SD lower or higher",
               table = "A12"),
   mig_sens_t8 |>
     filter(point %in% c("min", "max")) |>
@@ -1684,7 +1734,7 @@ cells_t8 <- function(d) {
     female_loss_2025 = fmt_range(d$loss[d$sex == "f" & d$year == 2025], f_f)
   )
 }
-mode_rows <- alpha_e0 |> filter(range_point %in% "mode") |> mutate(military = mode_military)
+mode_rows <- alive_e0 |> filter(point %in% "central") |> mutate(military = mode_military)
 tab8 <-
   bind_rows(
     cells_t8(mode_rows) |> mutate(analysis = "Every input at its mode", table = "", .before = 1),
@@ -1701,19 +1751,19 @@ save_tab(tab8, "table8_structural_sensitivity.csv")
 print(tab8)
 
 # ==============================================================================
-# TABLE A16 - The share alive and the registration-lag horizon together
+# TABLE A16 - The missing alive and the registration-lag horizon together
 # ==============================================================================
 tA16 <-
   lag_t8$grid |>
   filter(year == 2025, sex == "m") |>
-  transmute(alpha_point = factor(point, levels = unique(lag_t8$grid$point)),
-            alpha = round(alpha, 3),
+  transmute(evidence = factor(point, levels = unique(lag_t8$grid$point)),
+            share_of_missing_alive = round(share_alive, 3),
             scenario = factor(scenario, levels = unique(lag_t8$grid$scenario)),
             cell = sprintf("%s / %.2f", scales::comma(round(military)), loss)) |>
   arrange(scenario) |>
   pivot_wider(names_from = scenario, values_from = cell) |>
-  arrange(alpha_point)
-save_tab(tA16, "tableA16_alpha_by_lag_horizon.csv")
+  arrange(evidence)
+save_tab(tA16, "tableA16_missing_alive_by_lag_horizon.csv")
 print(tA16)
 
 # ==============================================================================
@@ -1722,14 +1772,20 @@ print(tA16)
 # ==============================================================================
 # Each statement counts the deaths known at its date. The register (v19, as
 # registered) and this study (at the mode) count the deaths among events up
-# to that date, as known in September 2026.
+# to that date, as known in September 2026. As in every other table, complete
+# years enter as their rounded totals, so a date at the end of 2025 or later
+# gives the four-year total of Tables 2 and 3.
 official <- read_csv("data_input/official_figures.csv", show_col_types = FALSE)
 mil_month <- read_rds("data_inter/ukr_military_by_month.rds")
 through <- function(d, col) {
   d <- as.Date(d)
-  full <- sum(mil_month[[col]][mil_month$month < floor_date(d, "month")])
-  part <- sum(mil_month[[col]][mil_month$month == floor_date(d, "month")])
-  full + part * day(d) / days_in_month(d)
+  years_done <- mil_month |>
+    filter(year(month) < year(d)) |>
+    summarise(n = sum(.data[[col]]), .by = year)
+  this_year <- mil_month |> filter(year(month) == year(d))
+  part <- sum(this_year[[col]][this_year$month < floor_date(d, "month")]) +
+    sum(this_year[[col]][this_year$month == floor_date(d, "month")]) * day(d) / days_in_month(d)
+  sum(round(years_done$n)) + round(part)
 }
 tA17 <-
   official |>
@@ -1737,7 +1793,7 @@ tA17 <-
   mutate(
     date = as.Date(date),
     kind = if_else(key == "military_killed_official", "Official Ukrainian statement", "Other estimate"),
-    stated = if_else(is.na(value), sprintf("%s - %s", scales::comma(low), scales::comma(high)),
+    stated = if_else(is.na(value), sprintf("%s–%s", scales::comma(low), scales::comma(high)),
                      scales::comma(value)),
     register_named_dead = round(map_dbl(date, \(d) through(d, "registered_dead"))),
     this_study = round(map_dbl(date, \(d) through(d, "military")))

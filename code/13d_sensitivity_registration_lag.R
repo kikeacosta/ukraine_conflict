@@ -19,17 +19,18 @@
 #   to 60 / 72 months        the same, with the rate of the 42-48 month band
 #                            carried on beyond 48 months
 #
-# Each scenario goes through production's imputation chain at the central
-# alpha its own evidence gives, and through the deterministic projection of
-# 13b, every other input at its mode. The scenario used must reproduce 13b.
-# A grid then crosses the four horizons with five values of alpha - its
-# floor, the ends of the 95% interval of its distribution, its central value
-# and its cap - to show how the two assumptions move the results together.
+# Each scenario goes through production's imputation at the central values
+# of the evidence on the missing alive, and through the deterministic
+# projection of 13b, every other input at its mode. The scenario used must
+# reproduce 13b. A grid then crosses the four horizons with five points of
+# that evidence - its floor, the ends of the 95% interval of the draws, its
+# central values and its ceiling, as 13b's sweep sets them - to show how the
+# two assumptions move the results together.
 #
 # INPUTS   data_inter/ukr_registration_completion.rds (08b)
 #          data_inter/ukr_ualosses_conflict_deaths_sex_age_2022_2025.rds (08)
-#          data_inter/ukr_ualosses_resolution_model.rds, ukr_alpha_missing.rds (09)
-#          data_inter/ukr_alpha_sensitivity_e0.rds (13b)
+#          data_inter/ukr_ualosses_resolution_model.rds, ukr_alive_missing.rds (09)
+#          data_inter/ukr_alive_sensitivity_military.rds, ukr_alive_sensitivity_e0.rds (13b)
 #          the static inputs of 13b
 # OUTPUTS  data_inter/ukr_registration_lag.rds
 # ==============================================================================
@@ -85,27 +86,23 @@ stocks_registered <-
   read_rds("data_inter/ukr_ualosses_conflict_deaths_sex_age_2022_2025.rds") |>
   summarise(n = sum(dx), .by = c(year, status)) |>
   mutate(status = as.character(status))
-register_alive <- sum(stocks_registered$n[stocks_registered$status %in% c("prisoner", "released_prisoner")])
 model <- read_rds("data_inter/ukr_ualosses_resolution_model.rds")
-alpha_used <- read_rds("data_inter/ukr_alpha_missing.rds")
+evidence <- read_rds("data_inter/ukr_alive_missing.rds")
 
 # each year's registered count spread over its months as v19 lists them, as
 # in 09, and each month completed by its factor under the horizon
-military_under <- function(horizon) {
+military_at <- function(horizon, captives = evidence$captives_mode, other = evidence$other_mode) {
   st <- factors_under(horizon) |>
     mutate(share = n_v19 / sum(n_v19), .by = c(year, status)) |>
     left_join(stocks_registered |> rename(n_year = n), by = c("year", "status")) |>
     mutate(completed = n_year * share * f)
   dead <- st |> filter(status == "dead") |> summarise(confirmed = sum(completed), .by = year)
   miss <- st |> filter(status == "missing") |> select(month = m, year, missing_stock = completed)
-  impute_fn <- \(a) impute_missing(a, model, miss)
-  a <- alpha_evidence(impute_fn, model$resolved, register_alive,
-                      net_projected_captivity = alpha_used$net_projected_captivity)
-  impute_fn(a$alpha_mode) |>
+  impute_missing(model, miss, captives, other) |>
     left_join(dead, by = "year") |>
-    transmute(year, alpha = a$alpha_mode, confirmed, missing = missing_stock, imputed_dead,
-              total = confirmed + imputed_dead)
+    transmute(year, confirmed, missing = missing_stock, imputed_dead, total = confirmed + imputed_dead)
 }
+military_under <- function(horizon) military_at(horizon)
 military <- scenarios |> mutate(res = map(horizon, military_under)) |> unnest(res)
 
 # 3. THE DETERMINISTIC PROJECTION, AS IN 13b ===================================
@@ -155,38 +152,24 @@ e0_loss <- function(mil) {
 loss <- military |> nest(.by = c(scenario, horizon)) |>
   mutate(res = map(data, e0_loss)) |> select(-data) |> unnest(res)
 
-# the scenario used must reproduce 13b at the central alpha
-check <- read_rds("data_inter/ukr_alpha_sensitivity_e0.rds") |> filter(range_point %in% "mode") |> arrange(year, sex)
+# the scenario used must reproduce 13b at the central values
+check <- read_rds("data_inter/ukr_alive_sensitivity_e0.rds") |> filter(point %in% "central") |> arrange(year, sex)
 stopifnot(isTRUE(all.equal(loss |> filter(scenario == "to 48 months (used)") |> arrange(year, sex) |> pull(loss),
                            check$loss, tolerance = 1e-8)))
 
-# 4. THE SHARE ALIVE AND THE HORIZON TOGETHER =================================
-# The military total and the loss over a grid of alpha - the floor, the ends
-# of the 95% interval of its distribution, the central value and the cap, all
-# from 09's evidence - and the four horizons, to show how the two assumptions
-# move the results jointly.
-alpha_points <- tibble(
-  point = c("floor", "2.5th percentile", "central", "97.5th percentile", "cap"),
-  alpha = c(0,
-            qpert(0.025, alpha_used$alpha_min, alpha_used$alpha_mode, alpha_used$alpha_max),
-            alpha_used$alpha_mode,
-            qpert(0.975, alpha_used$alpha_min, alpha_used$alpha_mode, alpha_used$alpha_max),
-            alpha_used$alpha_max)
-)
-military_at <- function(horizon, alpha) {
-  st <- factors_under(horizon) |>
-    mutate(share = n_v19 / sum(n_v19), .by = c(year, status)) |>
-    left_join(stocks_registered |> rename(n_year = n), by = c("year", "status")) |>
-    mutate(completed = n_year * share * f)
-  dead <- st |> filter(status == "dead") |> summarise(confirmed = sum(completed), .by = year)
-  miss <- st |> filter(status == "missing") |> select(month = m, year, missing_stock = completed)
-  impute_missing(alpha, model, miss) |>
-    left_join(dead, by = "year") |>
-    transmute(year, confirmed, total = confirmed + imputed_dead)
-}
+# 4. THE MISSING ALIVE AND THE HORIZON TOGETHER ===============================
+# The military total and the loss at five points of the evidence on the
+# missing alive - the floor, the ends of the 95% interval of the draws, the
+# central values and the ceiling, as 13b's sweep sets them - and the four
+# horizons, to show how the two assumptions move the results jointly.
+alive_points <-
+  read_rds("data_inter/ukr_alive_sensitivity_military.rds") |>
+  filter(point %in% c("floor", "2.5th percentile of draws", "central", "97.5th percentile of draws", "cap")) |>
+  distinct(point, share_alive, captives, other) |>
+  mutate(point = sub(" of draws", "", point))
 grid <-
-  expand_grid(scenarios, alpha_points) |>
-  mutate(mil = map2(horizon, alpha, military_at),
+  expand_grid(scenarios, alive_points) |>
+  mutate(mil = pmap(list(horizon, captives, other), military_at),
          # summed over rounded years, as table 3 builds its totals, so the two agree
          military = map_dbl(mil, \(m) sum(round(m$total))),
          res = map(mil, e0_loss)) |>
@@ -202,16 +185,15 @@ write_rds(list(lambda_band = lambda_band, L_ref = L_ref, ratios = ratios,
                military = military, loss = loss, grid = grid),
           "data_inter/ukr_registration_lag.rds")
 
-cat("\n=== MILITARY TOTAL AND 2025 MALE LOSS, ALPHA BY HORIZON ===\n")
+cat("\n=== MILITARY TOTAL AND 2025 MALE LOSS, THE MISSING ALIVE BY HORIZON ===\n")
 print(as.data.frame(
   grid |> filter(year == 2025, sex == "m") |>
     transmute(scenario, point, cell = sprintf("%s / %.2f", scales::comma(round(military)), loss)) |>
     pivot_wider(names_from = scenario, values_from = cell)
 ))
 
-cat("\n=== MILITARY TOTAL BY SCENARIO, EACH AT ITS OWN CENTRAL ALPHA ===\n")
-print(as.data.frame(military |> summarise(alpha = first(alpha),
-                                          across(c(confirmed, missing, imputed_dead, total), \(x) round(sum(x))),
+cat("\n=== MILITARY TOTAL BY SCENARIO, AT THE CENTRAL VALUES ===\n")
+print(as.data.frame(military |> summarise(across(c(confirmed, missing, imputed_dead, total), \(x) round(sum(x))),
                                           .by = scenario)))
 cat("\n=== LOSS, MEN ===\n")
 print(as.data.frame(loss |> filter(sex == "m") |> mutate(loss = round(loss, 2)) |> select(-horizon) |>

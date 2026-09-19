@@ -14,33 +14,37 @@
 #               combatant deaths (ualosses register), the latter further
 #               split into confirmed and imputed-from-missing
 #
-# Conflict death totals and net migration are both uncertain, so both are
-# drawn n_sim times (00_setup.R) from PERT distributions built in 10. Every
-# draw is projected through the full 2022-2025 accounting, which is what gives
-# the results their uncertainty intervals.
+# Every input that is uncertain and can be given a distribution is drawn n_sim
+# times (simulation_draws(), 00_setup.R), and every draw is projected through
+# the full 2022-2025 accounting, which is what gives the results their
+# uncertainty intervals: civilian deaths, the evidence on the missing alive,
+# the sampling error of the resolution model and of the registration-lag
+# factors, the Lee-Carter forecast of the counterfactual, and net migration.
 #
 # They are drawn differently, because they are uncertain in different ways.
 # Each year's civilian total is its own unknown, so those draws are
-# independent. The military total is uncertain through ONE parameter, alpha,
-# the share of the never-resolved missing who are alive, so alpha is drawn
-# once per simulation. Migration is uncertain in its COVERAGE - how much of the
+# independent. The evidence on the missing alive describes the missing, not a
+# year, so it is drawn once per simulation and sets every year's military
+# total together. Migration is uncertain in its COVERAGE - how much of the
 # outflow the sources see - and that bias runs the same way in every year, so
 # each migration component is drawn once per simulation and held across all
-# four years.
+# four years. The forecast index follows its random walk from year to year.
 #
 # INPUTS   data_inter/ukr_param_table.rds                  (from 10)
 #          data_inter/ukr_mxs_obs_plus_frcst_1989_2025.rds (from 04)
+#          data_inter/ukr_lc_forecast_error.rds            (from 04)
 #          data_inter/ukr_pop_sssu.rds                     (from 01)
 #          data_inter/ukr_migrants_...rds                  (from 06)
 #          data_inter/ukr_asfr_wpp_2022_2025.rds           (from 05)
 #          data_inter/ukr_ohchr_civilian_casualties.rds    (from 07_ohchr)
 #          data_inter/ukr_ualosses_...rds                  (from 08)
-#          data_inter/ukr_alpha_missing.rds, ukr_military_alpha_lines.rds (09)
+#          data_inter/ukr_military_inputs.rds              (from 09)
 #
 # OUTPUTS  data_inter/ukr_sim_draws_2022_2025_n<n_sim>.rds  (every draw)
 #          data_inter/ukr_probabilistic_deaths_rates_2022_2025.rds (summary)
 #          data_inter/ukr_sim_param_draws.rds      (the draws themselves, for 15)
-#          data_inter/ukr_sim_alpha_draws.rds      (alpha in every draw, for 15)
+#          data_inter/ukr_sim_alive_draws.rds      (the evidence on the missing
+#                                                   alive in every draw, for 15)
 #
 # The life expectancy decomposition that used to live at the bottom of this
 # script now has its own step, 14, which runs it inside every draw instead of
@@ -64,9 +68,12 @@ message("simulation size: n_sim = ", n_sim)
 param_table <- read_rds("data_inter/ukr_param_table.rds")
 
 # --- counterfactual ("expected") mortality, no war --------------------------
+# the forecast means, and what each draw needs to move them along its own
+# path of the forecast index: the loading bx and the forecast variance vk
 exp_mort2 <- read_rds("data_inter/ukr_mxs_obs_plus_frcst_1989_2025.rds") %>%
   filter(year %in% 2022:2025, source == "frcst") %>%
   select(-source)
+lc_error <- read_rds("data_inter/ukr_lc_forecast_error.rds")
 
 # --- starting population: 1 January 2022, continental Ukraine ----------------
 # region "cnt" is the whole country without Crimea and Sevastopol; it includes
@@ -141,6 +148,8 @@ static_inputs <- expand_grid(
   left_join(exp_mort2, by = c("year", "sex", "age")) %>%
   left_join(asfr2, by = c("year", "sex", "age")) %>%
   left_join(profile_props, by = c("year", "sex", "age")) %>%
+  left_join(lc_error$bx, by = c("sex", "age")) %>%
+  left_join(lc_error$variance |> select(sex, year, vk), by = c("sex", "year")) %>%
   replace_na(list(ems = 0, w = 0, mx = 0, fx = 0, prop_cvs = 0,
                   prop_cmb_dead = 0, prop_cmb_miss = 0))
 
@@ -176,15 +185,20 @@ stopifnot(
 # events, and 2022 being at its ceiling says nothing about 2023.
 #
 # COMBATANTS are not like that, although they look like a count. What is
-# uncertain about them is alpha, the share of the never-resolved missing who
-# are alive (00_setup.R, alpha_evidence(): the evidence, the sources and the
-# range). That is ONE property of the missing, not four separate facts, so
-# alpha is drawn once per simulation and every year's total follows from it:
-# at_alpha0 - alpha x residual, the line 09's imputation traces. Drawing the
-# years independently would let one simulation put 2022 at "none of the
-# missing alive" and 2025 at "a fifth of them alive", which is not a scenario
-# anyone could defend, and the errors would partly cancel in the four-year
-# total.
+# uncertain about them is how many of the missing are alive (00_setup.R,
+# alive_evidence(): the evidence, the sources and the ranges): the prisoners
+# of war among them and the share of the rest alive for other reasons. Those
+# are properties of the missing, not four separate facts, so they are drawn
+# once per simulation and every year's total follows from them
+# (military_draws()), together with a draw of the resolution model's
+# estimates and of the registration-lag factors. Drawing the years
+# independently would let one simulation put 2022 at "none of the missing
+# alive" and 2025 at "a fifth of them alive", which is not a scenario anyone
+# could defend, and the errors would partly cancel in the four-year total.
+#
+# THE COUNTERFACTUAL is a forecast, and its error grows with the horizon: each
+# simulation follows its own path of each sex's Lee-Carter index, the two
+# sexes' steps correlated as 04 measured.
 #
 # MIGRATION is uncertain in how much of the outflow the sources capture, and a
 # register that keeps people after they return does so in every year alike.
@@ -194,20 +208,21 @@ stopifnot(
 # the register reading - so its four-year total runs between the two sources'
 # own totals, and the mode is their midpoint in every year (see 10). RUSSIA AND
 # BELARUS is one 2022 entry with its own PERT bounds.
-alpha_range <- read_rds("data_inter/ukr_alpha_missing.rds")
-alpha_lines <- read_rds("data_inter/ukr_military_alpha_lines.rds")
-sampled <- simulation_draws(param_table, alpha_range, alpha_lines, n = n_sim)
+mil <- read_rds("data_inter/ukr_military_inputs.rds")
+sampled <- simulation_draws(param_table, mil, lc_error, n = n_sim)
 draws_df <- sampled$draws_df
 param_draws <- sampled$param_draws
-write_rds(sampled$alpha_draws, "data_inter/ukr_sim_alpha_draws.rds")
+write_rds(sampled$alive_draws, "data_inter/ukr_sim_alive_draws.rds")
 
-# the military draws must stay inside 10's bounds, which are the same line
-# evaluated at the ends of the range
+# the draws of the evidence alone, the model and the lag at their point
+# values, must stay inside 10's bounds, which are the same total at the ends
+# of the evidence
 stopifnot(
   param_draws |>
-    filter(role == "combatants") |>
+    filter(role == "mil_alive") |>
     left_join(param_table |> filter(role == "combatants") |> select(year, min, max), by = "year") |>
-    with(all(draw >= min - 1e-6 & draw <= max + 1e-6))
+    with(all(draw >= min - 1e-6 & draw <= max + 1e-6)),
+  !any(is.na(draws_df))
 )
 
 # One tidy row per simulation, year and role. 15 draws its PERT figures from

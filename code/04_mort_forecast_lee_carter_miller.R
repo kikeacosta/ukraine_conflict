@@ -93,6 +93,47 @@ tst_out <- tst %>%
 # saving forecast estimates
 write_rds(tst_out, "data_inter/ukr_mxs_obs_plus_frcst_1989_2025.rds")
 
+# The forecast's own uncertainty, for 11 to draw. log(mx) = a(x) + b(x) k(t),
+# and k follows a random walk with drift estimated on 2000-2019: a forecast h
+# years ahead has variance sigma^2 h (1 + h / (n - 1)), innovations plus the
+# error in the drift. The rates 04 writes are the forecast means, so a drawn
+# path with index deviation dk has rates mx x exp(b dk - b^2 v / 2): the
+# lognormal correction keeps the mean of the drawn rates at 04's rates. The
+# two sexes are fitted apart; their innovations are correlated as the yearly
+# changes in their fitted indices are. The check below confirms that this
+# reproduces the forecast distribution vital reports.
+lc_fit <- ukr_vital |> model(lc = LC(log(mx), adjust = "e0", jump_choice = "fit"))
+kt <- time_components(lc_fit) |> as_tibble()
+k_walk <- kt |>
+  arrange(sex, year) |>
+  summarise(k_last = last(kt), drift = mean(diff(kt)), sigma = sd(diff(kt)), n = n(),
+            last_year = max(year), .by = sex)
+dk_pairs <- kt |>
+  arrange(sex, year) |>
+  mutate(dk = kt - lag(kt), .by = sex) |>
+  select(sex, year, dk) |>
+  pivot_wider(names_from = sex, values_from = dk) |>
+  drop_na()
+lc_error <- list(
+  bx = age_components(lc_fit) |> select(sex, age, bx),
+  walk = k_walk,
+  rho = cor(dk_pairs$f, dk_pairs$m),
+  variance = k_walk |>
+    expand_grid(year = 2022:2025) |>
+    mutate(h = year - last_year, vk = sigma^2 * h * (1 + h / (n - 1))) |>
+    select(sex, year, h, vk)
+)
+check_sd <-
+  fc_rates |>
+  as_tibble() |>
+  filter(year %in% 2022:2025) |>
+  transmute(year, sex, age, sd_vital = (log(quantile(mx, pnorm(1))) - log(quantile(mx, pnorm(-1)))) / 2) |>
+  left_join(lc_error$bx, by = c("sex", "age")) |>
+  left_join(lc_error$variance, by = c("sex", "year")) |>
+  mutate(sd_here = abs(bx) * sqrt(vk))
+stopifnot(isTRUE(all.equal(check_sd$sd_here, check_sd$sd_vital, tolerance = 1e-6)))
+write_rds(lc_error, "data_inter/ukr_lc_forecast_error.rds")
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # visualizing observed and projected life expectancy ====

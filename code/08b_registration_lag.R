@@ -171,8 +171,55 @@ cat("\n=== V19 COUNTS BROUGHT TO THE COMPLETENESS EVENTS REACH AT FOUR YEARS ===
 print(as.data.frame(completion_year |> mutate(across(c(n_v19, n_completed), round),
                                               ratio = round(ratio, 4))))
 
+# 4. SAMPLING ERROR OF THE FACTORS ============================================
+# The band rates are averages over event months, and the months differ: a
+# release can add a batch to some months and not others. The error of the
+# factors is measured by resampling event months with replacement - each
+# month keeps all its release pairs, dead and missing together - and
+# re-estimating the band rates and the chained factors, B times. A band that a
+# resample happens to leave empty keeps its estimate. 11 draws one replicate
+# per simulation, so the late registrations and the completed missing carry
+# this error into the results.
+set.seed(20260919)
+B_lag <- 2000
+months_rates <- unique(growth$m)
+growth_band <-
+  growth |>
+  mutate(band = cut(Lmid, bands, right = TRUE)) |>
+  filter(!is.na(band)) |>
+  mutate(wt = n_from * dL)
+lag_replicate <- function(ms) {
+  lb <-
+    tibble(m = ms) |>
+    count(m, name = "times") |>
+    inner_join(growth_band, by = "m", relationship = "one-to-many") |>
+    summarise(lambda = sum(lambda * wt * times) / sum(wt * times), .by = c(status, band))
+  lb <-
+    lambda_band |>
+    select(status, band, lo, hi, lambda0 = lambda) |>
+    left_join(lb, by = c("status", "band")) |>
+    mutate(lambda = coalesce(lambda, lambda0))
+  map2_dbl(completion_month$lag, completion_month$status, \(l, s) chain_factor(l, s, lb = lb))
+}
+lag_factors <- sapply(seq_len(B_lag), \(b) lag_replicate(sample(months_rates, replace = TRUE)))
+stopifnot(all(lag_factors > 0), nrow(lag_factors) == nrow(completion_month))
+
+cat("\n=== SAMPLING ERROR OF THE COMPLETED COUNTS (", B_lag, "resamples of event months) ===\n")
+print(as.data.frame(
+  completion_month |>
+    select(year, status, n_v19) |>
+    bind_cols(as_tibble(lag_factors, .name_repair = \(x) paste0("b", seq_along(x)))) |>
+    summarise(across(starts_with("b"), \(f) sum(n_v19 * f)), n_v19 = sum(n_v19), .by = c(year, status)) |>
+    pivot_longer(starts_with("b"), values_to = "completed") |>
+    summarise(n_v19 = first(n_v19), lo = quantile(completed, 0.025), mid = median(completed),
+              hi = quantile(completed, 0.975), .by = c(year, status)) |>
+    mutate(across(c(lo, mid, hi), round)) |>
+    arrange(status, year)
+))
+
 write_rds(
-  list(lambda_band = lambda_band, L_ref = L_ref, month = completion_month, year = completion_year),
+  list(lambda_band = lambda_band, L_ref = L_ref, month = completion_month, year = completion_year,
+       factor_draws = lag_factors),
   "data_inter/ukr_registration_completion.rds"
 )
-message("Done. data_inter/ukr_registration_completion.rds written for 09 and 13d.")
+message("Done. data_inter/ukr_registration_completion.rds written for 09, 11 and 13d.")

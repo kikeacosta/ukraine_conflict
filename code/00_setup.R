@@ -382,14 +382,15 @@ ual_follow_missing <- function(regs) {
 # at the first absence (absent_as = "alive", production) or, for the
 # sensitivity, as still missing to the end (absent_as = "missing").
 #
-# A released prisoner was held, not disappeared. v19 is the first release to
-# record returns from captivity, so a person listed as missing whose first
-# resolution is a release was a prisoner the register had not recorded. Such
-# a person is left out of the population at risk altogether, in every window
-# (released = "exclude", production). The alternative, released = "alive",
-# counts the return as a resolution to captivity; 09 compares the two.
+# A missing person whose first resolution is a return from captivity was a
+# prisoner the register had not recorded, and is alive: the return counts as a
+# resolution to captivity (released = "alive", production). v19 is the first
+# release to record returns, so these resolutions fall in its window. The
+# alternative, released = "exclude", leaves such a person out of the
+# population at risk altogether, as someone held rather than disappeared; 09
+# compares the two.
 ual_outcomes <- c("dead", "prisoner", "no_longer_listed", "missing")
-ual_windows <- function(hist, absent_as = c("alive", "missing"), released = c("exclude", "alive")) {
+ual_windows <- function(hist, absent_as = c("alive", "missing"), released = c("alive", "exclude")) {
   absent_as <- match.arg(absent_as)
   released <- match.arg(released)
   rel <- ual_releases$release
@@ -538,43 +539,61 @@ ual_fit_durations <- function(cells, horizon, breaks = ual_duration_breaks) {
        fitted = cells |> bind_cols(as_tibble(cell_probs(fit$par), .name_repair = \(x) paste0("p_", x))))
 }
 
-# Imputation of the long-term missing. Defined once so that 09 (the central
-# value of alpha), 13b (the sweep over alpha, and rate sampling), 13d and the
-# range computed by alpha_evidence() below all use the SAME formula.
+# Imputation of the missing. Defined once so that 09 (the central values),
+# 10 (the bounds), 11 (every draw, through military_draws() below), 13b (the
+# sweep over the missing alive) and 13d all use the SAME formula.
 #
 # model          the fitted durations (ual_fit_durations()): hazards by band
 #                and the horizon
 # stock_missing  tibble(month, year, missing_stock): v19's missing by event
 #                month, completed for registration lag (09)
-# alpha          share of the NEVER-RESOLVED long-term missing who are alive;
-#                1 - alpha are dead. The one free parameter: its range comes
-#                from alpha_evidence(), 11 draws it, 13b sweeps it.
+# captives       the prisoners of war among the missing, alive: set by the
+#                official figures (alive_evidence() below), not projected
+# alive_other    the share of the unresolved who are alive for any other
+#                reason, as far as the rules can tell
 #
 # Each event month's missing move from the duration they have reached in v19
 # to the horizon, resolving along the way to death, to captivity or out of the
-# register; those still missing at the horizon are the never-resolved, and a
-# share alpha of them is alive. A month already past the horizon is not moved.
+# register (no longer listed, counted as found alive), or staying missing. A
+# month already past the horizon is not moved. The projection of captivity
+# rests on one release's catch-up of past returns (alive_evidence()), so
+# captivity is not taken from it: the captives are spread over event months
+# as the projection spreads captivity and scaled to the number given. The rest
+# of the projected captivity and those still missing at the horizon are the
+# unresolved; alive_other of them are alive and the rest dead.
+#
 # Returns, by event year (or by = c("month", "year")), missing_stock and its
-# parts: projected_dead, imputed_prisoner (projected captivity),
-# imputed_unlisted (projected to leave the register), never_resolved, and of
-# these alive_never_resolved (alpha x never_resolved); imputed_dead is
-# projected_dead plus the dead share of the never-resolved, imputed_alive the
-# unlisted plus the alive share. Every output is linear in alpha.
-impute_missing <- function(alpha, model, stock_missing, by = "year") {
+# parts: projected_dead, projected_captivity, captives, imputed_unlisted
+# (projected to leave the register), never_resolved, unresolved (projected
+# captivity plus never-resolved, less the captives), alive_other
+# (alive_other x unresolved), imputed_dead (projected deaths plus the dead
+# among the unresolved) and imputed_alive (captives, no longer listed and
+# alive_other).
+impute_missing <- function(model, stock_missing, captives, alive_other = 0, by = "year") {
   d_v19 <- ual_months_since(ual_releases$date[nrow(ual_releases)], stock_missing$month)
   p <- ual_resolve(model$h, pmin(d_v19, model$horizon), model$horizon, model$breaks)
-  stock_missing |>
+  proj <-
+    stock_missing |>
     mutate(
       projected_dead = missing_stock * p[, "dead"],
-      imputed_prisoner = missing_stock * p[, "prisoner"],
+      projected_captivity = missing_stock * p[, "prisoner"],
       imputed_unlisted = missing_stock * p[, "no_longer_listed"],
-      never_resolved = missing_stock * p[, "missing"],
-      alive_never_resolved = never_resolved * alpha,
-      imputed_dead = projected_dead + never_resolved - alive_never_resolved,
-      imputed_alive = imputed_unlisted + alive_never_resolved
-    ) |>
-    summarise(across(c(missing_stock, imputed_dead, imputed_alive, imputed_prisoner, imputed_unlisted,
-                       projected_dead, never_resolved, alive_never_resolved), sum),
+      never_resolved = missing_stock * p[, "missing"]
+    )
+  scale <- captives / sum(proj$projected_captivity)
+  out <-
+    proj |>
+    mutate(
+      captives = projected_captivity * scale,
+      unresolved = projected_captivity + never_resolved - captives,
+      alive_other = unresolved * alive_other,
+      imputed_dead = projected_dead + unresolved - alive_other,
+      imputed_alive = captives + imputed_unlisted + alive_other
+    )
+  stopifnot(all(out$unresolved >= 0))
+  out |>
+    summarise(across(c(missing_stock, imputed_dead, imputed_alive, projected_dead, projected_captivity,
+                       captives, imputed_unlisted, never_resolved, unresolved, alive_other), sum),
               .by = all_of(by))
 }
 
@@ -582,10 +601,11 @@ impute_missing <- function(alpha, model, stock_missing, by = "year") {
 # with event-year cohorts, one year apart, standing in for duration since
 # disappearance. tasas_long holds the twelve-month probabilities by cohort
 # and state (alive, dead, prisoner, missing) in `prop`, and stock_missing the
-# missing by event year.
-impute_missing_cohorts <- function(alpha, tasas_long, stock_missing) {
-  suelo_vivo <- alpha
-  suelo_muerto <- 1 - alpha
+# missing by event year. alive_other: the share of those still missing at the
+# end of the chain who are alive, as in impute_missing().
+impute_missing_cohorts <- function(alive_other, tasas_long, stock_missing) {
+  suelo_vivo <- alive_other
+  suelo_muerto <- 1 - alive_other
 
   extraer_tasa <- function(target_year, target_status) {
     valor <- tasas_long$prop[
@@ -659,55 +679,48 @@ impute_missing_cohorts <- function(alpha, tasas_long, stock_missing) {
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# the range of alpha allowed by the evidence ====
+# the missing who are alive: the evidence ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# alpha is the share of the never-resolved missing who are alive. Prisoners
-# are alive whether still held or released, so the evidence on alpha is about
-# prisoners of war, compared across two sources:
+# By the rules of the linkage, a missing person is alive if they turn out to
+# be a prisoner of war, held or since released, or if they leave the register
+# (no longer listed). The model projects the second. The first is set by the
+# official prisoner-of-war figures, compared with the register:
 #
-#   the register  v19 records prisoners and, as released_prisoner, returns
-#                 from captivity; together they are the prisoners it knows of
-#   official      the prisoners of war held in February 2026 plus the
-#   figures       military personnel returned from captivity by then:
-#                 everyone taken prisoner, whether held or released since.
-#                 Both counts are of the military at the same date, so no one
-#                 is counted twice and no civilian is counted
+#   official   the prisoners of war held in February 2026 plus the military
+#   figures    personnel returned from captivity by then: everyone taken
+#              prisoner, held or released since. Both counts are of the
+#              military at the same date, so no one is counted twice and no
+#              civilian is counted
+#   register   the prisoners and released prisoners v19 records
 #
-# Prisoners the register does not record as such are either among its missing
-# or not in the register at all.
+# The difference, the unrecorded prisoners, are either among the register's
+# missing or not in it at all. The share among the missing comes from the
+# register's own history of returns: of the people v19 records as returned who
+# had not been listed as prisoners, the share listed as missing in an earlier
+# release. For events of 2024-2025 the releases from September 2025 on cover
+# the time from capture to return, and about half had been listed as missing:
+# the mode. Over all event years the share is lower, because most returns from
+# 2022 events came before the first release that can be followed: the floor.
+# The ceiling assumes every unrecorded prisoner is among the missing.
 #
-#   min   0 - every unrecorded prisoner is outside the register (most of the
-#         people it records as returned were in no earlier release; 09)
-#   mode  (share_among_missing x (pow_held + returned_military - register_alive)
-#          - projected captivity) / residual, and no lower than 0. With
-#         share_among_missing = 1 (production), every unrecorded prisoner is
-#         among the missing, and those the chain itself projects into
-#         captivity are not among the never-resolved
-#   max   the register's own share of resolutions that are alive (to
-#         prisoner or no longer listed), assuming the never-resolved are no
-#         more often alive than those resolved: a living prisoner is listed
-#         or exchanged more readily than a body is recovered
+# Why the model's projection is not used for captivity: v19 is the first
+# release to record returns from captivity, and it recorded past returns in
+# one batch - 2,539 of the 2,582 moves from missing to captivity the model is
+# fitted to fall in the window before it (09). Carried forward as a rate, that
+# batch projects more future prisoners among today's missing than the
+# official figures leave unrecorded at all.
 #
-# Each unrecorded prisoner is counted once. Those among today's missing whom
-# the chain projects into captivity are resolved alive by the chain, so they
-# are taken out of the unrecorded prisoners before the rest are set against
-# the never-resolved. The chain resolves nobody to a release - released
-# prisoners are outside the population at risk (ual_windows) - so a prisoner
-# later exchanged is left to alpha. The mode leans high: of the people the
-# register records as returned who were not recorded as prisoners before,
-# about a quarter had been listed as missing and the rest were in no earlier
-# release, and 09 shows the mode with the unrecorded prisoners among the
-# missing in that proportion. The returned figure also holds the few taken
-# prisoner before 2022, outside the register's event years.
-#
-# residual is the number of missing never resolved at the end of the chain,
-# the quantity alpha applies to: impute_missing() is linear in alpha, so it is
-# the imputed dead at alpha = 0 minus those at alpha = 1.
+# The rest of the projected captivity and those still missing at the horizon
+# are the unresolved. A share of them may be alive for some other reason, and
+# no source counts them: the floor and the mode are 0, the ceiling the share
+# of the register's own first resolutions that leave it - the unresolved no
+# more often alive, outside captivity, than those resolved.
 #
 # SOURCES
 #   pow_held           "about 7,000 Ukrainian prisoners of war" held by
 #                      Russia - President Zelensky, Munich, 14 Feb 2026
-#                      (Ukrinform, 14 Feb 2026).
+#                      (Ukrinform, 14 Feb 2026). Rounded to the thousand, so
+#                      drawn between 6,500 and 7,500.
 #   returned_military  7,291 military personnel (235 women, 7,056 men)
 #                      returned from captivity since 24 Feb 2022, in the
 #                      Coordination Headquarters for the Treatment of Prisoners
@@ -715,54 +728,136 @@ impute_missing_cohorts <- function(alpha, tasas_long, stock_missing) {
 #                      (koordshtab.gov.ua/report, read 19 Sep 2026). The 876
 #                      civilians returned by then are left out: the register
 #                      lists military personnel only.
-pow_held <- 7000
+pow_held <- c(min = 6500, mode = 7000, max = 7500)
 returned_military <- 7291
 
-# impute          function(alpha) giving impute_missing()'s output for the
-#                 chain in use
-# resolved        the first resolutions the chain rests on, as counts named
-#                 dead and by the alive outcomes (prisoner, no longer listed)
+# resolved        the first resolutions the model rests on, as counts named
+#                 dead, prisoner and no_longer_listed
 # register_alive  the register's prisoners plus released prisoners, events
 #                 2022-2025, from 08's redistributed counts
-# net_projected_captivity  whether the chain's own projected transitions to
-#                 captivity are taken out of the unrecorded prisoners before
-#                 they are set against the never-resolved
-# share_among_missing  the share of the unrecorded prisoners taken to be among
-#                 the register's missing rather than outside it
-alpha_evidence <- function(impute, resolved, register_alive, net_projected_captivity = TRUE,
-                           share_among_missing = 1) {
-  imp0 <- impute(0)
-  imp1 <- impute(1)
-  residual <- sum(imp0$imputed_dead - imp1$imputed_dead)
-  projected_captivity <- sum(imp0$imputed_prisoner)
-
-  resolved_alive <- sum(resolved[names(resolved) != "dead"])
-  resolved_all <- sum(resolved)
+# released_prior  where v19's released prisoners had been listed before their
+#                 return, by event year: year, prior (prisoner, missing, dead,
+#                 not listed), n
+alive_evidence <- function(resolved, register_alive, released_prior) {
+  share_missing <- function(d) {
+    d <- d |> summarise(n = sum(n), .by = prior)
+    d$n[d$prior == "missing"] / sum(d$n[d$prior %in% c("missing", "not listed")])
+  }
   unrecorded <- pow_held + returned_military - register_alive
-  among_never_resolved <- share_among_missing * unrecorded -
-    if (net_projected_captivity) projected_captivity else 0
-
   out <- tibble(
-    alpha_min = 0,
-    alpha_mode = max(0, among_never_resolved) / residual,
-    alpha_max = resolved_alive / resolved_all,
-    residual = residual,
-    unrecorded_prisoners = unrecorded,
-    projected_captivity = projected_captivity,
-    net_projected_captivity = net_projected_captivity,
-    share_among_missing = share_among_missing,
+    s_min = share_missing(released_prior),
+    s_mode = share_missing(released_prior |> filter(year >= 2024)),
+    s_max = 1,
+    held_min = pow_held[["min"]],
+    held_mode = pow_held[["mode"]],
+    held_max = pow_held[["max"]],
+    returned_military = returned_military,
     register_alive = register_alive,
-    resolved_alive = resolved_alive,
-    resolved_dead = resolved_all - resolved_alive,
-    pow_held = pow_held,
-    returned_military = returned_military
+    unrecorded_min = unrecorded[["min"]],
+    unrecorded_mode = unrecorded[["mode"]],
+    unrecorded_max = unrecorded[["max"]],
+    captives_min = s_min * unrecorded_min,
+    captives_mode = s_mode * unrecorded_mode,
+    captives_max = s_max * unrecorded_max,
+    other_min = 0,
+    other_mode = 0,
+    other_max = resolved[["no_longer_listed"]] / sum(resolved)
   )
   stopifnot(
-    out$alpha_mode >= out$alpha_min,
-    out$alpha_mode < out$alpha_max,
-    out$alpha_max < 1
+    out$s_min <= out$s_mode, out$s_mode <= out$s_max,
+    out$unrecorded_min > 0, out$other_max < 1
   )
   out
+}
+# the prisoners among the missing, for a share s among the missing and a
+# count of prisoners held
+captives_for <- function(ev, s, held) s * (held + ev$returned_military - ev$register_alive)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# the military total in every draw ====
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# impute_missing() for many draws at once, adding the registered dead with
+# their late registrations. Three things vary between draws:
+#   the missing alive     captives (from the share among the missing and the
+#                         prisoners held) and alive_other
+#   the resolution model  the log-hazards and window multipliers, drawn from
+#                         their sampling distribution (theta)
+#   registration lag      the completion factors, one of 08b's resampled
+#                         replicates per draw (lag)
+# mil holds 09's inputs (data_inter/ukr_military_inputs.rds): the registered
+# dead and missing by event month (month, year, status, registered, row: the
+# row of 08b's factor tables), the point and resampled factors, the model and
+# the evidence. theta: a matrix of drawn theta, one row per draw, or NULL for
+# the estimate; lag: the replicate for each draw, or NULL for the point
+# factors. Returns one row per draw and year: confirmed (registered and late),
+# missing, captives, imputed_unlisted, alive_other, imputed_dead and military.
+military_draws <- function(mil, captives, alive_other, theta = NULL, lag = NULL) {
+  n <- length(captives)
+  stopifnot(length(alive_other) == n, is.null(lag) || length(lag) == n,
+            is.null(theta) || nrow(theta) == n)
+  dead <- mil$month |> filter(status == "dead")
+  miss <- mil$month |> filter(status == "missing")
+  factors <- function(rows) {
+    if (is.null(lag)) matrix(mil$factor_point[rows], length(rows), n)
+    else mil$factor_draws[rows, lag, drop = FALSE]
+  }
+  confirmed_m <- dead$registered * factors(dead$row)
+  missing_m <- miss$registered * factors(miss$row)
+
+  model <- mil$model
+  d0 <- pmin(ual_months_since(ual_releases$date[nrow(ual_releases)], miss$month), model$horizon)
+  resolve <- function(h) ual_resolve(h, d0, model$horizon, model$breaks)
+  outcome <- c("dead", "prisoner", "no_longer_listed", "missing")
+  if (is.null(theta)) {
+    p <- resolve(model$h)
+    part <- lapply(set_names(outcome), \(o) missing_m * p[, o])
+  } else {
+    arr <- vapply(seq_len(n),
+                  \(i) resolve(ual_theta_hazards(theta[i, ], model$nb, model$k)$projection)[, outcome],
+                  matrix(0, nrow(miss), length(outcome)))
+    part <- lapply(set_names(seq_along(outcome), outcome), \(j) missing_m * arr[, j, ])
+  }
+
+  years <- sort(unique(mil$month$year))
+  by_year <- function(x, yr) (outer(years, yr, "==") * 1) %*% x
+  D <- by_year(part$dead, miss$year)
+  K <- by_year(part$prisoner, miss$year)
+  L <- by_year(part$no_longer_listed, miss$year)
+  N <- by_year(part$missing, miss$year)
+  scale <- captives / colSums(K)
+  captives_y <- sweep(K, 2, scale, "*")
+  unresolved <- K + N - captives_y
+  stopifnot(all(unresolved >= 0))
+  other <- sweep(unresolved, 2, alive_other, "*")
+  imputed_dead <- D + unresolved - other
+  confirmed <- by_year(confirmed_m, dead$year)
+  long <- function(x) as.vector(x)
+  tibble(
+    sim_id = rep(seq_len(n), each = length(years)),
+    year = rep(years, n),
+    confirmed = long(confirmed),
+    missing = long(by_year(missing_m, miss$year)),
+    captives = long(captives_y),
+    imputed_unlisted = long(L),
+    alive_other = long(other),
+    imputed_dead = long(imputed_dead),
+    military = long(confirmed + imputed_dead)
+  )
+}
+
+# The late registrations' share of the confirmed military deaths in every
+# draw of 11: the draw's registered-and-late total against the register's own
+# count. Late registrations take the registered dead's age-sex profile, so 14
+# and 14b split the confirmed deaths, and what they cost, by this share.
+late_share_draws <- function() {
+  registered <-
+    read_rds("data_inter/ukr_ualosses_imputation_table.rds") |>
+    transmute(year = as.numeric(year), registered)
+  read_rds("data_inter/ukr_sim_param_draws.rds") |>
+    filter(role == "confirmed") |>
+    transmute(sim_id, year = as.numeric(year), confirmed = draw) |>
+    left_join(registered, by = "year") |>
+    transmute(sim_id, year, late_share = 1 - registered / confirmed)
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -823,9 +918,14 @@ stopifnot(!is.na(n_sim), n_sim >= 100)
 # ARGUMENTS
 #   sim_id         identifier carried through to the output
 #   draws_this_sim one row per year: draw_cvs, draw_cmb, draw_mig, conf_cmb
-#                  (conf_cmb = the register's confirmed dead that year)
+#                  (conf_cmb = the register's dead that year, with their late
+#                  registrations), and optionally dk_f and dk_m, the draw's
+#                  deviation of each sex's Lee-Carter index from its mean
+#                  path
 #   static_inputs  year-sex-age grid with ems, w, mx, fx, prop_cvs,
-#                  prop_cmb_dead, prop_cmb_miss
+#                  prop_cmb_dead, prop_cmb_miss, and for dk the index loading
+#                  bx and the forecast variance vk (04). A draw's rates are
+#                  mx x exp(bx dk - bx^2 vk / 2), whose mean over draws is mx
 #   pop22_ini      population by sex and completed age on 1 January 2022
 #
 # AGE CONVENTION: row x in year t is ONE birth cohort, the one born in year
@@ -916,10 +1016,15 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
       left_join(absent_timing() |> select(year, all_of(timing_cols)), by = "year")
   }
 
+  has_dk <- all(c("dk_f", "dk_m") %in% names(draws_this_sim)) &&
+    all(c("bx", "vk") %in% names(static_inputs))
+
   df_sim <- static_inputs %>%
     left_join(draws_this_sim, by = "year") %>%
     left_join(mig_base_by_year, by = "year") %>%
     mutate(
+      # the draw's counterfactual (see ARGUMENTS)
+      mx = if (has_dk) mx * exp(bx * if_else(sex == "f", dk_f, dk_m) - bx^2 * vk / 2) else mx,
       ems = ems + if_else(is.na(draw_mig), 0, draw_mig - mig_base) * w,
 
       # spread the drawn yearly totals over age and sex
@@ -1018,21 +1123,35 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # the simulation's draws ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Every disputed input of one set of n simulations, drawn in a fixed order from
-# one seed so that 11 and the PERT-shape check in 13g use the same random
-# numbers. Each draw is a Beta-PERT quantile of a uniform, with the given
-# shape (4 is the standard PERT):
-#   civilians   one uniform per year and simulation: each year's count comes
-#               from that year's own event reporting
-#   combatants  alpha once per simulation, which sets every year's total on
-#               09's line: at_alpha0 - alpha x residual
-#   migration   the western blend weight once per simulation, applied to every
-#               year's two readings; Russia and Belarus once
+# Every uncertain input of one set of n simulations, drawn in a fixed order
+# from one seed, so that 11 and the PERT-shape check in 13g use the same
+# random numbers. The disputed inputs are Beta-PERT quantiles of uniforms,
+# with the given shape (4 is the standard PERT); the estimated ones are drawn
+# from their sampling distributions:
+#   civilians        one uniform per year and simulation: each year's count
+#                    comes from that year's own event reporting
+#   the missing      the share of the unrecorded prisoners among the missing,
+#   alive            the prisoners held and the share of the unresolved alive
+#                    for other reasons, once per simulation each: they are
+#                    properties of the missing, not of a year
+#   resolution       the model's log-hazards and window multipliers, from the
+#   model            normal approximation to their sampling distribution
+#   registration     one of 08b's resampled sets of completion factors
+#   lag
+#   counterfactual   the Lee-Carter index of each sex, a random walk with
+#                    drift: the drift's error and each year's innovation,
+#                    correlated between the sexes as 04 measured
+#   migration        the western blend weight once per simulation, applied to
+#                    every year's two readings; Russia and Belarus once
+# The military total follows from the four inputs of the missing
+# (military_draws()). Each of them is also run alone, the others at their
+# point values, so that 15 can attribute the spread of the results.
 # Returns the draws by simulation and year (draws_df), the same by role
-# (param_draws) and alpha by simulation (alpha_draws).
-simulation_draws <- function(param_table, alpha_range, alpha_lines, n, shape = 4, seed = 42) {
+# (param_draws) and the inputs on the missing by simulation (alive_draws).
+simulation_draws <- function(param_table, mil, lc_error, n, shape = 4, seed = 42) {
   set.seed(seed)
   q <- function(u, a, m, b) qpert(u, min = a, mode = m, max = b, shape = shape)
+  ev <- mil$evidence
 
   cvs <- param_table |> filter(role == "civilians") |> arrange(year)
   draws_cvs_long <- map_dfr(seq_len(nrow(cvs)), function(i) {
@@ -1040,13 +1159,53 @@ simulation_draws <- function(param_table, alpha_range, alpha_lines, n, shape = 4
            draw = q(runif(n), cvs$min[i], cvs$mode[i], cvs$max[i]))
   })
 
-  alpha_draws <- tibble(
-    sim_id = seq_len(n),
-    alpha = q(runif(n), alpha_range$alpha_min, alpha_range$alpha_mode, alpha_range$alpha_max)
-  )
-  draws_cmb_long <-
-    expand_grid(alpha_draws, alpha_lines |> select(year, at_alpha0, residual)) |>
-    transmute(role = "combatants", year, sim_id, draw = at_alpha0 - alpha * residual)
+  alive_draws <-
+    tibble(
+      sim_id = seq_len(n),
+      s = q(runif(n), ev$s_min, ev$s_mode, ev$s_max),
+      held = q(runif(n), ev$held_min, ev$held_mode, ev$held_max),
+      alive_other = q(runif(n), ev$other_min, ev$other_mode, ev$other_max)
+    ) |>
+    mutate(captives = captives_for(ev, s, held))
+  model <- mil$model
+  n_theta <- length(model$theta)
+  theta <- sweep(matrix(rnorm(n * n_theta), n) %*% chol(model$vcov + diag(1e-12, n_theta)),
+                 2, model$theta, "+")
+  lag <- sample.int(ncol(mil$factor_draws), n, replace = TRUE)
+  alive_draws$lag <- lag
+
+  mil_all <- military_draws(mil, alive_draws$captives, alive_draws$alive_other, theta, lag)
+  at_mode <- rep(ev$captives_mode, n)
+  none <- rep(ev$other_mode, n)
+  mil_alive <- military_draws(mil, alive_draws$captives, alive_draws$alive_other)
+  mil_model <- military_draws(mil, at_mode, none, theta = theta)
+  mil_lag <- military_draws(mil, at_mode, none, lag = lag)
+  alive_draws <-
+    alive_draws |>
+    left_join(mil_all |> summarise(across(c(missing, imputed_unlisted, alive_other, imputed_dead), sum),
+                                   .by = sim_id) |>
+                rename(alive_other_n = alive_other),
+              by = "sim_id")
+
+  # the counterfactual: the deviation of each sex's forecast index from its
+  # mean path, h = years after the last fitted year
+  walk <- lc_error$walk
+  h_max <- 2025 - max(walk$last_year)
+  rho <- lc_error$rho
+  pair <- function(k) {
+    z1 <- matrix(rnorm(n * k), n)
+    z2 <- matrix(rnorm(n * k), n)
+    list(f = z1, m = rho * z1 + sqrt(1 - rho^2) * z2)
+  }
+  e_drift <- pair(1)
+  e_step <- pair(h_max)
+  dk_long <- map_dfr(c("f", "m"), function(sx) {
+    wk <- walk |> filter(sex == sx)
+    drift_err <- e_drift[[sx]][, 1] * wk$sigma / sqrt(wk$n - 1)
+    path <- t(apply(e_step[[sx]] * wk$sigma, 1, cumsum)) + outer(drift_err, seq_len(h_max))
+    expand_grid(sim_id = seq_len(n), year = 2022:2025) |>
+      mutate(role = paste0("lc_", sx), draw = path[cbind(sim_id, year - wk$last_year)])
+  })
 
   west <- param_table |> filter(role == "mig_west")
   w <- q(runif(n), 0, 0.5, 1)
@@ -1061,17 +1220,28 @@ simulation_draws <- function(param_table, alpha_range, alpha_lines, n, shape = 4
     mutate(role = "mig_ru_by", draw = q(u_ru[sim_id], min, mode, max)) |>
     select(role, year, sim_id, draw)
 
-  param_draws <- bind_rows(draws_cvs_long, draws_cmb_long, draws_west_long, draws_ru_long)
+  as_role <- function(d, col, role) d |> transmute(role = role, year, sim_id, draw = .data[[col]])
+  param_draws <- bind_rows(
+    draws_cvs_long,
+    as_role(mil_all, "military", "combatants"),
+    as_role(mil_all, "confirmed", "confirmed"),
+    as_role(mil_alive, "military", "mil_alive"),
+    as_role(mil_model, "military", "mil_model"),
+    as_role(mil_lag, "military", "mil_lag"),
+    dk_long,
+    draws_west_long,
+    draws_ru_long
+  )
   draws_df <-
     param_draws |>
+    filter(role %in% c("civilians", "combatants", "confirmed", "mig_west", "mig_ru_by", "lc_f", "lc_m")) |>
     mutate(role = case_when(role == "civilians" ~ "draw_cvs", role == "combatants" ~ "draw_cmb",
-                            .default = "draw_mig")) |>
+                            role == "confirmed" ~ "conf_cmb", role == "lc_f" ~ "dk_f",
+                            role == "lc_m" ~ "dk_m", .default = "draw_mig")) |>
     summarise(draw = sum(draw), .by = c(sim_id, year, role)) |>
     pivot_wider(names_from = role, values_from = draw) |>
-    left_join(param_table |> filter(role == "combatants") |> select(year, conf_cmb = confirmed),
-              by = "year") |>
     arrange(sim_id, year)
-  list(draws_df = draws_df, param_draws = param_draws, alpha_draws = alpha_draws)
+  list(draws_df = draws_df, param_draws = param_draws, alive_draws = alive_draws)
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

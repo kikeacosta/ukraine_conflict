@@ -9,19 +9,25 @@
 # per year and role.
 #
 #   COMBATANTS (ualosses register)
-#     The total is confirmed deaths plus the missing imputed as dead by 09's
-#     chain, which is linear in alpha, the share of the never-resolved missing
-#     who are alive. The bounds are that total at the ends and the centre of
-#     the range of alpha the evidence allows (alpha_evidence(), 00_setup.R):
-#     min  = total at alpha_max (the most alive)
-#     mode = total at alpha_mode
-#     max  = total at alpha_min
-#     11 draws alpha itself and computes the total from it; drawing the total
-#     from these bounds instead would give the same distribution, because a
-#     PERT carried through a linear map is the PERT of the mapped bounds.
-#     Two further columns describe the register rather than the estimate:
-#     confirmed (its recorded dead, used to split confirmed from imputed) and
-#     listed (confirmed plus everyone still listed as missing).
+#     The total is the registered dead, completed for registration lag, plus
+#     the missing imputed as dead by 09's model. How many of the missing are
+#     alive rests on the evidence alive_evidence() (00_setup.R) sets out: the
+#     prisoners of war among the missing and the share of the unresolved
+#     alive for other reasons. The bounds are the total at the ends and the
+#     centre of that evidence, at the model's estimates and 08b's point
+#     factors (military_draws(), 00_setup.R):
+#     min  = the most alive: every unrecorded prisoner among the missing, the
+#            most prisoners held, and the unresolved alive at their ceiling
+#     mode = the central values
+#     max  = the fewest alive: the unrecorded prisoners among the missing as
+#            the returned of every year had been, the fewest held, none of
+#            the unresolved alive
+#     11 draws the evidence together with the sampling error of the model
+#     and of the lag factors, so a draw can fall slightly outside these
+#     bounds. Two further columns describe the register rather than the
+#     estimate: confirmed (its dead with their late registrations, used to
+#     split confirmed from imputed) and listed (confirmed plus everyone still
+#     listed as missing).
 #
 #   CIVILIANS (UCDP georeferenced event data)
 #     min / mode / max = the low / best / high bounds UCDP publishes,
@@ -30,7 +36,8 @@
 # INPUTS   data_inter/ukr_ucdp_invals.rds                     (from 07_invals)
 #          data_inter/ukr_ualosses_..._sex_age_2022_2025.rds  (from 08)
 #          data_inter/ukr_ualosses_..._imputed_...rds         (from 09)
-#          data_inter/ukr_alpha_missing.rds, ukr_military_alpha_lines.rds (09)
+#          data_inter/ukr_military_inputs.rds (09): the evidence on the missing
+#          alive, the model and the registered counts by event month
 #          data_inter/ukr_migration_bounds.rds                (from 06)
 #          data_input/ohchr_civilian_deaths.xlsx (sheet "monthly"),
 #          data_input/migration/unhcr/unhcr_border_crossings_2022.csv and
@@ -62,23 +69,24 @@ ual2 <-
   complete(status, year = 2022:2025, sex, age = 0:100, fill = list(dx = 0))
 
 # --- combatants -------------------------------------------------------------
-alpha_range <- read_rds("data_inter/ukr_alpha_missing.rds")
-alpha_lines <- read_rds("data_inter/ukr_military_alpha_lines.rds")
-at_alpha <- function(a) alpha_lines$at_alpha0 - a * alpha_lines$residual
+mil <- read_rds("data_inter/ukr_military_inputs.rds")
+ev <- mil$evidence
+at_evidence <- function(captives, other) military_draws(mil, captives, other)
+at_mode <- at_evidence(ev$captives_mode, ev$other_mode)
 
 cmb <-
-  alpha_lines |>
+  at_mode |>
   transmute(
     year,
     role = "combatants",
-    mode = at_alpha(alpha_range$alpha_mode),
-    min = at_alpha(alpha_range$alpha_max),
-    max = at_alpha(alpha_range$alpha_min),
+    mode = military,
+    min = at_evidence(ev$captives_max, ev$other_max)$military,
+    max = at_evidence(ev$captives_min, ev$other_min)$military,
     confirmed,
     listed = confirmed + missing
   )
 
-# the mode must be the total 09 imputed at the central alpha; the register
+# the mode must be the total 09 imputed at the central values; the register
 # columns must be 09's counts completed for registration lag (08b), and those
 # must rest on the registered counts the profiles are built from
 imp_tab <- read_rds("data_inter/ukr_ualosses_imputation_table.rds") |> arrange(year)

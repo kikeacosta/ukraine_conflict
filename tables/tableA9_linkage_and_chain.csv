@@ -1,11 +1,12 @@
-design,alpha_central,military_deaths,male_2022,male_2023,male_2024,female_2025,male_2025
-"duration model, no longer listed = alive (production)",0.015,175818,4.71,4.14,5.59,0.129,6.28
-no longer listed = still missing,0.014,180750,4.71,4.18,5.75,0.129,6.55
-drop-outs at the dead's rate held as still missing,0.014,177918,4.71,4.15,5.66,0.129,6.41
-returns from captivity counted as resolutions,0,174600,4.72,4.14,5.55,0.129,6.2
-people listed as missing in v14 only,0.015,175848,4.71,4.14,5.59,0.129,6.29
-duration model to the longest duration observed,0,168661,4.67,4.03,5.37,0.129,5.97
-unrecorded prisoners among the missing as the returned had been,0,176889,4.72,4.15,5.63,0.129,6.33
-projected captivity also counted among the unrecorded prisoners,0.041,173923,4.69,4.11,5.54,0.129,6.21
-alive spread over event years by the register's prisoners,0.015,175818,4.66,4.14,5.6,0.129,6.31
-event-year cohorts standing in for duration,0.003,173004,4.72,4.08,5.49,0.129,6.16
+design,prisoners_of_war_among_missing,military_deaths,male_2022,male_2023,male_2024,female_2025,male_2025
+"duration model, captives from the official figures (production)",1412,177618,4.72,4.16,5.64,0.129,6.38
+no longer listed = still missing,1412,182303,4.73,4.2,5.79,0.129,6.63
+drop-outs at the dead's rate held as still missing,1412,179672,4.72,4.17,5.7,0.129,6.5
+returns from captivity left out of the population at risk,1412,177373,4.72,4.16,5.64,0.129,6.36
+people listed as missing in v14 only,1412,177654,4.72,4.16,5.64,0.129,6.38
+duration model to the longest duration observed,1412,171394,4.67,4.06,5.45,0.129,6.12
+every unrecorded prisoner among the missing,2966,176064,4.72,4.15,5.59,0.129,6.29
+unrecorded prisoners among the missing as the returned of every year had been,702,178328,4.72,4.16,5.66,0.129,6.42
+captivity as the model projects it,4429,174599,4.72,4.14,5.55,0.129,6.2
+captives spread over event years by the register's prisoners,1412,177618,4.65,4.15,5.66,0.129,6.44
+event-year cohorts standing in for duration,1412,175019,4.71,4.1,5.56,0.129,6.28

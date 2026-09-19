@@ -1,15 +1,15 @@
 row,months_since_event,dead,prisoner,no_longer_listed
-monthly hazard (%),0-3,0.72,0,0.215
-monthly hazard (%),3-6,0.446,0.001,0.093
-monthly hazard (%),6-9,0.366,0.27,0.162
-monthly hazard (%),9-12,0.539,0.158,0.082
-monthly hazard (%),12-18,0.98,0.178,0.11
-monthly hazard (%),18-24,1.092,0.11,0.15
-monthly hazard (%),24-30,0.892,0.051,0.16
-monthly hazard (%),30-36,0.547,0.117,0.155
-monthly hazard (%),36-42,0.332,0.09,0.308
-monthly hazard (%),42-48,0.342,0.105,0.541
-monthly hazard (%),48-60,0.193,0.304,1.528
+monthly hazard (%),0-3,0.721,0,0.217
+monthly hazard (%),3-6,0.447,0.066,0.094
+monthly hazard (%),6-9,0.366,0.249,0.162
+monthly hazard (%),9-12,0.539,0.179,0.082
+monthly hazard (%),12-18,0.976,0.177,0.11
+monthly hazard (%),18-24,1.076,0.181,0.148
+monthly hazard (%),24-30,0.876,0.205,0.158
+monthly hazard (%),30-36,0.536,0.308,0.153
+monthly hazard (%),36-42,0.327,0.325,0.301
+monthly hazard (%),42-48,0.32,0.189,0.517
+monthly hazard (%),48-60,0.185,1.005,1.457
 multiplier against the first window,v14-v16,1,1,1
-multiplier against the first window,v16-v18,1.073,0.193,0.317
-multiplier against the first window,v18-v19,0.631,19.573,0.703
+multiplier against the first window,v16-v18,1.076,0.186,0.318
+multiplier against the first window,v18-v19,0.639,28.766,0.717

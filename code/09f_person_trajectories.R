@@ -21,8 +21,8 @@
 #   - a person no longer listed - absent from a release and from every later
 #     one - is resolved alive at the first absence; absent from one release
 #     but listed again later, they were still missing;
-#   - a person whose first resolution is a return from captivity was held,
-#     not disappeared, and is left out altogether;
+#   - a return from captivity is a resolution to captivity: the person was a
+#     prisoner the register had not recorded, and is alive;
 #   - outcomes kept apart: dead, prisoner, no longer listed. A history stops
 #     at its first resolution.
 #
@@ -54,7 +54,7 @@ message(sprintf("  entrants: %s", paste(
 rel_date <- set_names(ual_releases$date, ual_releases$release)
 ids <- hist |> distinct(pid) |> mutate(person_id = row_number())
 intervals <-
-  ual_windows(hist, "alive") |>
+  ual_windows(hist, "alive", released = "alive") |>
   left_join(ids, by = "pid") |>
   transmute(
     person_id, year,
