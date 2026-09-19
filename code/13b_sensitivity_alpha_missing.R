@@ -2,55 +2,51 @@
 # STEP 13b - Sensitivity of the missing-combatant imputation
 # ==============================================================================
 #
-# Two things the main Monte Carlo does not propagate, quantified here instead
-# of being asserted to be small or large:
-#   1. suelo_vivo, the share of the long-term missing assumed alive - swept
-#      over its whole range, since nothing in the data identifies it;
+# Two things the main Monte Carlo treats in a particular way, quantified here
+# instead of being asserted to be small or large:
+#   1. alpha, the share of the long-term missing who are alive. 11 draws it
+#      inside the range the evidence allows; here it is swept over [0, 1], so
+#      the reader can see how far the results move across and beyond that
+#      range;
 #   2. sampling error in the observed transition rates, which are proportions
-#      estimated from finite counts (section 5).
+#      estimated from finite counts and are not propagated (section 5).
 # ==============================================================================
 #
 # WHY THIS MATTERS
 # -----------------
-# The military death total is dominated by an assumption, not a measurement.
-# Of the individuals recorded as missing and never resolved by the end of the
-# observed register chain, suelo_vivo = 0.10 (09) assumes 90% are dead.
-# Nothing in the data identifies this number: successive register releases
-# show how disappearances are ADMINISTRATIVELY RESOLVED, not the eventual
-# truth for those never resolved, so extrapolating from one to the other is
-# an assumption, not an estimate. The honest response is to show how far the
-# headline moves as the assumption moves, not to defend one value.
+# The military death total is dominated by alpha, not by a measurement. The
+# registers cannot estimate it: they record a missing soldier found dead but
+# have no way to record one who comes home. Its range is set from the number
+# of prisoners of war Russia holds (alpha_evidence(), 00_setup.R), which is a
+# linking assumption with one official figure behind it. So besides drawing
+# alpha inside that range, the pipeline shows what happens across the whole
+# of [0, 1].
 #
-# This re-runs 09's imputation chain (impute_missing(), defined once in
-# 00_setup.R so the two scripts cannot drift apart) across a grid of
-# suelo_vivo from 0 (none of the never-resolved are alive) to 1 (all of them
-# are), and propagates each resulting military-death total through the same
-# deterministic, mode-only projection step 13 uses for its migration check:
-# one scenario per grid point, not a full Monte Carlo re-run at each one,
-# because the question is how far the estimate moves, not its probabilistic
-# uncertainty at every point along the way.
+# This re-runs 09's imputation chain (impute_missing(), 00_setup.R) across a
+# grid of alpha from 0 (none of the never-resolved are alive) to 1 (all of
+# them are), plus the points of the range, and propagates each military
+# total through the same deterministic, mode-only projection step 13 uses for
+# its migration check: one scenario per grid point, not a full Monte Carlo
+# re-run at each one, because the question is how far the estimate moves.
 #
 # WHAT DOES NOT CHANGE ACROSS THE GRID
 # --------------------------------------
-#   - the individually confirmed dead (min_cmb): these are observed, not
-#     imputed, so suelo_vivo cannot move them
+#   - the individually confirmed dead (conf_cmb): observed, not imputed
 #   - the age-sex profiles (prop_cmb_dead, prop_cmb_miss), civilian deaths,
-#     and migration: all held at their production mode
+#     and migration: all held at their mode
 #
-# NOTE ON THE EXISTING PERT BOUNDS. The combatant min/max in
-# ukr_param_table.rds (all confirmed only / all missing simply added as
-# dead, with no chain applied) are a different construction from this
-# script's suelo_vivo = 0 and 1 endpoints. The chain still nets out whatever
-# the observed one-window transitions already resolved before applying the
-# terminal assumption to the never-resolved residual, so the two do not
-# coincide and should not be read as confirming each other.
+# The combatant bounds in ukr_param_table.rds are this same chain evaluated
+# at the ends and the centre of the range, so the grid points at those three
+# values reproduce them exactly.
 #
 # INPUTS   data_inter/ukr_ualosses_transition_rates.rds            (from 09)
+#          data_inter/ukr_alpha_missing.rds                        (from 09)
 #          data_inter/ukr_ualosses_conflict_deaths_sex_age_2022_2025.rds (08)
 #          the same static inputs as step 13 (param_table, forecast
 #          mortality, population, migration, fertility, age-sex profiles)
 # OUTPUTS  data_inter/ukr_alpha_sensitivity_military.rds
 #          data_inter/ukr_alpha_sensitivity_e0.rds
+#          data_inter/ukr_transition_rate_sampling.rds
 #          figures/exploratory/alpha_sensitivity_military.png
 #          figures/exploratory/alpha_sensitivity_e0.png
 # ==============================================================================
@@ -59,11 +55,12 @@ rm(list = ls())
 gc()
 source("code/00_setup.R")
 
-# lifetable() and run_single_sim() both come from 00_setup.R, as does
-# impute_missing() (extracted from 09 so the two cannot drift apart).
+# lifetable(), run_single_sim() and impute_missing() all come from 00_setup.R.
 
-# 1. INPUTS SHARED WITH STEP 13, HELD AT THEIR PRODUCTION MODE ================
+# 1. INPUTS SHARED WITH STEP 13, HELD AT THEIR MODE ===========================
 param_table <- read_rds("data_inter/ukr_param_table.rds")
+alpha_range <- read_rds("data_inter/ukr_alpha_missing.rds")
+alpha_mode <- alpha_range$alpha_mode
 
 exp_mort2 <- read_rds("data_inter/ukr_mxs_obs_plus_frcst_1989_2025.rds") %>%
   filter(year %in% 2022:2025, source == "frcst") %>%
@@ -90,8 +87,8 @@ ohchr2 <- read_rds("data_inter/ukr_ohchr_civilian_casualties.rds") %>%
 
 # two profiles, matching 11: registered deaths take the age distribution of
 # the register's confirmed dead, imputed deaths that of the missing they
-# come from. Neither profile depends on suelo_vivo - only the SIZE of the
-# imputed total moves across the grid, not its age-sex shape.
+# come from. Neither profile depends on alpha - only the SIZE of the imputed
+# total moves across the grid, not its age-sex shape.
 ual_raw <- read_rds("data_inter/ukr_ualosses_conflict_deaths_sex_age_2022_2025.rds")
 
 cmb_profile <- function(keep_status, nm) {
@@ -122,13 +119,13 @@ static_inputs <-
 stopifnot(all(static_inputs$mx > 0), !any(is.na(static_inputs)))
 
 # civilians and migration held at their mode throughout - only the combatant
-# total moves as suelo_vivo moves across the grid
+# total moves as alpha moves across the grid
 draw_cvs_by_year <- param_table |> filter(role == "civilians") |> select(year, draw_cvs = mode)
 draw_mig_by_year <- param_table |> filter(str_starts(role, "mig_")) |>
   summarise(draw_mig = sum(mode), .by = year)
-min_cmb_by_year <- param_table |> filter(role == "combatants") |> select(year, min_cmb = min)
+conf_cmb_by_year <- param_table |> filter(role == "combatants") |> select(year, conf_cmb = confirmed)
 
-# 2. THE MISSING-COMBATANT IMPUTATION, RE-RUN ACROSS A GRID OF suelo_vivo =====
+# 2. THE MISSING-COMBATANT IMPUTATION, RE-RUN ACROSS A GRID OF alpha ==========
 # tasas_long is 09's own saved output: the one-window resolution rates the
 # chain is built from. Re-reading it here (rather than re-deriving it from
 # the raw registers) means this script cannot silently drift onto a
@@ -145,53 +142,76 @@ stock_missing_2026 <-
 confirmados_df <-
   status_stocks |> filter(status == "dead") |> select(year, confirmados_stock = n)
 
-# rounded to 2dp: seq()'s floating-point accumulation would otherwise leave
-# suelo_vivo = 0.30000000000000004 in the saved table, which is a real defect
-# in a manuscript column, not just a display nuisance
-alpha_grid <- round(seq(0, 1, by = 0.05), 2)
-stopifnot(0.10 %in% alpha_grid) # the production value must be on the grid
+# A regular grid, rounded to 2dp so seq()'s floating-point accumulation cannot
+# leave 0.30000000000000004 in a manuscript column, plus the three points of
+# the range and the 2.5% and 97.5% points of the PERT 11 draws alpha from (the
+# 95% interval of the simulated alpha), all marked so 15 can pick them out.
+alpha_q <- function(p) {
+  qpert(p, min = alpha_range$alpha_min, mode = alpha_range$alpha_mode, max = alpha_range$alpha_max)
+}
+range_points <- c(
+  min = alpha_range$alpha_min,
+  mode = alpha_range$alpha_mode,
+  max = alpha_range$alpha_max,
+  p2.5 = alpha_q(0.025),
+  p97.5 = alpha_q(0.975)
+)
+alpha_grid <- sort(unique(c(round(seq(0, 1, by = 0.05), 2), range_points)))
+
+point_label <- function(a) {
+  lab <- names(range_points)[match(a, range_points)]
+  if_else(is.na(lab), NA_character_, lab)
+}
 
 military_by_alpha <- map_dfr(alpha_grid, function(a) {
   impute_missing(a, tasas_long, stock_missing_2026) |>
     left_join(confirmados_df, by = "year") |>
     mutate(
-      suelo_vivo = a,
+      alpha = a,
+      range_point = point_label(a),
       total_military = confirmados_stock + imputed_dead
     ) |>
     select(
-      suelo_vivo, year, confirmados_stock, missing_stock,
+      alpha, range_point, year, confirmados_stock, missing_stock,
       imputed_dead, imputed_alive, imputed_prisoner, total_military
     )
 })
+
+# the range points must reproduce 10's combatant bounds
+cmb_bounds <- param_table |> filter(role == "combatants") |> arrange(year)
+at_point <- function(p) {
+  military_by_alpha |> filter(range_point == p) |> arrange(year) |> pull(total_military)
+}
+stopifnot(
+  isTRUE(all.equal(at_point("mode"), cmb_bounds$mode)),
+  isTRUE(all.equal(at_point("min"), cmb_bounds$max)),
+  isTRUE(all.equal(at_point("max"), cmb_bounds$min))
+)
 
 write_rds(military_by_alpha, "data_inter/ukr_alpha_sensitivity_military.rds")
 
 military_totals <-
   military_by_alpha |>
-  summarise(total_military = sum(total_military), .by = suelo_vivo) |>
-  arrange(suelo_vivo)
+  summarise(total_military = sum(total_military), .by = c(alpha, range_point)) |>
+  arrange(alpha)
 
-cat("\n=== TOTAL MILITARY DEATHS, 2022-2025, BY suelo_vivo ===\n")
+cat("\n=== TOTAL MILITARY DEATHS, 2022-2025, BY alpha ===\n")
 print(as.data.frame(military_totals))
 
-current <- military_totals$total_military[military_totals$suelo_vivo == 0.10]
-crude_min <- sum(confirmados_df$confirmados_stock)
-crude_max <- crude_min + sum(stock_missing_2026$missing_stock)
 cat(sprintf(
-  "\nProduction value (suelo_vivo = 0.10): %s\n",
-  scales::comma(round(current))
+  "\nRange the evidence allows: alpha %.3f / %.3f / %.3f -> %s / %s / %s\n",
+  range_points[["min"]], range_points[["mode"]], range_points[["max"]],
+  scales::comma(round(at_point("min") |> sum())),
+  scales::comma(round(at_point("mode") |> sum())),
+  scales::comma(round(at_point("max") |> sum()))
 ))
 cat(sprintf(
-  "Range of the chain across suelo_vivo in [0, 1]: %s to %s\n",
+  "Whole of alpha in [0, 1]: %s to %s\n",
   scales::comma(round(min(military_totals$total_military))),
   scales::comma(round(max(military_totals$total_military)))
 ))
-cat(sprintf(
-  "For comparison, the crude PERT bounds (no chain, all-or-nothing): %s to %s\n",
-  scales::comma(round(crude_min)), scales::comma(round(crude_max))
-))
 
-# 3. PROPAGATE EACH suelo_vivo TO LIFE EXPECTANCY LOSS (deterministic, at the mode)
+# 3. PROPAGATE EACH alpha TO LIFE EXPECTANCY LOSS (deterministic, at the mode) =
 e0_of <- function(d, col) {
   d |>
     select(year, sex, age, mx = all_of(col)) |>
@@ -205,14 +225,14 @@ e0_of <- function(d, col) {
 e0_by_alpha <- map_dfr(alpha_grid, function(a) {
   draw_cmb_by_year <-
     military_by_alpha |>
-    filter(suelo_vivo == a) |>
+    filter(alpha == a) |>
     select(year, draw_cmb = total_military)
 
   draws_df <-
     draw_cvs_by_year |>
     left_join(draw_mig_by_year, by = "year") |>
     left_join(draw_cmb_by_year, by = "year") |>
-    left_join(min_cmb_by_year, by = "year") |>
+    left_join(conf_cmb_by_year, by = "year") |>
     mutate(sim_id = 1)
 
   sim <-
@@ -226,33 +246,40 @@ e0_by_alpha <- map_dfr(alpha_grid, function(a) {
   e0_of(sim, "mx_bsn") |>
     rename(ex_bsn = ex) |>
     left_join(e0_of(sim, "mx_all") |> rename(ex_all = ex), by = c("year", "sex")) |>
-    mutate(loss = ex_bsn - ex_all, suelo_vivo = a)
+    mutate(loss = ex_bsn - ex_all, alpha = a, range_point = point_label(a))
 })
 
 write_rds(e0_by_alpha, "data_inter/ukr_alpha_sensitivity_e0.rds")
 
-cat("\n=== LIFE EXPECTANCY LOSS AT suelo_vivo = 0, 0.10 (production) AND 1 ===\n")
+cat("\n=== LIFE EXPECTANCY LOSS AT alpha = 0, THE RANGE, AND 1 ===\n")
 print(as.data.frame(
   e0_by_alpha |>
-    filter(suelo_vivo %in% c(0, 0.10, 1)) |>
-    arrange(year, sex, suelo_vivo)
+    filter(alpha %in% c(0, 1) | !is.na(range_point)) |>
+    arrange(year, sex, alpha)
 ))
 
 # 4. DIAGNOSTIC PLOTS (exploratory; the manuscript table and figure are
 #    assembled in 15 from the two .rds files written above) ===================
+range_band <- function() {
+  list(
+    annotate("rect", xmin = range_points[["min"]], xmax = range_points[["max"]],
+             ymin = -Inf, ymax = Inf, alpha = 0.15),
+    geom_vline(xintercept = range_points[["mode"]], linetype = "dashed", colour = "grey40")
+  )
+}
+
 p_mil <-
   military_totals |>
-  ggplot(aes(suelo_vivo, total_military)) +
+  ggplot(aes(alpha, total_military)) +
+  range_band() +
   geom_line(linewidth = 1) +
   geom_point() +
-  geom_vline(xintercept = 0.10, linetype = "dashed", colour = "grey40") +
-  annotate("text", x = 0.10, y = max(military_totals$total_military),
-           label = "production (0.10)", hjust = -0.05, size = 3, colour = "grey40") +
   scale_y_continuous(labels = scales::comma) +
   labs(
-    x = "suelo_vivo (share of the never-resolved missing assumed alive)",
+    x = "alpha (share of the never-resolved missing who are alive)",
     y = "Total military deaths, 2022-2025",
-    title = "Sensitivity of the military death total to the imputation assumption"
+    title = "Sensitivity of the military death total to alpha",
+    caption = "Shaded: the range the evidence allows. Dashed: its central value."
   ) +
   theme_bw()
 ggsave("figures/exploratory/alpha_sensitivity_military.png", p_mil, w = 7, h = 4.5)
@@ -260,15 +287,16 @@ ggsave("figures/exploratory/alpha_sensitivity_military.png", p_mil, w = 7, h = 4
 p_e0 <-
   e0_by_alpha |>
   mutate(sex = if_else(sex == "f", "Females", "Males")) |>
-  ggplot(aes(suelo_vivo, loss, colour = factor(year))) +
+  ggplot(aes(alpha, loss, colour = factor(year))) +
+  range_band() +
   geom_line(linewidth = 1) +
-  geom_vline(xintercept = 0.10, linetype = "dashed", colour = "grey40") +
   facet_wrap(~sex, scales = "free_y") +
   labs(
-    x = "suelo_vivo (share of the never-resolved missing assumed alive)",
+    x = "alpha (share of the never-resolved missing who are alive)",
     y = "Life expectancy loss (years)",
     colour = "Year",
-    title = "Sensitivity of the life expectancy loss to the imputation assumption"
+    title = "Sensitivity of the life expectancy loss to alpha",
+    caption = "Shaded: the range the evidence allows. Dashed: its central value."
   ) +
   theme_bw()
 ggsave("figures/exploratory/alpha_sensitivity_e0.png", p_e0, w = 9, h = 4.5)
@@ -287,19 +315,19 @@ ggsave("figures/exploratory/alpha_sensitivity_e0.png", p_e0, w = 9, h = 4.5)
 # construction). Draws come from the Dirichlet posterior with a Jeffreys prior,
 # counts + 1/2, generated from independent Gammas so no extra package is
 # needed. Each draw goes through the same impute_missing() chain at the
-# production suelo_vivo, so the spread is attributable to rate sampling alone.
+# central alpha, so the spread is attributable to rate sampling alone.
 #
 # WHY THIS IS REPORTED RATHER THAN PROPAGATED: the observed transitions carry
-# under a tenth of the imputed dead (see the decomposition printed below); the
-# terminal suelo_vivo assumption carries the rest. Sampling error on a tenth of
-# the quantity is correspondingly small, and folding a band of that size into a
-# distribution two orders of magnitude wider would add machinery without
-# changing any reported figure.
+# about a tenth of the imputed dead (see the decomposition printed below); the
+# terminal alpha assumption carries the rest. Sampling error on a tenth of the
+# quantity is correspondingly small, and folding a band of that size into the
+# spread that alpha produces would add machinery without changing any
+# reported figure.
 set.seed(42)
 B_rates <- 2000
 
-rdirich <- function(alpha) {
-  g <- rgamma(length(alpha), shape = alpha, rate = 1)
+rdirich <- function(a) {
+  g <- rgamma(length(a), shape = a, rate = 1)
   g / sum(g)
 }
 
@@ -308,33 +336,23 @@ boot_total <- vapply(seq_len(B_rates), function(b) {
     d <- tasas_long |> filter(year == y) |> arrange(status2)
     tibble(year = y, status2 = d$status2, prop = rdirich(d$n + 0.5))
   })
-  imp <- impute_missing(0.10, resampled, stock_missing_2026) |>
+  imp <- impute_missing(alpha_mode, resampled, stock_missing_2026) |>
     left_join(confirmados_df, by = "year") |>
     mutate(total = confirmados_stock + imputed_dead)
   sum(imp$total)
 }, numeric(1))
 
-point_total <- military_totals$total_military[military_totals$suelo_vivo == 0.10]
+point_total <- sum(at_point("mode"))
 ci_rates <- quantile(boot_total, c(0.025, 0.975))
 
 # where the imputed dead actually come from: observed transitions carry the
-# last chain terms, the terminal assumption carries the residual
-gp <- function(y, s) {
-  v <- tasas_long$prop[tasas_long$year == y & tasas_long$status2 == s]
-  if (length(v) == 0) 0 else v[1]
-}
-M <- setNames(stock_missing_2026$missing_stock, stock_missing_2026$year)
-sm <- 1 - 0.10
-terminal <- c(
-  M[["2022"]] * sm,
-  M[["2023"]] * gp(2022, "missing") * sm,
-  M[["2024"]] * gp(2023, "missing") * gp(2022, "missing") * sm,
-  M[["2025"]] * gp(2024, "missing") * gp(2023, "missing") * gp(2022, "missing") * sm
-)
-imputed_dead_total <- sum(impute_missing(0.10, tasas_long, stock_missing_2026)$imputed_dead)
-observed_part <- imputed_dead_total - sum(terminal)
+# chain terms, the terminal assumption carries the residual
+imputed_dead_total <- sum(impute_missing(alpha_mode, tasas_long, stock_missing_2026)$imputed_dead)
+terminal_total <- (1 - alpha_mode) * alpha_range$residual
+observed_part <- imputed_dead_total - terminal_total
 
 rate_sampling <- tibble(
+  alpha = alpha_mode,
   point_total = point_total,
   sd = sd(boot_total),
   lo = ci_rates[[1]],
@@ -342,14 +360,14 @@ rate_sampling <- tibble(
   width = ci_rates[[2]] - ci_rates[[1]],
   imputed_dead = imputed_dead_total,
   from_observed_transitions = observed_part,
-  from_terminal_assumption = sum(terminal),
+  from_terminal_assumption = terminal_total,
   n_draws = B_rates
 )
 write_rds(rate_sampling, "data_inter/ukr_transition_rate_sampling.rds")
 
 cat("\n=== SAMPLING ERROR IN THE OBSERVED TRANSITION RATES ===\n")
-cat(sprintf("military total, point estimate : %s\n", scales::comma(round(point_total))))
-cat(sprintf("95%% sampling interval          : %s - %s (width %s, %.2f%% of the total)\n",
+cat(sprintf("military total at the central alpha: %s\n", scales::comma(round(point_total))))
+cat(sprintf("95%% sampling interval             : %s - %s (width %s, %.2f%% of the total)\n",
             scales::comma(round(ci_rates[[1]])), scales::comma(round(ci_rates[[2]])),
             scales::comma(round(ci_rates[[2]] - ci_rates[[1]])),
             100 * (ci_rates[[2]] - ci_rates[[1]]) / point_total))
@@ -357,11 +375,9 @@ cat(sprintf("\nof the %s imputed dead:\n", scales::comma(round(imputed_dead_tota
 cat(sprintf("  from observed transitions    : %s (%.1f%%)\n",
             scales::comma(round(observed_part)), 100 * observed_part / imputed_dead_total))
 cat(sprintf("  from the terminal assumption : %s (%.1f%%)\n",
-            scales::comma(round(sum(terminal))), 100 * sum(terminal) / imputed_dead_total))
-cat(sprintf("\nFor scale, moving suelo_vivo by 0.01 shifts the total by about %s,\n",
-            scales::comma(round(
-              sum(impute_missing(0.10, tasas_long, stock_missing_2026)$imputed_dead) -
-              sum(impute_missing(0.11, tasas_long, stock_missing_2026)$imputed_dead)))))
+            scales::comma(round(terminal_total)), 100 * terminal_total / imputed_dead_total))
+cat(sprintf("\nFor scale, moving alpha by 0.01 shifts the total by %s,\n",
+            scales::comma(round(0.01 * alpha_range$residual))))
 cat("which is several times the entire sampling band above.\n")
 
 message("\nDone. data_inter/ukr_alpha_sensitivity_military.rds, ",

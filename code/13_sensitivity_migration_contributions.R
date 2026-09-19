@@ -106,7 +106,7 @@ draws_df <-
   spread(role, mode) %>%
   rename(draw_cmb = combatants, draw_cvs = civilians, draw_mig = migration) |>
   left_join(
-    param_table |> filter(role == "combatants") |> select(year, min_cmb = min),
+    param_table |> filter(role == "combatants") |> select(year, conf_cmb = confirmed),
     by = "year"
   ) |>
   mutate(sim_id = 1)

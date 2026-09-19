@@ -247,10 +247,32 @@ arriaga_TE <- function(lb, lw) {
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # missing-combatant imputation ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Synthetic-cohort Markov imputation of the long-term missing. Extracted from
-# 09's original inline calculation so that 09 (which fixes suelo_vivo = 0.10)
-# and 13b (which varies it as a sensitivity check) call the SAME formula
-# instead of two copies that could drift apart.
+# UALosses nationality. In the 14 May 2026 release about 1,170 records hold
+# the place of origin in the Nationality field ("Kyiv, None",
+# "Zaporizhzhja, Zaporizka urban community", ...), with From = "Unknown": the
+# field is shifted, and the places are Ukrainian. Filtering on
+# Nationality == "Ukraine" silently dropped them. A value that is not a
+# country name is therefore read as Ukrainian, as is one the country matcher
+# reads as Ukraine (the village of Ukrayinka); genuine foreign nationals keep
+# their country and are still excluded.
+ual_is_ukrainian <- function(nationality) {
+  iso <- countrycode(nationality, "country.name", "iso3c", warn = FALSE)
+  !is.na(nationality) & (nationality == "Ukraine" | is.na(iso) | iso %in% "UKR")
+}
+
+# UALosses dates are Excel serial numbers. Excel's day 1 is 1 January 1900
+# but its calendar includes a 29 February 1900 that never existed, so for
+# every date after February 1900 the serial counts from 30 December 1899.
+# Counting from 1 January 1900 instead put every date two days late - the
+# busiest day of disappearance came out as 26 February 2022 rather than the
+# 24th - which moved events of 30 and 31 December into the following year.
+excel_date <- function(x) {
+  as.Date(suppressWarnings(as.numeric(x)), origin = "1899-12-30")
+}
+
+# Synthetic-cohort Markov imputation of the long-term missing. Defined once
+# so that 09 (the central value of alpha), 13b (the sweep over alpha) and the
+# range computed by alpha_evidence() below all use the SAME formula.
 #
 # tasas_long     observed one-window resolution rates by event-year cohort
 #                and destination status: transitions |> filter(from ==
@@ -258,17 +280,17 @@ arriaga_TE <- function(lb, lw) {
 #                built in 09.
 # stock_missing  tibble(year, missing_stock) - the missing stock by event
 #                year, from step 08's output.
-# suelo_vivo     share of the NEVER-RESOLVED long-term missing assumed
-#                alive; suelo_muerto = 1 - suelo_vivo is assumed dead. This
-#                is the one free parameter: 09 fixes it at 0.10, 13b sweeps
-#                it over [0, 1].
+# alpha          share of the NEVER-RESOLVED long-term missing who are
+#                alive; 1 - alpha are dead. The one free parameter: its range
+#                comes from alpha_evidence(), 11 draws it, 13b sweeps it.
 #
 # A "step" in the chain is the ~8-month window between two register
 # releases, not a calendar year; event-year cohorts stand in for duration
 # since disappearance. Returns stock_missing with imputed_dead,
-# imputed_alive and imputed_prisoner added.
-impute_missing <- function(suelo_vivo, tasas_long, stock_missing) {
-  suelo_muerto <- 1 - suelo_vivo
+# imputed_alive and imputed_prisoner added. Every output is linear in alpha.
+impute_missing <- function(alpha, tasas_long, stock_missing) {
+  suelo_vivo <- alpha
+  suelo_muerto <- 1 - alpha
 
   extraer_tasa <- function(target_year, target_status) {
     valor <- tasas_long$prop[
@@ -342,6 +364,71 @@ impute_missing <- function(suelo_vivo, tasas_long, stock_missing) {
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# the range of alpha allowed by the evidence ====
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# The register cannot estimate alpha. It records a missing soldier found dead
+# (obituaries, identified remains) but has no way to record one who comes
+# home: 97.6% of the people it listed as prisoners in September 2025 were
+# still "prisoner" in May 2026 although exchanges ran in between, and the
+# missing drop out of it no more often than the dead do. So its own mix of
+# resolutions can only be a floor.
+#
+# LINKING ASSUMPTION. A soldier missing for a long time who is alive is, in
+# practice, a prisoner of war. The number of prisoners Russia holds, over the
+# number of never-resolved missing, is then the share alive. It can be off in
+# both directions: some of those prisoners are already listed as prisoners in
+# the register (alpha lower), while people who came home and are still listed
+# as missing, and prisoners Kyiv does not know of, push it higher.
+#
+#   min   the register's own share of resolutions that are alive
+#   mode  pow_held / residual
+#   max   (pow_held + returned_from_captivity) / residual - every person ever
+#         returned still listed as missing: a bound, not a scenario
+#
+# residual is the number of missing never resolved at the end of the chain,
+# the quantity alpha applies to: impute_missing() is linear in alpha, so it is
+# the imputed dead at alpha = 0 minus those at alpha = 1.
+#
+# SOURCES
+#   pow_held                 "about 7,000 Ukrainian prisoners of war" held by
+#                            Russia - President Zelensky, Munich, 14 Feb 2026
+#                            (Ukrinform, 14 Feb 2026).
+#   returned_from_captivity  9,606 military personnel and civilians returned
+#                            through exchanges by late June 2026 (Euromaidan
+#                            Press, 24 Aug 2026). Includes civilians, which
+#                            only makes the bound more generous.
+pow_held <- 7000
+returned_from_captivity <- 9606
+
+alpha_evidence <- function(tasas_long, stock_missing) {
+  imp0 <- impute_missing(0, tasas_long, stock_missing)
+  imp1 <- impute_missing(1, tasas_long, stock_missing)
+  residual <- sum(imp0$imputed_dead - imp1$imputed_dead)
+
+  resolved <- tasas_long |> filter(status2 != "missing")
+  resolved_alive <- sum(resolved$n[resolved$status2 %in% c("alive", "prisoner")])
+  resolved_all <- sum(resolved$n)
+
+  out <- tibble(
+    alpha_min = resolved_alive / resolved_all,
+    alpha_mode = pow_held / residual,
+    alpha_max = (pow_held + returned_from_captivity) / residual,
+    residual = residual,
+    resolved_alive = resolved_alive,
+    resolved_dead = resolved_all - resolved_alive,
+    pow_held = pow_held,
+    returned_from_captivity = returned_from_captivity
+  )
+  stopifnot(
+    out$alpha_min > 0,
+    out$alpha_min < out$alpha_mode,
+    out$alpha_mode < out$alpha_max,
+    out$alpha_max < 1
+  )
+  out
+}
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # demographic assumptions shared by the projection scripts ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Sex ratio at birth (male births per female birth). Used by 11 and 13 to
@@ -399,7 +486,8 @@ stopifnot(!is.na(n_sim), n_sim >= 100)
 #
 # ARGUMENTS
 #   sim_id         identifier carried through to the output
-#   draws_this_sim one row per year: draw_cvs, draw_cmb, draw_mig, min_cmb
+#   draws_this_sim one row per year: draw_cvs, draw_cmb, draw_mig, conf_cmb
+#                  (conf_cmb = the register's confirmed dead that year)
 #   static_inputs  year-sex-age grid with ems, w, mx, fx, prop_cvs,
 #                  prop_cmb_dead, prop_cmb_miss
 #   pop22_ini      population by sex and completed age on 1 January 2022
@@ -458,7 +546,7 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
 
       # partition combatants: everything up to the individually confirmed
       # count is "confirmed", the excess is attributed to the imputed missing
-      ratio_confirmed = if_else(draw_cmb > 0, min_cmb / draw_cmb, 1),
+      ratio_confirmed = if_else(draw_cmb > 0, conf_cmb / draw_cmb, 1),
       ratio_confirmed = pmin(pmax(ratio_confirmed, 0), 1),
 
       # the two parts carry DIFFERENT age profiles. The register's missing are

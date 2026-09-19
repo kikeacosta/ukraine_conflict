@@ -15,13 +15,15 @@
 #               split into confirmed and imputed-from-missing
 #
 # Conflict death totals and net emigration are both uncertain, so both are
-# drawn n_sim times (00_setup.R) from the PERT bounds in the parameter table built in 10.
-# Every draw is projected through the full 2022-2025 accounting, which is what
-# gives the results their credible intervals.
+# drawn n_sim times (00_setup.R) from PERT distributions built in 10. Every
+# draw is projected through the full 2022-2025 accounting, which is what gives
+# the results their uncertainty intervals.
 #
-# The two are drawn differently, because they are uncertain in different ways.
-# Each year's conflict total is its own unknown, so those draws are
-# independent. Migration is uncertain in its COVERAGE - how much of the
+# They are drawn differently, because they are uncertain in different ways.
+# Each year's civilian total is its own unknown, so those draws are
+# independent. The military total is uncertain through ONE parameter, alpha,
+# the share of the never-resolved missing who are alive, so alpha is drawn
+# once per simulation. Migration is uncertain in its COVERAGE - how much of the
 # outflow the sources see - and that bias runs the same way in every year, so
 # each migration component is drawn once per simulation and held across all
 # four years.
@@ -33,10 +35,12 @@
 #          data_inter/ukr_asfr_wpp_2022_2025.rds           (from 05)
 #          data_inter/ukr_ohchr_civilian_casualties.rds    (from 07_ohchr)
 #          data_inter/ukr_ualosses_...rds                  (from 08)
+#          data_inter/ukr_alpha_missing.rds, ukr_military_alpha_lines.rds (09)
 #
 # OUTPUTS  data_inter/ukr_sim_draws_2022_2025_n<n_sim>.rds  (every draw)
 #          data_inter/ukr_probabilistic_deaths_rates_2022_2025.rds (summary)
-#          data_inter/ukr_sim_param_draws.rds      (the draws themselves, for 15 and 16)
+#          data_inter/ukr_sim_param_draws.rds      (the draws themselves, for 15)
+#          data_inter/ukr_sim_alpha_draws.rds      (alpha in every draw, for 15)
 #
 # The life expectancy decomposition that used to live at the bottom of this
 # script now has its own step, 14, which runs it inside every draw instead of
@@ -48,9 +52,10 @@ gc()
 source("code/00_setup.R")
 
 # 1. SIMULATION CONTROL ========================================================
-# n_sim comes from 00_setup.R: 20,000 by default, overridden with UKR_N_SIM for
-# construction runs. The cache below is keyed by it, so a run at one size can
-# never be served the other size's draws.
+# n_sim comes from 00_setup.R (1,000 while the pipeline is being built, 20,000
+# for the reported estimates), or from UKR_N_SIM for a one-off run. The cache
+# below is keyed by it, so a run at one size can never be served another
+# size's draws.
 message("simulation size: n_sim = ", n_sim)
 
 # 2. BASELINE DEMOGRAPHIC INPUTS ===============================================
@@ -58,12 +63,12 @@ message("simulation size: n_sim = ", n_sim)
 # --- parameter table: min / mode / max conflict deaths per year and role -----
 param_table <- read_rds("data_inter/ukr_param_table.rds")
 
-# the combatant minimum is the count of INDIVIDUALLY CONFIRMED deaths in the
-# ualosses register; anything drawn above it is attributable to the imputation
-# of the missing, and that is the split reported as confirmed vs imputed
-combatant_mins <- param_table %>%
+# the register's INDIVIDUALLY CONFIRMED deaths; anything drawn above them is
+# attributable to the imputation of the missing, and that is the split
+# reported as confirmed vs imputed
+combatant_confirmed <- param_table %>%
   filter(role == "combatants") %>%
-  select(year, min_cmb = min)
+  select(year, conf_cmb = confirmed)
 
 # --- counterfactual ("expected") mortality, no war --------------------------
 exp_mort2 <- read_rds("data_inter/ukr_mxs_obs_plus_frcst_1989_2025.rds") %>%
@@ -182,30 +187,41 @@ draws_cvs_long <- param_table %>%
     draw = rpert(n_sim, min = min, mode = mode, max = max)
   )
 
-# COMBATANTS are not like that, although they look like a count. Their bounds
-# ARE the imputation of the missing: the minimum is "none of the missing are
-# dead", the maximum is "all of them are", and the mode is the assumed 10%
-# alive (see 09 and 10). Where the truth sits inside that range is ONE
-# property of how disappearances resolve - the same registers, the same
-# recovery and identification process - not four separate facts. A year's own
-# range already reflects its own duration since disappearance, which is why
-# the range widens from 31% of the mode in 2022 to 81% in 2025.
-#
-# So the component gets one quantile per simulation, held across all four
-# years: exactly the treatment migration gets below, and for the same reason.
-# Drawing the years independently would let a single simulation put 2022 at
-# none-of-the-missing-dead and 2025 at all-of-them-dead, which is not a
-# scenario anyone could defend, and it understates the spread of the four-year
-# total by more than 40% (SD 8,611 against 14,891) because independent errors
-# partly cancel in the sum.
-u_cmb <- runif(n_sim)
-draws_cmb_long <- param_table %>%
-  filter(role == "combatants") %>%
-  group_by(role, year) %>%
-  reframe(
-    sim_id = 1:n_sim,
-    draw = qpert(u_cmb, min = min, mode = mode, max = max)
+# COMBATANTS are not like that, although they look like a count. What is
+# uncertain about them is alpha, the share of the never-resolved missing who
+# are alive (00_setup.R, alpha_evidence(): the linking assumption, the
+# sources and the range). That is ONE property of the missing, not four
+# separate facts, so alpha is drawn once per simulation and every year's total
+# follows from it: at_alpha0 - alpha x residual, the line 09's chain traces.
+# Drawing the years independently would let one simulation put 2022 at "none
+# of the missing alive" and 2025 at "a fifth of them alive", which is not a
+# scenario anyone could defend, and the errors would partly cancel in the
+# four-year total.
+alpha_range <- read_rds("data_inter/ukr_alpha_missing.rds")
+alpha_lines <- read_rds("data_inter/ukr_military_alpha_lines.rds")
+
+alpha_draws <- tibble(
+  sim_id = 1:n_sim,
+  alpha = qpert(
+    runif(n_sim),
+    min = alpha_range$alpha_min,
+    mode = alpha_range$alpha_mode,
+    max = alpha_range$alpha_max
   )
+)
+write_rds(alpha_draws, "data_inter/ukr_sim_alpha_draws.rds")
+
+draws_cmb_long <-
+  expand_grid(alpha_draws, alpha_lines |> select(year, at_alpha0, residual)) |>
+  transmute(role = "combatants", year, sim_id, draw = at_alpha0 - alpha * residual)
+
+# the draws must stay inside 10's bounds, which are the same line evaluated
+# at the ends of the range
+stopifnot(
+  draws_cmb_long |>
+    left_join(param_table |> filter(role == "combatants") |> select(year, min, max), by = "year") |>
+    with(all(draw >= min - 1e-6 & draw <= max + 1e-6))
+)
 
 draws_conflict_long <- bind_rows(draws_cvs_long, draws_cmb_long)
 
@@ -241,7 +257,7 @@ draws_mig <- draws_mig_long %>%
 
 draws_df <- draws_conflict %>%
   left_join(draws_mig, by = c("sim_id", "year")) %>%
-  left_join(combatant_mins, by = "year")
+  left_join(combatant_confirmed, by = "year")
 
 # One tidy row per simulation, year and role. 15 draws its PERT figures from
 # this rather than re-deriving the draws from the projection output, and 16

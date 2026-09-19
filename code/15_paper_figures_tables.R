@@ -36,6 +36,10 @@
 #   tableA3_e0_loss_by_cause.csv                     14
 #   tableA4_uncertainty_shares.csv                   11, 14 <- new
 #   tableA5_military_reconciliation.csv              07_ucdp, 08, 10, 11
+#   tableA6_alpha_sensitivity.csv                    09, 13b
+#   figA4_alpha_sensitivity_missing.png              09, 13b
+#   tableA7_migration_sensitivity.csv                13, 13c
+#   figA5_migration_sensitivity.png                  13, 13c
 #
 # INPUTS   the .rds products of steps 07-14
 # ==============================================================================
@@ -119,6 +123,7 @@ deaths_sum <- read_rds("data_inter/ukr_conflict_deaths_by_cause_summary_2022_202
 mig <- read_rds("data_inter/ukr_migration_decomposition.rds")
 alpha_mil <- read_rds("data_inter/ukr_alpha_sensitivity_military.rds")
 alpha_e0 <- read_rds("data_inter/ukr_alpha_sensitivity_e0.rds")
+alpha_range <- read_rds("data_inter/ukr_alpha_missing.rds")
 
 # The draws file is named for the simulation size, so 15 reads the one matching
 # the n_sim it was configured with rather than whatever the last run left behind.
@@ -515,7 +520,9 @@ figA1 <-
     x = "Death counts", y = "Density", colour = "Role", fill = "Role",
     caption = paste0(
       "Beta-PERT draws (n = ", scales::comma(n_sim),
-      "). Dashed line: mode. Dotted lines: min and max."
+      "). Dashed line: mode. Dotted lines: min and max. Combatant totals ",
+      "follow from one draw of alpha\n(the share of the never-resolved ",
+      "missing who are alive) per simulation, so their four years move together."
     )
   ) +
   theme_paper() +
@@ -657,15 +664,14 @@ acled <- read_rds("data_inter/ukr_acled.rds")
 ucdp_cmp_full <- read_rds("data_inter/ukr_rus_ucdp_source_comparison.rds")
 ucdp_ukr <- ucdp_cmp_full |> filter(country == "Ukraine")
 
-# Taken from the parameter table and summed over rounded years, exactly as
-# table 3 builds its Total row, so the two tables print the same bounds. The
-# register counts are fractional (08 redistributes records of unknown age or
-# year), and rounding their four-year sum once gives 176,055 where table 3 has
-# 176,054. Both are valid roundings of 176,054.6; a reader comparing the two
-# tables would still see a discrepancy.
+# The register's own low and high, taken from the parameter table's register
+# columns and summed over rounded years, the way the other tables build their
+# Total rows. The counts are fractional (08 redistributes records of unknown
+# age or year), and rounding a four-year sum once can differ by one from the
+# sum of rounded years.
 cmb_bounds <- param_table |> filter(role == "combatants")
-ual_low <- sum(round(cmb_bounds$min))
-ual_high <- sum(round(cmb_bounds$max))
+ual_low <- sum(round(cmb_bounds$confirmed))
+ual_high <- sum(round(cmb_bounds$listed))
 
 acled_tot <- acled |> summarise(dts = sum(dts), .by = role)
 
@@ -749,11 +755,13 @@ tab_imput <-
     total_deaths = total_estimado
   )
 
+# The Total row sums the rounded years, as tables 1 and 3 do, so the tables
+# print the same totals; rounding the four-year sum once can differ by one.
 tab_imput <- bind_rows(
   tab_imput,
   tab_imput |>
     summarise(across(c(registered_deaths, missing, imputed_dead,
-                       imputed_alive, total_deaths), sum)) |>
+                       imputed_alive, total_deaths), ~ sum(round(.x)))) |>
     mutate(
       year = NA_integer_,
       pct_dead = imputed_dead / missing,
@@ -775,6 +783,7 @@ print(tab_imput)
 # ==============================================================================
 tab_pert <-
   param_table |>
+  select(year, role, mode, min, max) |>
   mutate(across(c(mode, min, max), ~round(.x))) |>
   pivot_wider(
     names_from = role,
@@ -1064,7 +1073,7 @@ recon_year <-
   dyad |>
   left_join(ucdp_ukr, by = "year") |>
   left_join(
-    param_table |> filter(role == "combatants") |> select(year, registered = min),
+    param_table |> filter(role == "combatants") |> select(year, registered = confirmed),
     by = "year"
   ) |>
   left_join(cmb_draws |> reframe(q3(draw), .by = year), by = "year") |>
@@ -1101,28 +1110,36 @@ print(tA5)
 # ==============================================================================
 # TABLE A6 / FIGURE A4 - Sensitivity to the missing-combatant imputation
 # ==============================================================================
-# The military death total is dominated by suelo_vivo (09): the assumed
-# share of the long-term missing who are alive. Nothing in the data
-# identifies this number, so 13b re-runs the imputation chain and the
-# downstream projection across suelo_vivo in [0, 1], holding everything
-# else at its production mode, and this assembles the result into a
-# manuscript table and figure.
+# The military death total is dominated by alpha, the share of the
+# never-resolved missing who are alive. The registers cannot estimate it; its
+# range comes from the number of prisoners of war Russia holds (09,
+# alpha_evidence() in 00_setup.R), and 11 draws alpha inside that range. 13b
+# re-runs the imputation chain and the downstream projection across alpha in
+# [0, 1], holding everything else at its mode, and this assembles the result
+# into a manuscript table and figure with the range marked on it.
+range_label <- c(
+  min = "floor", mode = "central", max = "cap",
+  p2.5 = "2.5th percentile of draws", p97.5 = "97.5th percentile of draws"
+)
+
 tA6 <-
   alpha_mil |>
-  summarise(total_military_deaths = sum(total_military), .by = suelo_vivo) |>
+  # summed over rounded years, as table 3 builds its totals, so the two agree
+  summarise(total_military_deaths = sum(round(total_military)), .by = c(alpha, range_point)) |>
   left_join(
     alpha_e0 |>
       summarise(
         male_loss_2025 = loss[year == 2025 & sex == "m"],
         female_loss_2025 = loss[year == 2025 & sex == "f"],
-        .by = suelo_vivo
+        .by = alpha
       ),
-    by = "suelo_vivo"
+    by = "alpha"
   ) |>
-  arrange(suelo_vivo) |>
+  arrange(alpha) |>
   transmute(
-    suelo_vivo,
-    total_military_deaths = round(total_military_deaths),
+    alpha = round(alpha, 3),
+    evidence_range = unname(range_label[range_point]),
+    total_military_deaths,
     male_e0_loss_2025 = round(male_loss_2025, 2),
     female_e0_loss_2025 = round(female_loss_2025, 3)
   )
@@ -1130,44 +1147,258 @@ tA6 <-
 save_tab(tA6, "tableA6_alpha_sensitivity.csv")
 print(tA6)
 
-figA4a <-
+# "central (-down / +up)": the value at the central input and how far it moves
+# at the two ends of the 95% interval of the simulated input. Used by A4 and A5.
+pm_label <- function(central, a, b, digits) {
+  lo <- pmin(a, b)
+  hi <- pmax(a, b)
+  negligible <- pmax(central - lo, hi - central) < 0.5 * 10^-digits
+  if_else(
+    negligible,
+    sprintf("%.*f (±<%s)", digits, central, format(10^-digits, scientific = FALSE)),
+    sprintf("%.*f (−%.*f / +%.*f)", digits, central, digits, central - lo, digits, hi - central)
+  )
+}
+
+# text beside one end of each line, spread apart where lines end close
+# together; the x axis is widened on that side to make room for it
+end_labels <- function(d, side = c("right", "left")) {
+  side <- match.arg(side)
+  ggrepel::geom_text_repel(
+    data = d, aes(x = x, y = y, label = label, colour = colour_key),
+    inherit.aes = FALSE, hjust = if (side == "right") 0 else 1,
+    direction = "y", nudge_x = 0,
+    # labels move only vertically, so each keeps its own x in every panel
+    xlim = c(-Inf, Inf),
+    size = 2.7, segment.colour = NA,
+    box.padding = 0.15, min.segment.length = Inf, show.legend = FALSE
+  )
+}
+# breaks only over the data when the axis is widened for labels: ggplot
+# computes breaks on the widened range, which would put ticks under the text
+data_breaks <- function(left, right) {
+  function(lims) {
+    r <- diff(lims) / (1 + left + right)
+    lo <- lims[1] + left * r
+    hi <- lo + r
+    b <- scales::breaks_pretty()(c(lo, hi))
+    b[b >= lo - 1e-9 & b <= hi + 1e-9]
+  }
+}
+
+alpha_at <- function(p) alpha_mil$alpha[which(alpha_mil$range_point == p)[1]]
+
+# the range as a light band, the 95% interval of the simulated alpha as a
+# darker one inside it, the central value as a dashed line
+alpha_band <- list(
+  annotate(
+    "rect",
+    xmin = alpha_range$alpha_min, xmax = alpha_range$alpha_max,
+    ymin = -Inf, ymax = Inf, fill = "#0A9396", alpha = 0.14
+  ),
+  annotate(
+    "rect",
+    xmin = alpha_at("p2.5"), xmax = alpha_at("p97.5"),
+    ymin = -Inf, ymax = Inf, fill = "#0A9396", alpha = 0.18
+  ),
+  geom_vline(xintercept = alpha_range$alpha_mode, linetype = "dashed", colour = "grey30")
+)
+alpha_x <- scale_x_continuous(
+  "Share of the never-resolved missing who are alive (α)",
+  breaks = seq(0, 1, 0.25), labels = c("0", "0.25", "0.5", "0.75", "1"),
+  expand = expansion(mult = c(0.85, 0.02))
+)
+
+mil_curve <-
   alpha_mil |>
-  summarise(total_military = sum(total_military), .by = suelo_vivo) |>
-  ggplot(aes(suelo_vivo, total_military)) +
+  summarise(total_military = sum(round(total_military)), .by = c(alpha, range_point))
+mil_at <- function(p) mil_curve$total_military[which(mil_curve$range_point == p)[1]]
+mil_lo <- min(mil_at("p2.5"), mil_at("p97.5"))
+mil_hi <- max(mil_at("p2.5"), mil_at("p97.5"))
+# labels at alpha = 0, the left end, where the lines are furthest apart
+lab4a <- tibble(
+  x = 0,
+  y = mil_curve$total_military[mil_curve$alpha == 0],
+  colour_key = "military",
+  label = sprintf(
+    "%s (−%s / +%s)", scales::comma(mil_at("mode")),
+    scales::comma(mil_at("mode") - mil_lo), scales::comma(mil_hi - mil_at("mode"))
+  )
+)
+
+figA4a <-
+  mil_curve |>
+  ggplot(aes(alpha, total_military)) +
+  alpha_band +
   geom_line(linewidth = 1, colour = "#B23A48") +
-  geom_point(colour = "#B23A48") +
-  geom_vline(xintercept = 0.10, linetype = "dashed", colour = "grey50") +
+  end_labels(lab4a, "left") +
+  scale_colour_manual(values = c(military = "#B23A48"), guide = "none") +
+  alpha_x +
   scale_y_continuous(labels = scales::comma) +
-  labs(
-    x = "Share of the never-resolved missing assumed alive",
-    y = "Total military deaths, 2022–2025"
-  ) +
+  labs(y = "Total military deaths, 2022–2025") +
   theme_paper()
+
+lab4b <-
+  alpha_e0 |>
+  filter(range_point %in% c("mode", "p2.5", "p97.5")) |>
+  select(year, sex, range_point, loss) |>
+  pivot_wider(names_from = range_point, values_from = loss) |>
+  left_join(alpha_e0 |> filter(alpha == 0) |> select(year, sex, y = loss), by = c("year", "sex")) |>
+  mutate(
+    x = 0,
+    colour_key = factor(year),
+    label = pm_label(mode, p2.5, p97.5, if_else(sex == "m", 2, 3))
+  ) |>
+  nice_sex()
 
 figA4b <-
   alpha_e0 |>
   nice_sex() |>
-  ggplot(aes(suelo_vivo, loss, colour = factor(year))) +
+  ggplot(aes(alpha, loss, colour = factor(year))) +
+  alpha_band +
   geom_line(linewidth = 1) +
-  geom_vline(xintercept = 0.10, linetype = "dashed", colour = "grey50") +
+  end_labels(lab4b, "left") +
   facet_wrap(~sex, scales = "free_y") +
-  labs(
-    x = "Share of the never-resolved missing assumed alive",
-    y = "Life expectancy loss (years)",
-    colour = "Year"
-  ) +
+  alpha_x +
+  labs(y = "Life expectancy loss (years)", colour = "Year") +
   theme_paper()
 
 figA4 <- figA4a + figA4b +
+  plot_layout(widths = c(1, 2)) +
   plot_annotation(
-    title = "Sensitivity to the missing-combatant imputation assumption",
-    caption = paste0(
-      "Dashed line: the production value (suelo_vivo = 0.10). Deterministic, ",
-      "at the mode of every other input - not a Monte Carlo re-run at each point."
+    title = "Sensitivity to the share of the missing who are alive",
+    caption = sprintf(
+      paste0(
+        "Light band: the range the evidence allows (α = %.3f to %.2f), within which ",
+        "every simulation draws α from a Beta-PERT. Dark band: the 95%% interval\n",
+        "of the simulated α (%.3f to %.3f). Dashed: the central value, %.3f (about %s ",
+        "prisoners of war held by Russia over %s never-resolved missing).\n",
+        "Labels: the value at the central α, and how far it moves at the two ends of ",
+        "the dark band. Deterministic, at the mode of every other input - not a Monte ",
+        "Carlo re-run at each point."
+      ),
+      alpha_range$alpha_min, alpha_range$alpha_max, alpha_at("p2.5"), alpha_at("p97.5"),
+      alpha_range$alpha_mode, scales::comma(alpha_range$pow_held),
+      scales::comma(round(alpha_range$residual, -2))
     )
   )
-save_fig(figA4, "figA4_alpha_sensitivity_missing.png", 11, 4.5)
+save_fig(figA4, "figA4_alpha_sensitivity_missing.png", 14, 5)
 
+# ==============================================================================
+# TABLE A7 / FIGURE A5 - Sensitivity to net migration
+# ==============================================================================
+# The counterpart of A4 for migration. 13c sweeps each migration component
+# across its PERT range, along the quantile 11 draws, with the other component
+# and every conflict input at their mode. The band is the 95% interval of the
+# component's simulated four-year total, the dashed line its mode. Figure 4
+# gives the other end of the question: the loss with no migration at all.
+mig_sens <- read_rds("data_inter/ukr_migration_sensitivity_e0.rds")
+mig_decomp_2025 <- mig |> filter(year == 2025)
+
+mig_labels <- c(mig_west = "Western", mig_ru_by = "Russia and Belarus")
+point_order <- c("min", "p2.5", "mode", "p97.5", "max")
+
+tA7 <-
+  bind_rows(
+    mig_sens |>
+      filter(!is.na(point), year == 2025) |>
+      select(component, point, cumulative_net_migration, sex, loss),
+    # no migration at all (13), the reference for both components
+    tibble(component = "none", point = "no migration", cumulative_net_migration = 0) |>
+      cross_join(mig_decomp_2025 |> select(sex, loss = loss_nomig))
+  ) |>
+  pivot_wider(names_from = sex, values_from = loss) |>
+  mutate(
+    component = factor(component, levels = c("mig_west", "mig_ru_by", "none"),
+                       labels = c("Western", "Russia and Belarus", "None")),
+    point = factor(point, levels = c(point_order, "no migration"))
+  ) |>
+  arrange(component, point) |>
+  transmute(
+    component,
+    point,
+    cumulative_net_migration_2022_2025 = round(cumulative_net_migration),
+    male_e0_loss_2025 = round(m, 2),
+    female_e0_loss_2025 = round(f, 3)
+  )
+
+save_tab(tA7, "tableA7_migration_sensitivity.csv")
+print(tA7)
+
+# one strip per panel, "Western · Males", rather than two stacked strips
+mig_panels <- as.vector(t(outer(mig_labels, c("Females", "Males"), paste, sep = " · ")))
+mig_panel <- function(component, sex) {
+  factor(paste(mig_labels[component], sex, sep = " · "), levels = mig_panels)
+}
+
+mig_curves <-
+  mig_sens |>
+  filter(!is.na(u)) |>
+  nice_sex() |>
+  mutate(panel = mig_panel(component, sex))
+
+mig_marks <-
+  mig_sens |>
+  filter(point %in% c("p2.5", "mode", "p97.5")) |>
+  distinct(component, point, cumulative_net_migration) |>
+  pivot_wider(names_from = point, values_from = cumulative_net_migration) |>
+  cross_join(tibble(sex = c("Females", "Males"))) |>
+  mutate(panel = mig_panel(component, sex))
+
+# labels beside the right-hand end of each line: the loss at the mode and how
+# far it moves at the two ends of the band (pm_label() and end_labels() are
+# defined with A4)
+lab5 <-
+  mig_sens |>
+  filter(point %in% c("mode", "p2.5", "p97.5")) |>
+  select(component, year, sex, point, loss) |>
+  pivot_wider(names_from = point, values_from = loss) |>
+  left_join(
+    mig_sens |> filter(point == "max") |> select(component, year, sex, x = cumulative_net_migration, y = loss),
+    by = c("component", "year", "sex")
+  ) |>
+  mutate(
+    x = x / 1e6,
+    colour_key = factor(year),
+    label = pm_label(mode, p2.5, p97.5, if_else(sex == "m", 2, 3))
+  ) |>
+  nice_sex() |>
+  mutate(panel = mig_panel(component, sex))
+
+figA5 <-
+  mig_curves |>
+  ggplot(aes(cumulative_net_migration / 1e6, loss, colour = factor(year))) +
+  geom_rect(
+    data = mig_marks, inherit.aes = FALSE,
+    aes(xmin = p2.5 / 1e6, xmax = p97.5 / 1e6, ymin = -Inf, ymax = Inf),
+    fill = "#0A9396", alpha = 0.18
+  ) +
+  geom_vline(data = mig_marks, aes(xintercept = mode / 1e6),
+             linetype = "dashed", colour = "grey30") +
+  geom_line(linewidth = 1) +
+  end_labels(lab5) +
+  facet_wrap(~panel, scales = "free", ncol = 2) +
+  scale_x_continuous(breaks = data_breaks(0.02, 0.7), expand = expansion(mult = c(0.02, 0.7))) +
+  labs(
+    x = "Net migration of the component, cumulative 2022–2025 (millions, net outflow)",
+    y = "Life expectancy loss (years)",
+    colour = "Year",
+    title = "Sensitivity to net migration",
+    caption = sprintf(
+      paste0(
+        "Each component is swept across its PERT range with the other and every ",
+        "conflict input at their mode. Shaded: the 95%% interval of the\n",
+        "component's simulated total. Dashed: its mode. Labels: the loss at the mode, ",
+        "and how far it moves at the two ends of the shaded interval.\n",
+        "With no migration at all the 2025 loss would be %.2f years for men and ",
+        "%.2f for women (figure 4)."
+      ),
+      mig_decomp_2025$loss_nomig[mig_decomp_2025$sex == "m"],
+      mig_decomp_2025$loss_nomig[mig_decomp_2025$sex == "f"]
+    )
+  ) +
+  theme_paper()
+save_fig(figA5, "figA5_migration_sensitivity.png", 12, 7)
 # ==============================================================================
 # TABLE A2 - Empirical status transitions of the missing
 # ==============================================================================

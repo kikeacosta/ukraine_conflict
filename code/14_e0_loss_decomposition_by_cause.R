@@ -354,11 +354,10 @@ plot_share <- function(causes, min_label = 0.03, y_lab = NULL,
 # missing. Two- and three-way variants were also trialled; the three-way is
 # the one that carries the story, so it is the only one produced.
 #
-# Note that the confirmed:imputed ratio is uniform across age and sex by
-# construction — both groups are distributed over age and sex using the same
-# profile (that of the confirmed dead), and the partition is a single
-# year-level scalar, min_cmb / draw_cmb. The sex contrast in these figures is
-# therefore driven entirely by the civilian share and by the magnitudes.
+# The partition between confirmed and imputed is a year-level scalar,
+# conf_cmb / draw_cmb, but the two parts are spread over different age-sex
+# profiles (the register's dead and its missing, see 11), so their ratio
+# differs from one age-sex cell to another.
 three_way <- c(
   "Civilians", "Registered combatants", "Missing combatants (imputed)"
 )

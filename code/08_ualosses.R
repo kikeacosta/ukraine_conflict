@@ -122,8 +122,8 @@ dts <- cache_rds("data_inter/ualosses_counts_2022_2025.rds", {
         sex == 1 ~ "m",
         TRUE ~ NA_character_
       ),
-      date_bth = ymd("1900-01-01") + as.numeric(datebirth),
-      date_evnt = ymd("1900-01-01") + as.numeric(dateevent)
+      date_bth = excel_date(datebirth),
+      date_evnt = excel_date(dateevent)
     )
 
   dt3 <-
@@ -141,7 +141,9 @@ dts <- cache_rds("data_inter/ualosses_counts_2022_2025.rds", {
   )
 
   dt3 |>
-    filter(nationality == "Ukraine", !is.na(sex)) |>
+    # ual_is_ukrainian() (00_setup.R) also keeps the records whose nationality
+    # field holds a Ukrainian place of origin instead of a country
+    filter(ual_is_ukrainian(nationality), !is.na(sex)) |>
     mutate(
       year = year(date_evnt),
       age = floor(interval(date_bth, date_evnt) / years(1))

@@ -52,8 +52,8 @@ read_reg <- function(path) {
       name_first = as.character(FirstName),
       name_patr = as.character(Patronym),
       name_full = paste(name_last, name_first, name_patr, sep = " "),
-      date_bth = ymd("1900-01-01") + as.numeric(DateBirth),
-      date_evnt = ymd("1900-01-01") + as.numeric(DateEvent),
+      date_bth = excel_date(DateBirth),
+      date_evnt = excel_date(DateEvent),
       year = year(date_evnt)
     ) |>
     filter(year %in% 2022:2025, Nationality == "Ukraine") |>

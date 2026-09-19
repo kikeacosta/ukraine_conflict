@@ -9,9 +9,19 @@
 # per year and role.
 #
 #   COMBATANTS (ualosses register)
-#     min  = individually confirmed deaths only
-#     mode = confirmed + the share of the missing imputed as dead (step 09)
-#     max  = confirmed + ALL of the missing treated as dead
+#     The total is confirmed deaths plus the missing imputed as dead by 09's
+#     chain, which is linear in alpha, the share of the never-resolved missing
+#     who are alive. The bounds are that total at the ends and the centre of
+#     the range of alpha the evidence allows (alpha_evidence(), 00_setup.R):
+#     min  = total at alpha_max (the most alive)
+#     mode = total at alpha_mode
+#     max  = total at alpha_min
+#     11 draws alpha itself and computes the total from it; drawing the total
+#     from these bounds instead would give the same distribution, because a
+#     PERT carried through a linear map is the PERT of the mapped bounds.
+#     Two further columns describe the register rather than the estimate:
+#     confirmed (its recorded dead, used to split confirmed from imputed) and
+#     listed (confirmed plus everyone still listed as missing).
 #
 #   CIVILIANS (UCDP georeferenced event data)
 #     min / mode / max = the low / best / high bounds UCDP publishes,
@@ -20,6 +30,7 @@
 # INPUTS   data_inter/ukr_ucdp_invals.rds                     (from 07_invals)
 #          data_inter/ukr_ualosses_..._sex_age_2022_2025.rds  (from 08)
 #          data_inter/ukr_ualosses_..._imputed_...rds         (from 09)
+#          data_inter/ukr_alpha_missing.rds, ukr_military_alpha_lines.rds (09)
 #          data_inter/ukr_migration_bounds.rds                (from 06)
 # OUTPUT   data_inter/ukr_param_table.rds
 # ==============================================================================
@@ -43,16 +54,38 @@ ual2 <-
   complete(status, year = 2022:2025, sex, age = 0:100, fill = list(dx = 0))
 
 # --- combatants -------------------------------------------------------------
-cmb_m <- ual_imp |> summarise(mode = sum(dx), .by = c(year)) # confirmed + imputed
-cmb_l <- ual2 |> filter(status == "dead") |> summarise(min = sum(dx), .by = c(year))
-cmb_u <- ual2 |> summarise(max = sum(dx), .by = c(year)) # dead + all missing
+alpha_range <- read_rds("data_inter/ukr_alpha_missing.rds")
+alpha_lines <- read_rds("data_inter/ukr_military_alpha_lines.rds")
+at_alpha <- function(a) alpha_lines$at_alpha0 - a * alpha_lines$residual
 
 cmb <-
-  cmb_m |>
-  left_join(cmb_l, by = "year") |>
-  left_join(cmb_u, by = "year") |>
-  mutate(role = "combatants") |>
-  select(year, role, mode, min, max)
+  alpha_lines |>
+  transmute(
+    year,
+    role = "combatants",
+    mode = at_alpha(alpha_range$alpha_mode),
+    min = at_alpha(alpha_range$alpha_max),
+    max = at_alpha(alpha_range$alpha_min),
+    confirmed,
+    listed = confirmed + missing
+  )
+
+# the mode must be the total 09 imputed at the central alpha, and the
+# register columns must match the counts the profiles are built from
+stopifnot(
+  isTRUE(all.equal(
+    cmb$mode,
+    ual_imp |> summarise(d = sum(dx), .by = year) |> arrange(year) |> pull(d)
+  )),
+  isTRUE(all.equal(
+    cmb$confirmed,
+    ual2 |> filter(status == "dead") |> summarise(d = sum(dx), .by = year) |> arrange(year) |> pull(d)
+  )),
+  isTRUE(all.equal(
+    cmb$listed,
+    ual2 |> summarise(d = sum(dx), .by = year) |> arrange(year) |> pull(d)
+  ))
+)
 
 # --- civilians --------------------------------------------------------------
 cvs <-

@@ -19,12 +19,12 @@ file_v18 <- "data_input/260514_UKR_ualosses_Personnel.xlsx"
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # KEY ASSUMPTION
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Share of the long-term missing (those still unresolved at the end of the
-# chain) assumed to be alive. This single number drives the combatant death
-# "mode" in 10 and therefore the headline estimate, so it is worth a
-# sensitivity check before quoting the results.
-suelo_vivo <- 0.1
-suelo_muerto <- 1 - suelo_vivo
+# alpha, the share of the long-term missing (those still unresolved at the end
+# of the chain) who are alive, drives the combatant total. The registers
+# cannot estimate it; its range comes from alpha_evidence() in 00_setup.R,
+# which sets out the linking assumption and the sources. This script imputes
+# at the central value and records the range, 10 turns the range into the
+# combatant bounds, and 11 draws alpha within it.
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # individual-level matching -> anonymous transition counts (cached)
@@ -36,20 +36,31 @@ transitions <- cache_rds(
       read_xlsx(require_raw(path), sheet = "Database") |>
         mutate(
           name2 = paste(LastName, FirstName, Patronym, sep = " "),
-          date_bth = ymd("1900-01-01") + as.numeric(DateBirth),
-          date_evnt = ymd("1900-01-01") + as.numeric(DateEvent),
-          year = year(date_evnt)
+          date_bth = excel_date(DateBirth),
+          date_evnt = excel_date(DateEvent),
+          year = year(date_evnt),
+          ukrainian = ual_is_ukrainian(Nationality)
         ) |>
-        filter(year %in% 2022:2025, Nationality == "Ukraine") |>
-        select(name2, date_bth, year, date_evnt, status = Status)
+        select(name2, date_bth, year, date_evnt, ukrainian, status = Status)
     }
 
-    v14 <- read_reg(file_v14)
+    # The population at risk is defined on the EARLIER register only: people
+    # listed there as missing (or prisoner) with an event in 2022-2025. The
+    # later register is searched in full. Filtering it on event year and
+    # nationality too lost every person whose later record had a corrected
+    # event date or a shifted nationality field - about 460 people, some 360
+    # of whom had been found dead - and counted them as still missing.
+    v14 <- read_reg(file_v14) |> filter(year %in% 2022:2025, ukrainian)
     v18 <- read_reg(file_v18)
 
     # one outcome per person: name + date of birth can collide, and a
-    # many-to-many join would count those individuals more than once
-    v18_lu <- v18 |> distinct(name2, date_bth, .keep_all = TRUE)
+    # many-to-many join would count those individuals more than once. Where
+    # the same key appears under two statuses the most resolved one is kept:
+    # a death record is newer information than a missing one.
+    v18_lu <-
+      v18 |>
+      arrange(match(status, c("dead", "prisoner", "missing"))) |>
+      distinct(name2, date_bth, .keep_all = TRUE)
     message(
       "  v18 rows: ", nrow(v18),
       " | unique name+dob keys: ", nrow(v18_lu),
@@ -64,16 +75,12 @@ transitions <- cache_rds(
         by = c("name2", "date_bth")
       ) |>
       # A name+DOB not found in v18 is treated as CENSORED (still missing),
-      # not resolved alive. v18 postdates v14 and the register only grows
-      # (accumulates records, never removes them), so a person genuinely
-      # found alive would need to be actively pulled from the register - the
-      # far more likely explanation for an absence is a linkage miss (a
-      # name transliterated differently, a date-of-birth correction) than a
-      # real resurrection. An earlier version of this line read "absent
-      # from the later register = resurfaced alive" and used that reading
-      # directly; treating the same absences as still-missing instead
-      # raises the imputed dead total by about 4,600 (2.8%), which is the
-      # size of the assumption this line was making.
+      # not resolved alive. Absence is not a sign of survival: the dead
+      # vanish from the register as often as the missing do (1.4% against
+      # 1.2% with no trace of the name at all), and most of the people not
+      # found by an exact match are still in the later file under a
+      # corrected name or date of birth. Reading absence as "resurfaced
+      # alive" would lower the imputed dead by about 4,000.
       mutate(
         status2 = ifelse(is.na(status2), "missing", status2),
         year = year(date_evnt)
@@ -93,8 +100,8 @@ transitions <- cache_rds(
 #
 # This matters: step 08 redistributes the ~3,300 records whose age or event
 # year is not recorded. Counting the raw file again here would silently drop
-# them, so the confirmed-death total used in this script (83,182) would not
-# match the one used everywhere downstream (86,526) — and the manuscript
+# them, so the confirmed-death total used in this script would fall short of
+# the one used everywhere downstream by those records, and the manuscript
 # tables built in 15 would disagree with each other.
 stocks <-
   read_rds("data_inter/ukr_ualosses_conflict_deaths_sex_age_2022_2025.rds") |>
@@ -127,7 +134,12 @@ stock_missing_2026 <-
   filter(status == "missing") |>
   select(year, missing_stock = n)
 
-imputation_final <- impute_missing(suelo_vivo, tasas_long, stock_missing_2026)
+# the range of alpha the evidence allows (00_setup.R sets out the sources)
+alpha_range <- alpha_evidence(tasas_long, stock_missing_2026)
+print(as.data.frame(alpha_range))
+write_rds(alpha_range, "data_inter/ukr_alpha_missing.rds")
+
+imputation_final <- impute_missing(alpha_range$alpha_mode, tasas_long, stock_missing_2026)
 
 print(imputation_final)
 
@@ -135,6 +147,32 @@ confirmados_df <-
   stocks |>
   filter(status == "dead") |>
   select(year, confirmados_stock = n)
+
+# The military total in each year is linear in alpha: at_alpha0 - alpha x
+# residual. 10 builds the combatant bounds from these two columns and 11
+# draws alpha, so both use exactly the chain run here.
+military_alpha_lines <-
+  confirmados_df |>
+  left_join(stock_missing_2026, by = "year") |>
+  left_join(
+    impute_missing(0, tasas_long, stock_missing_2026) |> select(year, dead0 = imputed_dead),
+    by = "year"
+  ) |>
+  left_join(
+    impute_missing(1, tasas_long, stock_missing_2026) |> select(year, dead1 = imputed_dead),
+    by = "year"
+  ) |>
+  transmute(
+    year,
+    confirmed = confirmados_stock,
+    missing = missing_stock,
+    at_alpha0 = confirmados_stock + dead0,
+    residual = dead0 - dead1
+  )
+
+stopifnot(isTRUE(all.equal(sum(military_alpha_lines$residual), alpha_range$residual)))
+print(military_alpha_lines)
+write_rds(military_alpha_lines, "data_inter/ukr_military_alpha_lines.rds")
 
 combined_losses <- confirmados_df %>%
   left_join(imputation_final, by = "year") %>%
