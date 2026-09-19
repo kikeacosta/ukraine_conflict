@@ -8,25 +8,37 @@
 # the net migration estimate itself?
 #
 # Net migration enters the simulation as two components (06, 10), each drawn once
-# per simulation from a PERT and held across the four years (11):
-#   mig_west   the western outflow, bracketed by the register reading and the
-#              border-crossing reading; its mode is their midpoint
-#   mig_ru_by  displacement into Russia and Belarus, a single 2022 entry
+# per simulation and held across the four years (11):
+#   mig_west   the western outflow, bracketed by source: each draw blends the
+#              crossings reading's whole path with the register reading's by
+#              one Beta-PERT(0, 0.5, 1) weight, so the mode is their midpoint
+#   mig_ru_by  displacement into Russia and Belarus, a single 2022 entry drawn
+#              from a PERT
 #
-# Each component is swept across its whole PERT range, along the quantile u
-# that 11 draws (so every year moves together, as in the simulation), while
-# the other component and every conflict input stay at their mode. One
-# deterministic projection per grid point, as in 13b.
+# Each component is swept across its whole range, along the quantile u that
+# 11 draws (so every year moves together, as in the simulation), while the
+# other component and every conflict input stay at their mode: the western
+# component from the crossings reading's path to the register reading's,
+# Russia and Belarus across its PERT bounds. One deterministic projection per
+# grid point, as in 13b.
 #
-# The sweep stays inside each component's PERT support. Below the minimum, the
-# additive allocation along the departures profile that run_single_sim() uses
-# would start to push age cells negative, so a curve extended towards zero
-# would be an artefact of the allocation rather than a result. The loss with
+# The sweep stays inside each component's range. Below it, the additive
+# allocation along the departures profile that run_single_sim() uses would
+# start to push age cells negative, so a curve extended towards zero would be
+# an artefact of the allocation rather than a result. The loss with
 # no migration at all is 13's scenario, reported alongside.
+#
+# Section 5 then checks three specification choices of the migration input,
+# one at a time at the mode (documents/migration_methodology.md, section 10):
+# where the western mode sits in the bracket (A2), the age-sex profile of the
+# Russia and Belarus flow (A9), and additive against proportional allocation
+# (A5). 15 reports them as table A8.
 #
 # INPUTS   the same as 13
 #          data_inter/ukr_migration_decomposition.rds (from 13)
+#          data_inter/ukr_pop_sssu.rds, Donetsk and Luhansk (from 01)
 # OUTPUTS  data_inter/ukr_migration_sensitivity_e0.rds
+#          data_inter/ukr_migration_specification_e0.rds (section 5)
 #          figures/exploratory/migration_sensitivity_e0.png
 # ==============================================================================
 
@@ -100,21 +112,27 @@ conflict_at_mode <-
     by = "year"
   )
 
-mig_bounds <- param_table |> filter(str_starts(role, "mig_")) |> select(year, role, min, mode, max)
+mig_bounds <- param_table |> filter(str_starts(role, "mig_")) |>
+  select(year, role, min, mode, max, crossings, register)
 
 # 2. THE GRID ==================================================================
 # u is the PERT quantile of the swept component, shared by its years as in 11.
 # The 2.5% and 97.5% points bound the 95% interval of the simulated draws, and
 # the mode is added exactly (for the western component it is the median,
-# because its mode is the midpoint of its bounds; for Russia and Belarus it is
-# not).
+# because its blend weight is symmetric; for Russia and Belarus it is not).
 # rounded so the equality tests below are exact
 u_grid <- round(seq(0, 1, by = 0.025), 3)
 
+# as 11 draws: the western blend of the two readings' paths, Russia and
+# Belarus through its own PERT
 component_at <- function(rl, u) {
-  mig_bounds |>
-    filter(role == rl) |>
-    transmute(year, value = qpert(u, min = min, mode = mode, max = max))
+  rows <- mig_bounds |> filter(role == rl)
+  if (rl == "mig_west") {
+    w <- qpert(u, min = 0, mode = 0.5, max = 1)
+    rows |> transmute(year, value = crossings + w * (register - crossings))
+  } else {
+    rows |> transmute(year, value = qpert(u, min = min, mode = mode, max = max))
+  }
 }
 component_at_mode <- function(rl) {
   mig_bounds |> filter(role == rl) |> transmute(year, value = mode)
@@ -212,3 +230,104 @@ migration_sensitivity |>
 ggsave("figures/exploratory/migration_sensitivity_e0.png", w = 9, h = 6)
 
 message("Done. data_inter/ukr_migration_sensitivity_e0.rds written for 15.")
+
+# ==============================================================================
+# 5. SPECIFICATION CHECKS
+# ==============================================================================
+# Three assumptions in documents/migration_methodology.md (section 10) are
+# tested by changing one of them at a time, deterministically, with every
+# conflict input at its mode:
+#
+#   A2  the western mode is the midpoint of the two readings. Alternative: a
+#       third of the way from the crossings reading to the register reading.
+#   A9  Russia and Belarus share the 2022 western departures profile, which the
+#       exit ban on men makes young and female. Alternative: the 1 January
+#       2022 age-sex structure of Donetsk and Luhansk oblasts, as if whole
+#       households left - older and more male.
+#   A5  a draw away from the mode is added along the departures profile.
+#       Alternative: the signed age-sex profile scaled in proportion, which
+#       also scales returns. At the mode the two coincide, so the check is run
+#       at both ends of the western bracket.
+loss_of <- function(static, draw_mig) {
+  sim <-
+    run_single_sim(1, conflict_at_mode |> left_join(draw_mig, by = "year") |> mutate(sim_id = 1),
+                   static, pop22_ini) |>
+    mutate(conflict = civilian + combatant_confirmed + combatant_imputed,
+           mx_all = (expected + conflict) / pop, mx_bsn = expected / pop)
+  stopifnot(min(sim$pop) >= 0)
+  e0 <- function(col) {
+    sim |> select(year, sex, age, mx = all_of(col)) |> group_by(year, sex) |>
+      do(lifetable(dt_in = .data)) |> ungroup() |> filter(age == 0) |> select(year, sex, ex)
+  }
+  e0("mx_bsn") |> rename(ex_bsn = ex) |>
+    left_join(e0("mx_all") |> rename(ex_all = ex), by = c("year", "sex")) |>
+    transmute(year, sex, loss = ex_bsn - ex_all)
+}
+
+west_at <- function(w) {
+  mig_bounds |> filter(role == "mig_west") |> transmute(year, value = crossings + w * (register - crossings))
+}
+totals_with_west <- function(w) {
+  bind_rows(west_at(w), component_at_mode("mig_ru_by")) |> summarise(draw_mig = sum(value), .by = year)
+}
+mode_totals <- totals_with_west(0.5)
+
+# A9: move the Russia and Belarus flow (2022) from the departures profile w to
+# the Donetsk-Luhansk population structure. The population on 1 January 2022
+# at age a is the cohort that sits in row a + 1 of 2022 (00_setup.R).
+ru_by_mode <- mig_bounds |> filter(role == "mig_ru_by") |> pull(mode)
+dl_profile <-
+  read_rds("data_inter/ukr_pop_sssu.rds") |>
+  filter(reg %in% c("dnk", "luk"), year == 2022) |>
+  summarise(pop = sum(pop), .by = c(sex, age)) |>
+  mutate(age = pmin(age + 1, 100)) |>
+  summarise(pop = sum(pop), .by = c(sex, age)) |>
+  mutate(p_dl = pop / sum(pop), year = 2022L) |>
+  select(year, sex, age, p_dl)
+static_a9 <-
+  static_inputs |>
+  left_join(dl_profile, by = c("year", "sex", "age")) |>
+  mutate(ems = if_else(year == 2022, ems - ru_by_mode * w + ru_by_mode * coalesce(p_dl, 0), ems)) |>
+  select(-p_dl)
+stopifnot(isTRUE(all.equal(sum(static_a9$ems), sum(static_inputs$ems))))
+
+# A5: the signed profile scaled in proportion to the draw, instead of the
+# difference added along the departures profile
+proportional <- function(totals) {
+  static_inputs |>
+    left_join(totals |> rename(target = draw_mig), by = "year") |>
+    left_join(mode_totals |> rename(base = draw_mig), by = "year") |>
+    mutate(ems = ems * target / base) |>
+    select(-target, -base)
+}
+
+specification <- bind_rows(
+  loss_of(static_inputs, mode_totals) |> mutate(scenario = "Mode"),
+  loss_of(static_inputs, totals_with_west(1 / 3)) |> mutate(scenario = "A2: western mode a third of the way from the crossings reading"),
+  loss_of(static_a9, mode_totals) |> mutate(scenario = "A9: Russia and Belarus on the Donetsk-Luhansk population structure"),
+  loss_of(static_inputs, totals_with_west(0)) |> mutate(scenario = "A5: crossings end, additive (as used)"),
+  loss_of(proportional(totals_with_west(0)), mode_totals) |> mutate(scenario = "A5: crossings end, proportional"),
+  loss_of(static_inputs, totals_with_west(1)) |> mutate(scenario = "A5: register end, additive (as used)"),
+  loss_of(proportional(totals_with_west(1)), mode_totals) |> mutate(scenario = "A5: register end, proportional")
+)
+
+# the first row must reproduce 13's loss at the mode
+stopifnot(isTRUE(all.equal(
+  specification |> filter(scenario == "Mode") |> arrange(year, sex) |> pull(loss),
+  read_rds("data_inter/ukr_migration_decomposition.rds") |> arrange(year, sex) |> pull(loss),
+  tolerance = 1e-8
+)))
+
+write_rds(specification, "data_inter/ukr_migration_specification_e0.rds")
+
+cat("\n=== SPECIFICATION CHECKS: LOSS BY YEAR, MEN, AND 2025 WOMEN ===\n")
+print(as.data.frame(
+  specification |>
+    mutate(col = if_else(sex == "m", paste0("m_", year), paste0("f_", year))) |>
+    filter(sex == "m" | year == 2025) |>
+    select(scenario, col, loss) |>
+    pivot_wider(names_from = col, values_from = loss) |>
+    mutate(across(where(is.numeric), \(x) round(x, 3)))
+))
+
+message("Done. data_inter/ukr_migration_specification_e0.rds written for 15.")

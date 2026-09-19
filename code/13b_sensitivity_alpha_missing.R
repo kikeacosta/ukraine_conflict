@@ -2,14 +2,15 @@
 # STEP 13b - Sensitivity of the missing-combatant imputation
 # ==============================================================================
 #
-# Two things the main Monte Carlo treats in a particular way, quantified here
+# Three things the main Monte Carlo treats in a particular way, quantified here
 # instead of being asserted to be small or large:
 #   1. alpha, the share of the long-term missing who are alive. 11 draws it
 #      inside the range the evidence allows; here it is swept over [0, 1], so
 #      the reader can see how far the results move across and beyond that
 #      range;
 #   2. sampling error in the observed transition rates, which are proportions
-#      estimated from finite counts and are not propagated (section 5).
+#      estimated from finite counts and are not propagated (section 5);
+#   3. the linkage rules behind those rates (section 6).
 # ==============================================================================
 #
 # WHY THIS MATTERS
@@ -39,13 +40,15 @@
 # values reproduce them exactly.
 #
 # INPUTS   data_inter/ukr_ualosses_transition_rates.rds            (from 09)
-#          data_inter/ukr_alpha_missing.rds                        (from 09)
+#          data_inter/ukr_ualosses_window_counts.rds               (from 09)
+#          data_inter/ukr_alpha_missing.rds, ukr_ualosses_linkage_checks.rds (from 09)
 #          data_inter/ukr_ualosses_conflict_deaths_sex_age_2022_2025.rds (08)
 #          the same static inputs as step 13 (param_table, forecast
 #          mortality, population, migration, fertility, age-sex profiles)
 # OUTPUTS  data_inter/ukr_alpha_sensitivity_military.rds
 #          data_inter/ukr_alpha_sensitivity_e0.rds
 #          data_inter/ukr_transition_rate_sampling.rds
+#          data_inter/ukr_linkage_rules_e0.rds (section 6)
 #          figures/exploratory/alpha_sensitivity_military.png
 #          figures/exploratory/alpha_sensitivity_e0.png
 # ==============================================================================
@@ -125,7 +128,7 @@ draw_mig_by_year <- param_table |> filter(str_starts(role, "mig_")) |>
 conf_cmb_by_year <- param_table |> filter(role == "combatants") |> select(year, conf_cmb = confirmed)
 
 # 2. THE MISSING-COMBATANT IMPUTATION, RE-RUN ACROSS A GRID OF alpha ==========
-# tasas_long is 09's own saved output: the one-window resolution rates the
+# tasas_long is 09's own saved output: the twelve-month resolution rates the
 # chain is built from. Re-reading it here (rather than re-deriving it from
 # the raw registers) means this script cannot silently drift onto a
 # different set of empirical rates than 09 actually used.
@@ -221,12 +224,9 @@ e0_of <- function(d, col) {
     select(year, sex, ex)
 }
 
-e0_by_alpha <- map_dfr(alpha_grid, function(a) {
-  draw_cmb_by_year <-
-    military_by_alpha |>
-    filter(alpha == a) |>
-    select(year, draw_cmb = total_military)
-
+# the loss for a military total by year (draw_cmb), every other input at its
+# mode; shared by the alpha grid and the linkage rules in section 6
+loss_for <- function(draw_cmb_by_year) {
   draws_df <-
     draw_cvs_by_year |>
     left_join(draw_mig_by_year, by = "year") |>
@@ -245,7 +245,15 @@ e0_by_alpha <- map_dfr(alpha_grid, function(a) {
   e0_of(sim, "mx_bsn") |>
     rename(ex_bsn = ex) |>
     left_join(e0_of(sim, "mx_all") |> rename(ex_all = ex), by = c("year", "sex")) |>
-    mutate(loss = ex_bsn - ex_all, alpha = a, range_point = point_label(a))
+    mutate(loss = ex_bsn - ex_all)
+}
+
+e0_by_alpha <- map_dfr(alpha_grid, function(a) {
+  military_by_alpha |>
+    filter(alpha == a) |>
+    select(year, draw_cmb = total_military) |>
+    loss_for() |>
+    mutate(alpha = a, range_point = point_label(a))
 })
 
 write_rds(e0_by_alpha, "data_inter/ukr_alpha_sensitivity_e0.rds")
@@ -307,13 +315,12 @@ ggsave("figures/exploratory/alpha_sensitivity_e0.png", p_e0, w = 9, h = 4.5)
 # finite counts, so they carry sampling error that the pipeline does not
 # propagate. This measures it rather than asserting it is small.
 #
-# Each cohort-year is an independent multinomial sample over
-# {dead, missing, prisoner} with the observed at-risk denominator (the cohorts
-# are disjoint sets of people, so their sampling errors are independent; the
-# chain couples them afterwards, which the resampling below reproduces by
-# construction). Draws come from the Dirichlet posterior with a Jeffreys prior,
-# counts + 1/2, generated from independent Gammas so no extra package is
-# needed. Each draw goes through the same impute_missing() chain at the
+# Each cohort-year and window between releases is treated as an independent
+# multinomial sample over the outcomes, with its observed number at risk (09's
+# window counts). Draws come from the Dirichlet posterior with a Jeffreys
+# prior, counts + 1/2, generated from independent Gammas so no extra package
+# is needed; each draw is composed into twelve-month rates by the same
+# ual_compose() as 09 and goes through the same impute_missing() chain at the
 # central alpha, so the spread is attributable to rate sampling alone.
 #
 # WHY THIS IS REPORTED RATHER THAN PROPAGATED: the observed transitions carry
@@ -329,11 +336,18 @@ rdirich <- function(a) {
   g / sum(g)
 }
 
+window_counts <-
+  read_rds("data_inter/ukr_ualosses_window_counts.rds") |>
+  summarise(n = sum(n), .by = c(year, from_release, to)) |>
+  complete(nesting(year, from_release), to = ual_outcomes, fill = list(n = 0))
+
 boot_total <- vapply(seq_len(B_rates), function(b) {
-  resampled <- map_dfr(sort(unique(tasas_long$year)), function(y) {
-    d <- tasas_long |> filter(year == y) |> arrange(status2)
-    tibble(year = y, status2 = d$status2, prop = rdirich(d$n + 0.5))
-  })
+  resampled <-
+    window_counts |>
+    mutate(n = rdirich(n + 0.5), .by = c(year, from_release)) |>
+    ual_compose() |>
+    mutate(status2 = ual_chain_state(to)) |>
+    summarise(prop = sum(prop), .by = c(year, status2))
   imp <- impute_missing(alpha_mode, resampled, stock_missing_2026) |>
     left_join(confirmados_df, by = "year") |>
     mutate(total = confirmados_stock + imputed_dead)
@@ -378,7 +392,36 @@ cat(sprintf("\nFor scale, moving alpha by 0.01 shifts the total by %s,\n",
             scales::comma(round(0.01 * alpha_range$residual))))
 cat("which is several times the entire sampling band above.\n")
 
+# ==============================================================================
+# 6. THE LINKAGE RULES
+# ==============================================================================
+# 09 recomputes the military total under two alternatives to its linkage rules
+# - a person no longer listed held as still missing rather than alive, and
+# rates from the people listed as missing in v14 only - each at the central
+# alpha its own evidence gives. Each is projected here as the alpha grid is,
+# every other input at its mode. The rules used must reproduce the central
+# value of the grid.
+linkage_e0 <-
+  read_rds("data_inter/ukr_ualosses_linkage_checks.rds")$designs |>
+  mutate(res = map(by_year, \(d) loss_for(d |> select(year, draw_cmb = total)))) |>
+  select(design, alpha_mode, military, res) |>
+  unnest(res)
+stopifnot(isTRUE(all.equal(
+  linkage_e0 |> filter(str_detect(design, "production")) |> arrange(year, sex) |> pull(loss),
+  e0_by_alpha |> filter(range_point %in% "mode") |> arrange(year, sex) |> pull(loss),
+  tolerance = 1e-8
+)))
+write_rds(linkage_e0, "data_inter/ukr_linkage_rules_e0.rds")
+
+cat("\n=== THE LINKAGE RULES: MILITARY TOTAL AND LOSS ===\n")
+print(as.data.frame(
+  linkage_e0 |>
+    mutate(col = paste0(sex, "_", year), loss = round(loss, 3), military = round(military)) |>
+    select(design, alpha_mode, military, col, loss) |>
+    pivot_wider(names_from = col, values_from = loss)
+))
+
 message("\nDone. data_inter/ukr_alpha_sensitivity_military.rds, ",
-        "ukr_alpha_sensitivity_e0.rds and ukr_transition_rate_sampling.rds ",
-        "written; the first two are consumed by 15 for the manuscript table ",
-        "and figure.")
+        "ukr_alpha_sensitivity_e0.rds, ukr_transition_rate_sampling.rds and ",
+        "ukr_linkage_rules_e0.rds written; the first two are consumed by 15 for ",
+        "the manuscript table and figure.")

@@ -48,13 +48,15 @@ size every table was built at.
 | `07_ohchr` | Age-sex **profile** of civilian deaths | `ukr_ohchr_civilian_casualties.rds` |
 | `07_acled` | ACLED totals, comparison only | `ukr_acled.rds` |
 | `08` | Combatant deaths by age and sex from the ualosses register (release v19) | `ukr_ualosses_..._sex_age_...rds` |
-| `09` | Linkage of v14 to v19, Markov imputation of how the "missing" resolve, and the range of the share alive | `ukr_ualosses_..._imputed_...rds`, `ukr_alpha_missing.rds` |
+| `09` | Linkage of everyone listed as missing across the four releases (v14, v16, v18, v19), Markov imputation of how the "missing" resolve, and the range of the share alive | `ukr_ualosses_..._imputed_...rds`, `ukr_alpha_missing.rds` |
+| `09f`, `09g` | Investigation, not part of the estimates: per-person histories across the four releases and a competing-risks multistate model, with the pass/fail test that keeps it out of production | `ukr_ualosses_multistate_test.rds` |
 | `10` | min / mode / max parameter table | `ukr_param_table.rds` |
 | `11` | Monte Carlo cohort-component projection | `ukr_sim_draws_2022_2025_n<n_sim>.rds` |
 | `12` | Figures for the mortality estimates | `figures/mort_rates_*.png` |
 | `13` | Sensitivity: the migration denominator effect | `ukr_migration_decomposition.rds` |
 | `13b` | Sensitivity: the share of the missing who are alive, and sampling error in the resolution rates | `ukr_alpha_sensitivity_*.rds` |
-| `13c` | Sensitivity: the range of each net migration component | `ukr_migration_sensitivity_e0.rds` |
+| `13c` | Sensitivity: the range of each net migration component, and three specification checks of the migration input | `ukr_migration_sensitivity_e0.rds`, `ukr_migration_specification_e0.rds` |
+| `13d` | Sensitivity: registration lag, measured on the four register releases | `ukr_registration_lag.rds` |
 | `14` | **Life expectancy loss decomposed by cause** | `ukr_e0_loss_by_cause_*.rds` |
 | `15` | **All manuscript figures and tables** | `figures/fig*.png`, `tables/table*.csv` |
 | `a01` | UNICEF export (not part of the paper): every iteration, by cause | `data_inter/unicef/<yymmdd>_ukraine_mx_estimates_*.csv` |
@@ -76,9 +78,10 @@ so COVID excess mortality does not enter the "no war" baseline.
 Conflict death totals and migration are uncertain, so they are drawn from PERT
 distributions and every draw is projected through the full accounting. Civilian
 deaths are drawn independently by year. Military deaths follow from one draw of
-the share of the never-resolved missing who are alive, and each migration
-component takes one quantile per draw, both held across all four years, because
-their uncertainty is one systematic quantity rather than four separate ones. Step
+the share of the never-resolved missing who are alive; the western net outflow
+from one weight blending the two sources' four-year paths; Russia and Belarus
+from one draw. All three are held across the four years, because their
+uncertainty is one systematic quantity rather than four separate ones. Step
 14 then builds two life tables per
 draw (baseline and observed), runs an Arriaga decomposition, and splits each
 age's contribution between causes in proportion to that age's conflict deaths.
@@ -93,13 +96,14 @@ expectancy gap.
 
 | Where | Assumption |
 |---|---|
-| `00_setup`, `09` | A missing soldier who is alive is taken to be a prisoner of war, held or released; prisoners are alive either way. The share of the 67,066 never-resolved missing who are alive is drawn between 0 and 0.252, centred on the 5,281 prisoners that official figures count and the register does not record, over the never-resolved (0.079). It carries about 85% of the imputed deaths; step 13b shows the results across [0, 1] (table A6, figure A4). |
-| `09` | A person recorded as missing who cannot be found in the later register release is treated as still missing, not as resurfaced alive. |
+| `00_setup`, `09` | A missing soldier who is alive is taken to be a prisoner of war, held or released; prisoners are alive either way. The share of the 64,066 never-resolved missing who are alive is drawn between 0 and 0.317, centred on the 5,281 prisoners that official figures count and the register does not record, over the never-resolved (0.082). It carries about 84% of the imputed deaths; step 13b shows the results across [0, 1] (table A6, figure A4). |
+| `00_setup`, `09` | A person recorded as missing who is no longer listed — absent from a later release and from every release after it — is resolved alive. Before that, each release is searched under a corrected name or date of birth. A person whose first resolution is a return from captivity was held, not disappeared, and is left out of the population at risk. |
 | `11` | Imputed combatant deaths take the age–sex profile of the missing; registered deaths that of the confirmed dead. |
 | `00_setup` | Sex ratio at birth `srb = 1.06`. |
 | `11`, `13` | WPP2024 publishes fertility only to 2023; the 2023 schedule is carried forward to 2024–2025. |
 | `11` | Starts from continental Ukraine (SSSU region `cnt`): the whole country without Crimea and Sevastopol, **including** Donetsk and Luhansk. SSSU population estimates for those two regions assume complete registration, which has not held since 2015. |
 | `13` | Conflict deaths are absolute counts, so net migration shrinks the denominator and raises the rates. Step 13 quantifies how much of the loss this accounts for; step 13c how far the loss moves across the range of each migration component. |
+| `06`, `11` | The western net outflow is bracketed by source: each draw blends the border-crossing reading's four-year path with the register reading's by one weight, so the four-year total stays between the two sources' own totals (4.29–5.27 million). |
 
 ## Layout
 
@@ -113,6 +117,7 @@ figures/           manuscript figures, written only by step 15
   exploratory/     diagnostic plots from steps 02-14
   deprecated/      figures from previous versions, untracked
 tables/            manuscript tables as .csv, written only by step 15
+documents/         methodology reports and the draft paper, kept locally, untracked
 ```
 
 ## Figures and tables
@@ -131,7 +136,7 @@ anything sitting directly in `figures/` is a manuscript deliverable.
 | `fig5_decomposition_by_cause.png` | e0 loss by civilians / registered / imputed combatants |
 | `fig6_uncertainty_shares.png` | How much of the spread in the loss each input accounts for |
 | `figA1_pert_draw_distributions.png` | Beta-PERT draw densities against their input bounds |
-| `figA2_pert_draw_distributions_migration.png` | The same for the two migration components |
+| `figA2_pert_draw_distributions_migration.png` | Draws of the two migration components: the western blend of the two readings, and Russia and Belarus |
 | `figA3_cumulative_migration_draws.png` | Cumulative net migration across draws |
 | `figA4_alpha_sensitivity_missing.png` | Military deaths and e0 loss across the share of the missing who are alive, with the evidence range and the 95% interval of the draws |
 | `figA5_migration_sensitivity.png` | e0 loss across the range of each net migration component |
@@ -143,10 +148,11 @@ anything sitting directly in `figures/` is a manuscript deliverable.
 | `table6_totals_by_cause.csv` | Deaths by cause, summed over years |
 | `table7_totals_by_year.csv` | Deaths by year, summed over causes |
 | `tableA1_source_reconciliation.csv` | UCDP vs ACLED, Ukraine and Russia |
-| `tableA2_status_transitions.csv` | Observed transitions of the missing between registers |
+| `tableA2_status_transitions.csv` | Resolution of the missing over twelve months, composed from the four register releases |
 | `tableA3_e0_loss_by_cause.csv` | Years of life expectancy lost, by cause |
 | `tableA4_uncertainty_shares.csv` | How much of the spread in the loss each input accounts for |
 | `tableA5_military_reconciliation.csv` | Ukrainian military deaths: UCDP against the register and this study |
 | `tableA6_alpha_sensitivity.csv` | Military deaths and e0 loss across the share of the missing who are alive |
 | `tableA7_migration_sensitivity.csv` | 2025 e0 loss across the range of each net migration component, and with no migration |
+| `tableA8_migration_specification.csv` | e0 loss under three alternative specifications of the migration input |
 | `_run_provenance.csv` | Draws, seed, draws file and commit the tables were built from |

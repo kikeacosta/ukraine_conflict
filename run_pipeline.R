@@ -31,6 +31,7 @@ steps_to_run <- list(
   list(name = "13", file = "code/13_sensitivity_migration_contributions.R"),
   list(name = "13b", file = "code/13b_sensitivity_alpha_missing.R"),
   list(name = "13c", file = "code/13c_sensitivity_migration_range.R"),
+  list(name = "13d", file = "code/13d_sensitivity_registration_lag.R"),
   list(name = "14", file = "code/14_e0_loss_decomposition_by_cause.R"),
   # 15 builds every manuscript figure and table. It was missing from this
   # list, so a full pipeline run produced none of the deliverables.

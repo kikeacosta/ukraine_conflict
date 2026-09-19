@@ -2,6 +2,16 @@
 # STEP 09 - IMPROVED: Ualosses Missing Analysis with Fuzzy Matching & Phase 1
 # ==============================================================================
 #
+# STATUS: investigation only, not part of the pipeline (run_pipeline.R does
+# not run it) and not an input to the estimates. It feeds the per-window
+# competing-risks model in 09d. The adoption test for the multistate approach
+# is run on the per-person trajectories instead (09f, 09g) and failed; see
+# documents/missing_combatants_methodology.md, section 10. Two rules differ
+# from production step 09 and from 09f: this script uses fuzzy name matching,
+# and it reads each release filtered to 2022-2025 Ukrainian records before
+# matching. A non-match is held as still missing and released prisoners are
+# kept as their own outcome, as in production.
+#
 # WHAT THIS SCRIPT DOES
 # ---------------------
 # 1. FUZZY MATCHING: Matches individuals between register versions allowing for
@@ -21,14 +31,16 @@
 #
 # INPUT    data_input/ualosses_hubert_datasets/250916_UKR_ualosses_Personnel_v14.xlsx
 #          data_input/ualosses_hubert_datasets/251204_UKR_ualosses_Personnel_v16.xlsx
-#          data_input/ualosses_hubert_datasets/260530_UKR_ualosses_Personnel_v18.xlsx
+#          data_input/ualosses_hubert_datasets/260423_UKR_ualosses_Personnel_v18.xlsx
 #          data_input/ualosses_hubert_datasets/260919_UKR_ualosses_Personnel_v19.xlsx
 #          data_inter/ukr_ualosses_conflict_deaths_sex_age_2022_2025.rds
-# OUTPUTS  data_inter/ukr_ualosses_transition_rates_two_windows.rds
-#          data_inter/ukr_ualosses_imputation_table.rds (updated with CI)
-#          data_inter/ukr_ualosses_transition_rates.rds
-#          data_inter/ukr_ualosses_conflict_deaths_imputed_miss_sex_age_2022_2025.rds
+# OUTPUTS  data_inter/ukr_ualosses_transition_rates_two_windows.rds (aggregate)
+#          data_inter/ukr_ualosses_stability_check.rds             (aggregate)
+#          data_inter/ukr_ualosses_pooled_transition_rates.rds     (aggregate)
+#          data_inter/ukr_ualosses_pooled_transitions.rds  (one row per person,
+#                                             no names or dates; gitignored)
 #          figures/exploratory/transition_rates_validation.png
+#          It writes none of production step 09's files.
 # ==============================================================================
 
 rm(list = ls())
@@ -56,7 +68,7 @@ read_reg <- function(path) {
       date_evnt = excel_date(DateEvent),
       year = year(date_evnt)
     ) |>
-    filter(year %in% 2022:2025, Nationality == "Ukraine") |>
+    filter(year %in% 2022:2025, ual_is_ukrainian(Nationality)) |>
     select(name_last, name_first, name_patr, name_full, date_bth, year,
            date_evnt, status = Status)
 }
@@ -67,8 +79,8 @@ v14 <- read_reg("data_input/ualosses_hubert_datasets/250916_UKR_ualosses_Personn
 message("Reading register v16 (Dec 2025)...")
 v16 <- read_reg("data_input/ualosses_hubert_datasets/251204_UKR_ualosses_Personnel_v16.xlsx")
 
-message("Reading register v18 (May 2026)...")
-v18 <- read_reg("data_input/ualosses_hubert_datasets/260530_UKR_ualosses_Personnel_v18.xlsx")
+message("Reading register v18 (Apr 2026)...")
+v18 <- read_reg("data_input/ualosses_hubert_datasets/260423_UKR_ualosses_Personnel_v18.xlsx")
 
 message("Reading register v19 (Sep 2026)...")
 v19 <- read_reg("data_input/ualosses_hubert_datasets/260919_UKR_ualosses_Personnel_v19.xlsx")
@@ -77,11 +89,11 @@ message(sprintf("v14: %d rows, v16: %d rows, v18: %d rows, v19: %d rows",
                 nrow(v14), nrow(v16), nrow(v18), nrow(v19)))
 
 # Register export dates, from the filenames themselves (250916, 251204,
-# 260530, 260919), used both for the window_months labels below and for
+# 260423, 260919), used both for the window_months labels below and for
 # duration-since-disappearance calculations downstream (09d).
 register_dates <- c(
   v14 = as.Date("2025-09-16"), v16 = as.Date("2025-12-04"),
-  v18 = as.Date("2026-05-30"), v19 = as.Date("2026-09-19")
+  v18 = as.Date("2026-04-23"), v19 = as.Date("2026-09-19")
 )
 
 # ==============================================================================
@@ -174,9 +186,11 @@ fuzzy_match <- function(source, target, dob_window = 30, threshold = 0.90) {
     }
   }
 
-  # For any remaining unmatched: treated as "alive" (resurfaced but not in target register)
+  # Any remaining unmatched: held as still missing (censored), not resurfaced
+  # alive - absence from a later release is not a sign of survival (the dead
+  # drop out of the register as often as the missing do)
   matched <- matched %>%
-    mutate(status2 = ifelse(is.na(status2), "alive", status2)) %>%
+    mutate(status2 = ifelse(is.na(status2), "missing", status2)) %>%
     select(-.row_id)
 
   return(matched)
@@ -189,14 +203,9 @@ fuzzy_match <- function(source, target, dob_window = 30, threshold = 0.90) {
 # The raw Status field has FOUR values across the three registers, not
 # three: dead, missing, prisoner, and (v19 only) released_prisoner - a
 # category introduced between v18 and v19 that earlier inspection of v14
-# alone missed. A released prisoner is definitively not dead and no longer
-# detained, so for this analysis (which cares about dead vs. not-dead) it is
-# folded into "alive" here, once, so every downstream consumer of status2
-# (Phase 1 rates, the competing-risks model) sees an exhaustive 4-category
-# outcome that actually sums to n_total - previously it silently didn't,
-# understating "still missing" and starving the "prisoner" transition of
-# events for the 2022/2023 cohorts (who had time to be released), which is
-# what triggered (quasi-)separation in the Cox competing-risks fit.
+# alone missed. A released prisoner is alive; it is recorded here under the
+# "alive" label the rest of this script counts, and the label now means
+# released from captivity only, since non-matches are held as missing.
 normalize_status2 <- function(df) {
   df %>% mutate(status2 = ifelse(status2 == "released_prisoner", "alive", status2))
 }
@@ -438,7 +447,13 @@ message(sprintf("\nUsing suelo_vivo = %.2f for imputation", suelo_vivo))
 # (For now, save the rates and transition data for review)
 
 write_rds(pooled_rates, "data_inter/ukr_ualosses_pooled_transition_rates.rds")
-write_rds(pooled_transitions, "data_inter/ukr_ualosses_pooled_transitions.rds")
+# no names or dates of birth: persons are numbered, and the file is gitignored
+write_rds(
+  pooled_transitions |>
+    mutate(person_id = row_number()) |>
+    select(-any_of(c("name_last", "name_first", "name_patr", "name_full", "date_bth"))),
+  "data_inter/ukr_ualosses_pooled_transitions.rds"
+)
 
 message("\n✓ Phase 1 validation complete!")
 message("  Output files:")

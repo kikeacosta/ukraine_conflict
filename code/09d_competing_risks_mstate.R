@@ -2,6 +2,11 @@
 # STEP 09D - COMPETING RISKS MULTI-STATE MODEL
 # ==============================================================================
 #
+# STATUS: investigation only, not part of the pipeline. Superseded by 09g,
+# which fits the same competing risks on per-person trajectories and runs the
+# adoption test (it failed). Needs the mstate package and the output of
+# 09_ualosses_missing_analysis_improved.R.
+#
 # WHAT THIS SCRIPT DOES
 # ---------------------
 # Replaces the separate per-outcome Cox models in Phase 2 with a single

@@ -270,24 +270,187 @@ excel_date <- function(x) {
   as.Date(suppressWarnings(as.numeric(x)), origin = "1899-12-30")
 }
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# following the missing across register releases ====
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Four releases of the register, each a full individual-level list with
+# names and dates of birth (gitignored). 09 turns them into anonymous
+# transition counts, 09f into per-person histories without names, 13d into
+# counts by event month. Nothing these functions return may be written out
+# with the key, name or date-of-birth columns still in it.
+ual_releases <- tibble(
+  release = c("v14", "v16", "v18", "v19"),
+  date = as.Date(c("2025-09-16", "2025-12-04", "2026-04-23", "2026-09-19")),
+  path = file.path("data_input/ualosses_hubert_datasets", c(
+    "250916_UKR_ualosses_Personnel_v14.xlsx", "251204_UKR_ualosses_Personnel_v16.xlsx",
+    "260423_UKR_ualosses_Personnel_v18.xlsx", "260919_UKR_ualosses_Personnel_v19.xlsx"
+  ))
+)
+ual_status_order <- c("dead", "released_prisoner", "prisoner", "missing")
+
+# What linkage needs from one release. A person's key is full name plus date
+# of birth; `name` (surname and first name) serves the corrected-key search.
+ual_read_release <- function(path) {
+  read_xlsx(require_raw(path), sheet = "Database", col_types = "text") |>
+    transmute(
+      dob = excel_date(DateBirth),
+      key = paste(LastName, FirstName, Patronym, dob),
+      name = paste(LastName, FirstName),
+      date_evnt = excel_date(DateEvent),
+      year = year(date_evnt),
+      ukrainian = ual_is_ukrainian(Nationality),
+      status = Status
+    )
+}
+
+# One row per key. Where a key appears under two statuses the most resolved
+# is kept: a death record, or a return from captivity, is newer information
+# than a missing one.
+ual_one_per_key <- function(r) {
+  r |> arrange(match(status, ual_status_order)) |> distinct(key, .keep_all = TRUE)
+}
+
+# A person not found under their key may be listed under a corrected name or
+# date of birth. The candidates are the later release's NEW keys - absent from
+# `before`, the release the search starts from - sharing surname and first
+# name and either the date of birth or the month of the event. Where several
+# qualify, the most resolved status is kept.
+ual_corrected_key <- function(p, later, before) {
+  candidates <-
+    later |>
+    anti_join(before, by = "key") |>
+    transmute(name, dob_new = dob, month_new = floor_date(date_evnt, "month"),
+              key_new = key, status_new = status)
+  p |>
+    transmute(key, name, dob, month = floor_date(date_evnt, "month")) |>
+    inner_join(candidates, by = "name", relationship = "many-to-many") |>
+    filter((dob == dob_new) %in% TRUE | (month == month_new) %in% TRUE) |>
+    arrange(match(status_new, ual_status_order)) |>
+    distinct(key, .keep_all = TRUE) |>
+    select(key, key_new, status_new)
+}
+
+# Everyone listed as missing - event in 2022-2025, Ukrainian - in any release
+# but the last, entering at their first listing, and their status in every
+# later release: `found` says whether under the same key, a corrected key, or
+# not at all. regs: the releases in order, named, as read by
+# ual_read_release(). One row per person and later release; the person is
+# identified by a sequential `pid`, and no key, name or date of birth is kept.
+ual_follow_missing <- function(regs) {
+  rel <- names(regs)
+  lu <- map(regs, ual_one_per_key)
+  seen <- character(0)    # keys listed in an earlier release
+  claimed <- character(0) # corrected keys of people already followed
+  out <- list()
+  for (i in seq_len(length(rel) - 1)) {
+    entrants <-
+      regs[[i]] |>
+      filter(status == "missing", year %in% 2022:2025, ukrainian) |>
+      distinct(key, .keep_all = TRUE) |>
+      filter(!key %in% seen, !key %in% claimed) |>
+      mutate(pid = paste0(rel[i], "-", row_number()))
+    cur <- entrants |> select(pid, key, name, dob, date_evnt)
+    rows <- list()
+    for (j in (i + 1):length(rel)) {
+      at_j <- cur |> left_join(lu[[j]] |> select(key, status), by = "key")
+      ck <- ual_corrected_key(at_j |> filter(is.na(status)), lu[[j]], lu[[j - 1]])
+      at_j <-
+        at_j |>
+        left_join(ck, by = "key") |>
+        mutate(found = case_when(!is.na(status) ~ "exact", !is.na(status_new) ~ "corrected",
+                                 .default = "absent"),
+               status = coalesce(status, status_new),
+               key = coalesce(key_new, key))
+      claimed <- c(claimed, at_j$key[at_j$found == "corrected"])
+      rows[[j]] <- at_j |> transmute(pid, release = rel[j], status, found)
+      cur <- at_j |> select(pid, key, name, dob, date_evnt)
+    }
+    out[[i]] <-
+      entrants |>
+      transmute(pid, year, date_evnt, entry = rel[i]) |>
+      left_join(bind_rows(rows), by = "pid", relationship = "one-to-many")
+    seen <- union(seen, lu[[i]]$key)
+  }
+  bind_rows(out)
+}
+
+# The windows between consecutive releases in which each person is at risk
+# (missing at the window's start), up to their first resolution, with the
+# outcome at the window's end. A person absent from a release but listed again
+# in a later one is carried as still missing. A person absent from a release
+# and from every later one is no longer listed, and counts as resolved alive
+# at the first absence (absent_as = "alive", production) or, for the
+# sensitivity, as still missing to the end (absent_as = "missing").
+#
+# A released prisoner was held, not disappeared. v19 is the first release to
+# record returns from captivity, so a person listed as missing whose first
+# resolution is a release was a prisoner the register had not recorded. Such
+# a person is left out of the population at risk altogether, in every window.
+ual_outcomes <- c("dead", "prisoner", "no_longer_listed", "missing")
+ual_windows <- function(hist, absent_as = c("alive", "missing")) {
+  absent_as <- match.arg(absent_as)
+  rel <- ual_releases$release
+  w <-
+    hist |>
+    arrange(pid, match(release, rel)) |>
+    mutate(listed_later = rev(cumsum(rev(!is.na(status)))) > 0, .by = pid) |>
+    mutate(
+      to = case_when(!is.na(status) ~ status,
+                     listed_later | absent_as == "missing" ~ "missing",
+                     .default = "no_longer_listed"),
+      from_release = rel[match(release, rel) - 1]
+    ) |>
+    filter(cumsum(lag(to != "missing", default = FALSE)) == 0, .by = pid) |>
+    select(pid, year, entry, date_evnt, from_release, release, to)
+  released <- w |> filter(to == "released_prisoner") |> distinct(pid)
+  w |> anti_join(released, by = "pid")
+}
+
+# Twelve-month probabilities of moving from missing to each outcome, by
+# event-year cohort, from window counts (year, from_release, to, n): a chain
+# through the windows, P(outcome) = sum over windows of P(still missing at
+# the window's start) x the window's share moving to that outcome.
+ual_compose <- function(counts) {
+  rel <- ual_releases$release
+  counts |>
+    summarise(n = sum(n), .by = c(year, from_release, to)) |>
+    complete(nesting(year, from_release), to = ual_outcomes, fill = list(n = 0)) |>
+    mutate(p = n / sum(n), .by = c(year, from_release)) |>
+    select(-n) |>
+    pivot_wider(names_from = to, values_from = p) |>
+    arrange(year, match(from_release, rel)) |>
+    mutate(s_before = lag(cumprod(missing), default = 1), .by = year) |>
+    summarise(across(all_of(setdiff(ual_outcomes, "missing")), \(x) sum(s_before * x)),
+              missing = prod(missing), .by = year) |>
+    pivot_longer(-year, names_to = "to", values_to = "prop")
+}
+
+# The chain's states: a person no longer listed is alive; a prisoner is alive
+# too, but kept apart.
+ual_chain_state <- function(to) {
+  case_when(to == "no_longer_listed" ~ "alive", .default = to)
+}
+
 # Synthetic-cohort Markov imputation of the long-term missing. Defined once
 # so that 09 (the central value of alpha), 13b (the sweep over alpha) and the
 # range computed by alpha_evidence() below all use the SAME formula.
 #
-# tasas_long     observed one-window resolution rates by event-year cohort
-#                and destination status: transitions |> filter(from ==
-#                "missing") |> mutate(prop = n / sum(n), .by = year), as
-#                built in 09.
+# tasas_long     twelve-month resolution probabilities by event-year cohort
+#                and destination status (alive, dead, prisoner, missing), in
+#                `prop`, as built in 09 with ual_compose(); `n` is prop times
+#                the cohort's missing in v14, the weight alpha_evidence()
+#                gives each cohort.
 # stock_missing  tibble(year, missing_stock) - the missing stock by event
 #                year, from step 08's output.
 # alpha          share of the NEVER-RESOLVED long-term missing who are
 #                alive; 1 - alpha are dead. The one free parameter: its range
 #                comes from alpha_evidence(), 11 draws it, 13b sweeps it.
 #
-# A "step" in the chain is the window between the two register releases,
-# twelve months from v14 to v19; event-year cohorts, one year apart, stand in
-# for duration since disappearance. Returns stock_missing with imputed_dead,
-# imputed_alive and imputed_prisoner added. Every output is linear in alpha.
+# A "step" in the chain is twelve months, v14 to v19, composed from the three
+# windows between the four releases; event-year cohorts, one year apart, stand
+# in for duration since disappearance. Returns stock_missing with
+# imputed_dead, imputed_alive and imputed_prisoner added. Every output is
+# linear in alpha.
 impute_missing <- function(alpha, tasas_long, stock_missing) {
   suelo_vivo <- alpha
   suelo_muerto <- 1 - alpha
@@ -383,12 +546,15 @@ impute_missing <- function(alpha, tasas_long, stock_missing) {
 #         listed 3,857 of the people it now records as returned)
 #   mode  (pow_held + returned_from_captivity - register_alive) / residual -
 #         every unrecorded prisoner is among the never-resolved missing
-#   max   the register's own share of resolutions that are alive (to prisoner
-#         or released), assuming the never-resolved are no more often alive
-#         than those resolved: a living prisoner is listed or exchanged more
-#         readily than a body is recovered
+#   max   the register's own share of resolutions that are alive (to
+#         prisoner or no longer listed), assuming the never-resolved are no
+#         more often alive than those resolved: a living prisoner is listed
+#         or exchanged more readily than a body is recovered
 #
-# The mode leans high: the returned figure includes civilians, whom the
+# The chain resolves nobody to a release - released prisoners are outside the
+# population at risk (ual_windows) - so a prisoner among today's missing who
+# is later exchanged is left to alpha, as the mode assumes, and not counted
+# twice. The mode leans high: the returned figure includes civilians, whom the
 # register does not list, and prisoners held in February and released by June
 # appear in both figures. Captures after February are missing from it.
 #

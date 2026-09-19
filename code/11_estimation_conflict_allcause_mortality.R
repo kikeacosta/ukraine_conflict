@@ -235,15 +235,26 @@ draws_conflict <- draws_conflict_long %>%
 # simulation put 2022 on the register reading and 2023 on the crossing
 # reading, which is not a scenario anyone could defend. So each component
 # gets ONE quantile per simulation, held across all four years.
+#
+# The WESTERN component is bracketed by source: one weight w per simulation,
+# drawn from a symmetric Beta-PERT on [0, 1] with mode 0.5, blends the two
+# readings' whole paths - w = 0 is the crossings reading in every year, w = 1
+# the register reading. Its four-year total therefore runs between the two
+# sources' own totals, and the mode is their midpoint in every year (see 10).
+# RUSSIA AND BELARUS is one 2022 entry with its own PERT bounds.
 mig_component_draws <- function(rl) {
   u <- runif(n_sim)
-  param_table %>%
-    filter(role == rl) %>%
-    group_by(role, year) %>%
-    reframe(
-      sim_id = 1:n_sim,
-      draw = qpert(u, min = min, mode = mode, max = max)
-    )
+  rows <- param_table %>% filter(role == rl)
+  if (rl == "mig_west") {
+    w <- qpert(u, min = 0, mode = 0.5, max = 1)
+    rows %>%
+      group_by(role, year) %>%
+      reframe(sim_id = 1:n_sim, draw = crossings + w * (register - crossings))
+  } else {
+    rows %>%
+      group_by(role, year) %>%
+      reframe(sim_id = 1:n_sim, draw = qpert(u, min = min, mode = mode, max = max))
+  }
 }
 
 draws_mig_long <-

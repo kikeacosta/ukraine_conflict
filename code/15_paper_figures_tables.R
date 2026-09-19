@@ -40,6 +40,7 @@
 #   figA4_alpha_sensitivity_missing.png              09, 13b
 #   tableA7_migration_sensitivity.csv                13, 13c
 #   figA5_migration_sensitivity.png                  13, 13c
+#   tableA8_migration_specification.csv              13c
 #
 # INPUTS   the .rds products of steps 07-14
 # ==============================================================================
@@ -114,7 +115,6 @@ nice_sex <- function(d) {
 # ==============================================================================
 ual <- read_rds("data_inter/ukr_ualosses_conflict_deaths_sex_age_2022_2025.rds")
 imput <- read_rds("data_inter/ukr_ualosses_imputation_table.rds")
-trans <- read_rds("data_inter/ukr_ualosses_transition_rates.rds")
 param_table <- read_rds("data_inter/ukr_param_table.rds")
 sce <- read_rds("data_inter/ukr_probabilistic_deaths_rates_2022_2025.rds")
 loss_draws <- read_rds("data_inter/ukr_e0_loss_by_cause_draws_2022_2025.rds")
@@ -530,12 +530,14 @@ figA1 <-
 save_fig(figA1, "figA1_pert_draw_distributions.png", 10, 5)
 
 # ==============================================================================
-# FIGURE A2 - Distributions of the simulated net emigration totals
+# FIGURE A2 - Distributions of the simulated net migration totals
 # ==============================================================================
 # The counterpart of A1 for the migration side. It reads differently from A1
 # in one respect: a simulation takes ONE quantile per component and holds it
 # across all four years, so within a row the panels move together and the
-# spread is a coverage scenario rather than four independent accidents.
+# spread is a coverage scenario rather than four independent accidents. For
+# the western component the dotted lines are that year's two readings, which
+# every draw blends with one weight across the four years.
 # west first, so its four years fill the top row and the single Russia and
 # Belarus panel sits on its own below rather than breaking the row
 mig_component <- function(r) factor(MIG_ROLES[r], levels = unname(MIG_ROLES))
@@ -577,12 +579,13 @@ figA2 <-
   scale_colour_manual(values = COL_MIG) +
   facet_nested_wrap(component ~ year, scales = "free", ncol = 4) +
   labs(
-    x = "Net emigration (millions)", y = "Density",
+    x = "Net migration, net outflow (millions)", y = "Density",
     colour = "Component", fill = "Component",
     caption = paste0(
-      "Beta-PERT draws (n = ", scales::comma(n_sim),
-      "). Dashed line: mode. Dotted lines: min and max. Each component is ",
-      "drawn once per simulation and held across all four years."
+      "Draws (n = ", scales::comma(n_sim), "). Dashed line: mode. Dotted lines: ",
+      "western, the year's two readings, blended with one Beta-PERT weight per ",
+      "simulation;\nRussia and Belarus, its PERT minimum and maximum. Each ",
+      "component is drawn once per simulation and held across all four years."
     )
   ) +
   theme_paper() +
@@ -590,7 +593,7 @@ figA2 <-
 save_fig(figA2, "figA2_pert_draw_distributions_migration.png", 10, 5)
 
 # ==============================================================================
-# FIGURE A3 - Cumulative net emigration implied by the draws
+# FIGURE A3 - Cumulative net migration implied by the draws
 # ==============================================================================
 # A2 shows the components year by year; this shows what they add up to, which
 # is the quantity the published sources actually disagree about.
@@ -622,11 +625,12 @@ figA3 <-
   geom_vline(data = mig_refs, aes(xintercept = value, linetype = label),
              colour = "grey20") +
   scale_linetype_manual(values = c("dashed", "dotdash")) +
+  guides(linetype = guide_legend(nrow = 2)) +
   labs(
-    x = "Cumulative net emigration 2022-2025 (millions)", y = "Density",
+    x = "Cumulative net migration 2022–2025 (millions, net outflow)", y = "Density",
     linetype = "Published estimate",
     caption = paste0(
-      "Beta-PERT draws (n = ", scales::comma(n_sim), ").\nThe published ",
+      "Draws (n = ", scales::comma(n_sim), ").\nThe published ",
       "figures count different populations: the Data Finder\nomits US parolees ",
       "and most of Canada, CES pairs crossings with 1.3M in Russia/Belarus."
     )
@@ -781,20 +785,24 @@ print(tab_imput)
 # ==============================================================================
 # TABLE 3 - PERT simulation input bounds
 # ==============================================================================
+# The western component is bracketed by source, so its columns are the two
+# readings' paths (crossings, register) either side of the mode, not per-year
+# minima and maxima: a draw blends the paths, and the Total row is then the
+# range of the four-year total.
 tab_pert <-
   param_table |>
-  select(year, role, mode, min, max) |>
-  mutate(across(c(mode, min, max), ~round(.x))) |>
+  select(year, role, mode, min, max, crossings, register) |>
+  mutate(across(c(mode, min, max, crossings, register), ~round(.x))) |>
   pivot_wider(
     names_from = role,
-    values_from = c(mode, min, max),
+    values_from = c(mode, min, max, crossings, register),
     names_glue = "{role}_{.value}"
   ) |>
   select(
     year,
     combatants_mode, combatants_min, combatants_max,
     civilians_mode, civilians_min, civilians_max,
-    mig_west_mode, mig_west_min, mig_west_max,
+    mig_west_mode, mig_west_crossings, mig_west_register,
     mig_ru_by_mode, mig_ru_by_min, mig_ru_by_max
   )
 
@@ -1290,7 +1298,7 @@ save_fig(figA4, "figA4_alpha_sensitivity_missing.png", 14, 5)
 # TABLE A7 / FIGURE A5 - Sensitivity to net migration
 # ==============================================================================
 # The counterpart of A4 for migration. 13c sweeps each migration component
-# across its PERT range, along the quantile 11 draws, with the other component
+# across its range, along the quantile 11 draws, with the other component
 # and every conflict input at their mode. The band is the 95% interval of the
 # component's simulated four-year total, the dashed line its mode. Figure 4
 # gives the other end of the question: the loss with no migration at all.
@@ -1388,7 +1396,7 @@ figA5 <-
     title = "Sensitivity to net migration",
     caption = sprintf(
       paste0(
-        "Each component is swept across its PERT range with the other and every ",
+        "Each component is swept across its range with the other and every ",
         "conflict input at their mode. Shaded: the 95%% interval of the\n",
         "component's simulated total. Dashed: its mode. Labels: the loss at the mode, ",
         "and how far it moves at the two ends of the shaded interval.\n",
@@ -1401,28 +1409,56 @@ figA5 <-
   ) +
   theme_paper()
 save_fig(figA5, "figA5_migration_sensitivity.png", 12, 7)
+
 # ==============================================================================
-# TABLE A2 - Empirical status transitions of the missing
+# TABLE A8 - Migration specification checks
 # ==============================================================================
-tA2 <-
-  trans |>
-  filter(status2 != "missing") |>
-  mutate(pct_of_changed = n / sum(n), .by = year) |>
-  left_join(
-    trans |>
-      summarise(
-        still_missing = sum(n[status2 == "missing"]),
-        changed = sum(n[status2 != "missing"]),
-        .by = year
-      ),
-    by = "year"
-  ) |>
+# Three assumptions of the migration input changed one at a time (13c,
+# section 5): where the western mode sits in the bracket (A2), the age-sex
+# profile of the Russia and Belarus flow (A9), and additive versus
+# proportional allocation of a draw away from the mode (A5, at both ends of
+# the western bracket). Loss in years, every conflict input at its mode.
+spec <- read_rds("data_inter/ukr_migration_specification_e0.rds")
+spec_order <- unique(spec$scenario)
+
+tA8 <-
+  spec |>
+  filter(sex == "m" | year == 2025) |>
+  mutate(col = if_else(sex == "m", paste0("male_", year), paste0("female_", year))) |>
+  select(scenario, col, loss) |>
+  pivot_wider(names_from = col, values_from = loss) |>
   mutate(
-    missing_start = still_missing + changed,
-    pct_of_changed = scales::percent(pct_of_changed, accuracy = 0.1)
+    scenario = factor(scenario, levels = spec_order),
+    across(starts_with("male_"), \(x) round(x, 2)),
+    across(starts_with("female_"), \(x) round(x, 3))
   ) |>
-  select(year, missing_start, changed, to = status2, counts = n, pct_of_changed) |>
-  arrange(year, to)
+  arrange(scenario)
+
+save_tab(tA8, "tableA8_migration_specification.csv")
+print(tA8)
+# ==============================================================================
+# TABLE A2 - Resolution of the missing over twelve months
+# ==============================================================================
+# From 09: everyone listed as missing in v14, v16 or v18, followed to v19, the
+# three windows between the four releases composed into the twelve months
+# from v14 to v19. People whose first resolution was a return from captivity
+# were held, not disappeared, and are left out. Shares of the cohort's missing.
+res12 <- read_rds("data_inter/ukr_ualosses_resolution_12m.rds")
+released_out <-
+  read_rds("data_inter/ukr_ualosses_linkage_checks.rds")$released_excluded |>
+  summarise(released_left_out = sum(n), .by = year)
+tA2 <-
+  res12 |>
+  left_join(released_out, by = "year") |>
+  transmute(
+    year,
+    missing_v14 = at_risk_v14,
+    first_listed_v16_v18 = later_entrants,
+    released_left_out,
+    across(c(dead, prisoner, no_longer_listed, still_missing = missing),
+           \(x) scales::percent(x, accuracy = 0.1))
+  ) |>
+  arrange(year)
 
 save_tab(tA2, "tableA2_status_transitions.csv")
 print(tA2)

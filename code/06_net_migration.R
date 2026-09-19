@@ -38,7 +38,11 @@
 #                    277k who left through Russia or Belarus and are now
 #                    elsewhere (they are in the registers but crossed no
 #                    western border)
-#      Bounds are the two readings; the mode is their midpoint.
+#      The two readings bracket the flow as whole paths: 11 draws one weight
+#      per simulation and blends the two readings' paths with it, so the
+#      four-year total runs between the two sources' own totals. The mode is
+#      their midpoint in every year. The per-year min and max written below
+#      are the range of each year's two readings, kept for display and checks.
 #
 #   4. RUSSIA AND BELARUS, one 2022 entry: mode = Data Finder stock at end
 #      2022 net of 2021; min and max set below with their reasons.

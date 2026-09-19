@@ -110,12 +110,33 @@ cvs <-
 # 06 builds the bounds from the input data and allocates its age-sex flows at
 # the modes of the same table. Both components are systematic rather than
 # year-by-year noise, and 11 draws them accordingly.
+#
+# The western component is bracketed by SOURCE, not year by year: its two
+# readings disagree in opposite directions in different years (the register
+# is higher in 2022-2023, the crossings in 2024-2025), so per-year bounds
+# would mix the sources and reach four-year totals neither supports. What the
+# population denominator depends on is the total abroad, so 11 blends the two
+# readings' whole paths. The paths are carried here as `crossings` and
+# `register`; min and max stay the per-year range of the two, for display.
 migration_bounds <- read_rds("data_inter/ukr_migration_bounds.rds")
+migration_readings <- read_rds("data_inter/ukr_migration_readings.rds")
 
 mig <-
   migration_bounds |>
   mutate(role = paste0("mig_", component)) |>
-  select(year, role, mode, min, max)
+  select(year, role, mode, min, max) |>
+  left_join(
+    migration_readings |> transmute(year, role = "mig_west", crossings, register),
+    by = c("year", "role")
+  )
+
+# the western mode is the midpoint of the two paths, and its range their span
+west <- mig |> filter(role == "mig_west")
+stopifnot(
+  isTRUE(all.equal(west$mode, (west$crossings + west$register) / 2)),
+  isTRUE(all.equal(west$min, pmin(west$crossings, west$register))),
+  isTRUE(all.equal(west$max, pmax(west$crossings, west$register)))
+)
 
 param_table <- bind_rows(cmb, cvs, mig)
 

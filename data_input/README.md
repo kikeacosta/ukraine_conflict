@@ -1,7 +1,8 @@
 # Raw inputs
 
 **Every input file and data source, with provenance, references and URLs, is
-catalogued in [`../documents/data_sources.md`](../documents/data_sources.md).**
+catalogued in `documents/data_sources.md`, which is kept with the other project
+documents outside the repository.**
 Migration inputs, including saved copies of the web sources behind them, are in
 [`migration/`](migration/README.md).
 
