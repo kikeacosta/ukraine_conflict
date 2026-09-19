@@ -72,10 +72,13 @@ ual2 <-
 mil <- read_rds("data_inter/ukr_military_inputs.rds")
 ev <- mil$evidence
 at_evidence <- function(captives, other) military_draws(mil, captives, other)
-at_mode <- at_evidence(ev$captives_mode, ev$other_mode)
+# the "mode" column of the combatant rows is the total at the central values
+# of the evidence, the medians of its inputs (alive_evidence(), 00_setup.R):
+# the reference every deterministic analysis starts from
+at_central <- at_evidence(ev$captives_central, ev$other_central)
 
 cmb <-
-  at_mode |>
+  at_central |>
   transmute(
     year,
     role = "combatants",

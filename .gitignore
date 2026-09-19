@@ -86,3 +86,6 @@ data_input/LifeTables.xlsx
 # --- documentation: the methodology reports, the notes for coauthors and
 #     the draft of the paper are kept on this machine, not published
 documents/
+
+# SSSU deaths by cause, month, region, age and sex, 2005-2022 (data.gov.ua; 338 MB)
+data_input/sssu_death_cause/

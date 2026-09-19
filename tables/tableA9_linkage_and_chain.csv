@@ -1,12 +1,17 @@
 design,prisoners_of_war_among_missing,military_deaths,male_2022,male_2023,male_2024,female_2025,male_2025
-"duration model, captives from the official figures (production)",1412,177618,4.72,4.16,5.64,0.129,6.38
-no longer listed = still missing,1412,182303,4.73,4.2,5.79,0.129,6.63
-drop-outs at the dead's rate held as still missing,1412,179672,4.72,4.17,5.7,0.129,6.5
-returns from captivity left out of the population at risk,1412,177373,4.72,4.16,5.64,0.129,6.36
-people listed as missing in v14 only,1412,177654,4.72,4.16,5.64,0.129,6.38
-duration model to the longest duration observed,1412,171394,4.67,4.06,5.45,0.129,6.12
-every unrecorded prisoner among the missing,2966,176064,4.72,4.15,5.59,0.129,6.29
-unrecorded prisoners among the missing as the returned of every year had been,702,178328,4.72,4.16,5.66,0.129,6.42
-captivity as the model projects it,4429,174599,4.72,4.14,5.55,0.129,6.2
-captives spread over event years by the register's prisoners,1412,177618,4.65,4.15,5.66,0.129,6.44
-event-year cohorts standing in for duration,1412,175019,4.71,4.1,5.56,0.129,6.28
+"duration model, drop-outs beyond list maintenance found alive, captives from the official figures (production)",1519,181773,4.7,4.19,5.76,0.13,6.63
+every person no longer listed found alive,1519,179019,4.7,4.17,5.68,0.13,6.47
+no longer listed = still missing,1519,184788,4.7,4.23,5.86,0.13,6.77
+February 2022 events kept in the fit,1519,181528,4.7,4.19,5.75,0.13,6.62
+returns from captivity left out of the population at risk,1519,181500,4.7,4.19,5.76,0.13,6.61
+people listed as missing in v14 only,1519,181790,4.7,4.19,5.76,0.13,6.63
+duration model to the longest duration observed,1519,181249,4.69,4.18,5.75,0.13,6.62
+the v14-v16 window's multipliers alone,1519,178840,4.69,4.16,5.67,0.13,6.48
+the v16-v18 window's multipliers alone,1519,184793,4.7,4.23,5.86,0.13,6.77
+the v18-v19 window's multipliers alone,1519,180180,4.69,4.17,5.71,0.13,6.56
+every unrecorded prisoner among the missing,2966,180336,4.7,4.18,5.72,0.13,6.55
+unrecorded prisoners among the missing as the returned of every year had been,702,182584,4.7,4.2,5.79,0.13,6.67
+the register's prisoners with no recorded event year left out,2229,181068,4.7,4.19,5.74,0.13,6.59
+captivity as the model projects it,5673,177647,4.7,4.16,5.64,0.13,6.39
+captives spread over event years by the register's prisoners,1519,181772,4.62,4.18,5.78,0.13,6.69
+event-year cohorts standing in for duration,1519,182255,4.69,4.18,5.78,0.13,6.67

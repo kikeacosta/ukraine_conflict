@@ -1,7 +1,7 @@
 source,country,civilians,combatants,unknown
 ACLED,Russia,1071,5673,NA
-UCDP,Russia,775,10763,20
-UCDP adjusted,Russia,777,224043,NA
+UCDP,Russia,774,14500,20
+UCDP adjusted,Russia,776,255604,NA
 ACLED,Ukraine,11724,193264,NA
-UCDP,Ukraine,26848,276386,17766
-UCDP adjusted,Ukraine,31156,76582,NA
+UCDP,Ukraine,26861,314578,17756
+UCDP adjusted,Ukraine,30752,87358,NA

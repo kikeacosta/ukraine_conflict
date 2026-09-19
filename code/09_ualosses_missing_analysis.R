@@ -7,7 +7,7 @@ source("code/00_setup.R")
 #
 # How do the personnel recorded as "missing" resolve? Estimated by following
 # everyone listed as missing through the four register releases - v14 (16 Sep
-# 2025), v16 (4 Dec 2025), v18 (23 Apr 2026) and v19 (19 Sep 2026) - and
+# 2025), v16 (4 Dec 2025), v18 (23 Apr 2026) and v19 (21 Jul 2026) - and
 # fitting, to the three windows between them, how fast the missing leave that
 # status by months since the event. Each event month's missing in v19 are then
 # carried forward from the duration they have reached.
@@ -20,13 +20,14 @@ source("code/00_setup.R")
 # KEY ASSUMPTION
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # How many of the missing are alive drives the combatant total. The model
-# projects who will leave the register (counted alive by the rules below); the
-# prisoners of war among the missing are set by the official figures,
-# compared with the prisoners the register records; and a share of the rest
-# may be alive for other reasons. alive_evidence() in 00_setup.R sets out the
-# evidence, its ranges and the sources. This script imputes at the central
-# values and records the ranges, 10 turns them into the combatant bounds, and
-# 11 draws them together with the sampling error of the model and of the
+# projects who will leave the register beyond list maintenance (counted alive
+# by the rules below); the prisoners of war among the missing are set by the
+# official figures, compared with the prisoners the register records; and a
+# share of the rest may be alive for other reasons. alive_evidence() in
+# 00_setup.R sets out the evidence, its ranges and the sources. This script
+# imputes at the central values - the medians of the evidence's inputs - and
+# records the ranges, 10 turns them into the combatant bounds, and 11 draws
+# them together with the sampling error of the model and of the
 # registration-lag factors (military_draws()).
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -40,8 +41,10 @@ source("code/00_setup.R")
 #     a key new in that release with the same surname and first name and the
 #     same date of birth or event month;
 #   - a person no longer listed - absent from a release and from every later
-#     one - is resolved alive at the first absence. Absent from one release
-#     but listed again later, they were still missing;
+#     one - leaves the register at the first absence. Absent from one release
+#     but listed again later, they were still missing. Below, drop-out at the
+#     rate at which the dead leave the register is list maintenance and held
+#     as still missing; only the excess is resolved alive;
 #   - a history stops at its first resolution;
 #   - a return from captivity is a resolution to captivity: the person was a
 #     prisoner the register had not recorded, and is alive.
@@ -133,6 +136,36 @@ linkage <- cache_rds(
 
 windows <- linkage |> filter(table == "windows") |> select(rule, year, month, entry, from_release, to, n)
 production_windows <- windows |> filter(rule == "production")
+
+# February 2022 is left out of every fit, as it is out of the registration-lag
+# rates (08b): v19 deleted a batch of its records at once, which a duration
+# model would read as drop-out at the durations those records had reached.
+# Its missing are still projected with everyone else's.
+feb22 <- as.Date("2022-02-01")
+
+# List maintenance. The dead cannot have been found alive, yet they leave the
+# register too: their drop-out rate, by cohort and window, measures how often
+# a record disappears through list maintenance. The missing who leave at that
+# rate are held as still missing; only the excess over it is resolved alive.
+dead_rates <- function(drop_feb22 = TRUE) {
+  linkage |>
+    filter(table == "dead_windows", !drop_feb22 | month != feb22) |>
+    summarise(at_risk = sum(n), dropped = sum(n[to == "no_longer_listed"]), .by = c(year, from_release)) |>
+    mutate(rate = dropped / at_risk)
+}
+dead_dropout <- dead_rates()
+maintain <- function(w, drop_feb22 = TRUE) {
+  w <-
+    w |>
+    filter(!drop_feb22 | month != feb22) |>
+    left_join(dead_rates(drop_feb22) |> select(year, from_release, rate), by = c("year", "from_release")) |>
+    mutate(maint_share = pmin(1, rate * sum(n) / sum(n[to == "no_longer_listed"])), .by = c(year, from_release)) |>
+    mutate(n_maint = if_else(to == "no_longer_listed", n * maint_share, 0))
+  bind_rows(w |> mutate(n = n - n_maint),
+            w |> filter(n_maint > 0) |> mutate(to = "missing", n = n_maint)) |>
+    summarise(n = sum(n), .by = c(rule, year, month, entry, from_release, to))
+}
+
 at_risk_v14 <-
   production_windows |>
   filter(from_release == "v14") |>
@@ -206,8 +239,9 @@ resolution_12m <-
 print(as.data.frame(resolution_12m |> mutate(across(all_of(ual_outcomes), \(x) round(100 * x, 2)))))
 
 # the same composed by event-year cohort, in the states of the earlier chain,
-# kept for the comparison of designs below
-tasas_long <- chain_rates(production_windows)
+# kept for the comparison of designs below; list maintenance held as missing,
+# as in the model
+tasas_long <- chain_rates(maintain(production_windows))
 stopifnot(tasas_long |> summarise(p = sum(prop), .by = year) |> with(all(abs(p - 1) < 1e-9)))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -218,11 +252,13 @@ stopifnot(tasas_long |> summarise(p = sum(prop), .by = year) |> with(all(abs(p -
 # projection runs to the horizon 08b settled for registration lag, 48 months:
 # the longest duration measured on at least a year of event months. Beyond it
 # the data rest on a few months of 2022 events and on v19's one-off deletion
-# of a batch of February 2022 records.
-fit_model <- function(w) {
+# of a batch of February 2022 records. The model is fitted to the windows with
+# list maintenance held as missing and February 2022 left out (above).
+fit_model <- function(w, drop_feb22 = TRUE) {
+  if (drop_feb22) w <- w |> filter(month != feb22)
   ual_fit_durations(ual_duration_cells(w), horizon = completion$L_ref)
 }
-model <- fit_model(production_windows)
+model <- fit_model(maintain(production_windows))
 
 hazards <-
   as_tibble(model$h) |>
@@ -270,7 +306,7 @@ evidence <- alive_evidence(model$resolved, register_alive, released_prior)
 print(as.data.frame(evidence))
 write_rds(evidence, "data_inter/ukr_alive_missing.rds")
 
-impute <- function(captives = evidence$captives_mode, other = evidence$other_mode, m = model,
+impute <- function(captives = evidence$captives_central, other = evidence$other_central, m = model,
                    stock = stock_missing_month, by = "year") {
   impute_missing(m, stock, captives, other, by)
 }
@@ -312,7 +348,7 @@ military_inputs <- list(
   model = model,
   evidence = evidence
 )
-check_point <- military_draws(military_inputs, evidence$captives_mode, evidence$other_mode)
+check_point <- military_draws(military_inputs, evidence$captives_central, evidence$other_central)
 stopifnot(isTRUE(all.equal(check_point$military, combined_losses$total_estimado)))
 write_rds(military_inputs, "data_inter/ukr_military_inputs.rds")
 
@@ -334,21 +370,23 @@ write_rds(tasas_long, "data_inter/ukr_ualosses_transition_rates.rds")
 # how much the linkage rules, the model and the evidence matter
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # The military total under alternatives, each at the central values of the
-# evidence (the captives among the missing at their mode, none of the
-# unresolved alive for other reasons):
-#   - a person no longer listed held as still missing rather than alive;
-#   - drop-outs at the rate at which the dead leave the register, window by
-#     window and cohort by cohort, taken as list maintenance and held as still
-#     missing; only the excess over that rate is found alive;
+# evidence (the medians of its inputs), each differing from the rules used in
+# one respect:
+#   - every person no longer listed found alive, list maintenance included;
+#   - a person no longer listed held as still missing;
+#   - February 2022 events kept in the fit;
 #   - a return from captivity leaving the person out of the population at
 #     risk, as someone held rather than disappeared;
 #   - rates from the people listed as missing in v14 only, without those first
 #     listed later;
-#   - the projection run to the longest duration observed (about 55 months)
+#   - the projection run to the longest duration observed in the fit
 #     instead of 48;
+#   - each release window's multipliers alone instead of their average;
 #   - every unrecorded prisoner among the missing;
 #   - the unrecorded prisoners among the missing in the proportion the
 #     returned prisoners of every event year had been;
+#   - the register's prisoners with no recorded event year left out, which
+#     step 08 spreads over the event years, 2014-2021 included;
 #   - captivity as the model projects it, instead of from the official
 #     figures;
 #   - the captives spread over event years in proportion to the prisoners the
@@ -364,26 +402,25 @@ design_total <- function(imp) {
     transmute(year, confirmed = confirmados_stock, total = confirmados_stock + imputed_dead)
   tibble(military = sum(by_year$total), by_year = list(by_year))
 }
+model_all_alive <- fit_model(production_windows)
 model_dropouts_missing <- fit_model(windows |> filter(rule == "dropouts_missing"))
-model_released_excluded <- fit_model(windows |> filter(rule == "released_excluded"))
-model_v14_only <- fit_model(production_windows |> filter(entry == "v14"))
+model_with_feb22 <- fit_model(maintain(production_windows, drop_feb22 = FALSE), drop_feb22 = FALSE)
+model_released_excluded <- fit_model(maintain(windows |> filter(rule == "released_excluded")))
+model_v14_only <- fit_model(maintain(production_windows |> filter(entry == "v14")))
+# each window's multipliers alone in place of their average over the year
+model_window <- function(w) {
+  modifyList(model, list(h = sweep(model$h_reference, 2, model$window_multipliers[w, ], "*")))
+}
+window_label <- paste0(ual_releases$release[-nrow(ual_releases)], "-", ual_releases$release[-1])
 
-# list maintenance: the dead's drop-out rate by cohort and window
-dead_dropout <-
-  linkage |>
-  filter(table == "dead_windows") |>
-  summarise(at_risk = sum(n), dropped = sum(n[to == "no_longer_listed"]), .by = c(year, from_release)) |>
-  mutate(rate = dropped / at_risk)
-windows_maintenance <-
-  production_windows |>
-  left_join(dead_dropout |> select(year, from_release, rate), by = c("year", "from_release")) |>
-  mutate(maint_share = pmin(1, rate * sum(n) / sum(n[to == "no_longer_listed"])), .by = c(year, from_release)) |>
-  mutate(n_maint = if_else(to == "no_longer_listed", n * maint_share, 0))
-windows_maintenance <-
-  bind_rows(windows_maintenance |> mutate(n = n - n_maint),
-            windows_maintenance |> filter(n_maint > 0) |> mutate(to = "missing", n = n_maint)) |>
-  summarise(n = sum(n), .by = c(rule, year, month, entry, from_release, to))
-model_maintenance <- fit_model(windows_maintenance)
+# the register's prisoners and released prisoners with a recorded event year
+# in 2022-2025, before 08 spreads the records without one
+register_alive_known <-
+  read_rds("data_inter/ualosses_counts_2022_2025.rds") |>
+  filter(year %in% 2022:2025, status %in% c("prisoner", "released_prisoner")) |>
+  pull(dx) |>
+  sum()
+captives_known_year <- evidence$s_central * (evidence$held_central + returned_military - register_alive_known)
 
 # the share listed as missing among the returned of every event year
 share_listed_missing <- evidence$s_min
@@ -403,47 +440,57 @@ by_year_captives <-
   left_join(prisoners_by_year, by = "year") |>
   left_join(confirmados_df |> select(year, confirmados_stock), by = "year") |>
   mutate(captives_year = pmin(projected_captivity + never_resolved,
-                              evidence$captives_mode * prisoners / sum(prisoners)),
-         imputed_dead = missing_stock - imputed_unlisted - captives_year,
+                              evidence$captives_central * prisoners / sum(prisoners)),
+         unresolved_year = projected_captivity + never_resolved - captives_year,
+         imputed_dead = projected_dead + (1 - evidence$other_central) * unresolved_year,
          total = confirmados_stock + imputed_dead)
 
-# the earlier chain: with none of those still missing alive for other reasons,
-# its imputed alive are those who leave the register, and the captives are
-# taken out of its dead
+# the earlier chain: its imputed alive are those who leave the register beyond
+# list maintenance and the central share of those still missing at its end,
+# and the captives are taken out of its dead
 cohort_chain <-
-  impute_missing_cohorts(0, tasas_long, stock_missing_2026) |>
+  impute_missing_cohorts(evidence$other_central, tasas_long, stock_missing_2026) |>
   mutate(imputed_dead = missing_stock - imputed_alive -
-           evidence$captives_mode * missing_stock / sum(missing_stock))
+           evidence$captives_central * missing_stock / sum(missing_stock))
 
+cc <- evidence$captives_central
 linkage_designs <-
   bind_rows(
     design_total(impute()) |>
-      mutate(design = "duration model, captives from the official figures (production)",
-             captives = evidence$captives_mode),
+      mutate(design = "duration model, drop-outs beyond list maintenance found alive, captives from the official figures (production)",
+             captives = cc),
+    design_total(impute(m = model_all_alive)) |>
+      mutate(design = "every person no longer listed found alive", captives = cc),
     design_total(impute(m = model_dropouts_missing)) |>
-      mutate(design = "no longer listed = still missing", captives = evidence$captives_mode),
-    design_total(impute(m = model_maintenance)) |>
-      mutate(design = "drop-outs at the dead's rate held as still missing", captives = evidence$captives_mode),
+      mutate(design = "no longer listed = still missing", captives = cc),
+    design_total(impute(m = model_with_feb22)) |>
+      mutate(design = "February 2022 events kept in the fit", captives = cc),
     design_total(impute(m = model_released_excluded)) |>
-      mutate(design = "returns from captivity left out of the population at risk",
-             captives = evidence$captives_mode),
+      mutate(design = "returns from captivity left out of the population at risk", captives = cc),
     design_total(impute(m = model_v14_only)) |>
-      mutate(design = "people listed as missing in v14 only", captives = evidence$captives_mode),
+      mutate(design = "people listed as missing in v14 only", captives = cc),
     design_total(impute(m = modifyList(model, list(horizon = max(model$fitted$d1))))) |>
-      mutate(design = "duration model to the longest duration observed", captives = evidence$captives_mode),
-    design_total(impute(captives = evidence$unrecorded_mode)) |>
-      mutate(design = "every unrecorded prisoner among the missing", captives = evidence$unrecorded_mode),
-    design_total(impute(captives = share_listed_missing * evidence$unrecorded_mode)) |>
+      mutate(design = "duration model to the longest duration observed", captives = cc),
+    map_dfr(seq_along(window_label), \(w) {
+      design_total(impute(m = model_window(w))) |>
+        mutate(design = paste0("the ", window_label[w], " window's multipliers alone"), captives = cc)
+    }),
+    design_total(impute(captives = evidence$unrecorded_central)) |>
+      mutate(design = "every unrecorded prisoner among the missing", captives = evidence$unrecorded_central),
+    design_total(impute(captives = share_listed_missing * evidence$unrecorded_central)) |>
       mutate(design = "unrecorded prisoners among the missing as the returned of every year had been",
-             captives = share_listed_missing * evidence$unrecorded_mode),
+             captives = share_listed_missing * evidence$unrecorded_central),
+    design_total(impute(captives = captives_known_year)) |>
+      mutate(design = "the register's prisoners with no recorded event year left out",
+             captives = captives_known_year),
     design_total(impute(captives = projected_captivity)) |>
       mutate(design = "captivity as the model projects it", captives = projected_captivity),
     tibble(military = sum(by_year_captives$total),
            by_year = list(by_year_captives |> transmute(year, confirmed = confirmados_stock, total)),
            design = "captives spread over event years by the register's prisoners",
-           captives = evidence$captives_mode),
+           captives = cc),
     design_total(cohort_chain) |>
-      mutate(design = "event-year cohorts standing in for duration", captives = evidence$captives_mode)
+      mutate(design = "event-year cohorts standing in for duration", captives = cc)
   ) |>
   relocate(design)
 stopifnot(isTRUE(all.equal(linkage_designs$military[1], sum(combined_losses$total_estimado))))
@@ -481,10 +528,13 @@ cat("\n=== WHERE THE RETURNED PRISONERS WERE LISTED BEFORE THEIR RETURN ===\n")
 print(as.data.frame(released_prior |> pivot_wider(names_from = prior, values_from = n, values_fill = 0)))
 cat(sprintf("share listed as missing, of those not recorded as prisoners: %.3f (all years), %.3f (2024-2025)\n",
             evidence$s_min, evidence$s_mode))
+cat(sprintf("register prisoners and released, 2022-2025: %s with the unknown-year records spread, %s without\n",
+            scales::comma(round(register_alive)), scales::comma(register_alive_known)))
 write_rds(list(designs = linkage_designs, no_trace = no_trace, patterns = patterns,
                released_first = released_first, dead_dropout = dead_dropout,
                released_prior = released_prior, captivity_by_window = captivity_by_window,
-               by_year_captives = by_year_captives),
+               by_year_captives = by_year_captives, register_alive_known = register_alive_known,
+               window_multipliers = model$window_multipliers),
           "data_inter/ukr_ualosses_linkage_checks.rds")
 
 # military deaths by event month at the central values, for 15's comparison

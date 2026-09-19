@@ -24,12 +24,12 @@
 # THE SWEEP. The missing alive are the prisoners of war among them (captives),
 # those the model projects to leave the register, and a share of the rest,
 # the unresolved, alive for other reasons (impute_missing(), 00_setup.R). The
-# sweep follows one path through the two free quantities: the captives rise
-# from their floor to their ceiling with none of the unresolved alive, and
-# then the share of the unresolved alive rises from 0 to 1 with the captives
-# at their ceiling. The floor, the central values and the ceiling of the
-# evidence all lie on it, and each point is labelled by the share of all the
-# missing alive. Each point is propagated through the same deterministic,
+# sweep follows one path through the two free quantities, in straight
+# segments: from the floor of the evidence (captives at their floor, none of
+# the unresolved alive) to its central values (both at their medians), on to
+# its ceiling (both at their ceilings), and then to all the unresolved alive
+# with the captives at their ceiling. Each point is labelled by the share of
+# all the missing alive. Each point is propagated through the same deterministic,
 # mode-only projection step 13 uses for its migration check: one scenario per
 # point, not a full Monte Carlo re-run at each one, because the question is
 # how far the estimate moves.
@@ -80,22 +80,30 @@ parts <- function(captives, other) {
   tibble(missing = sum(d$missing), unlisted = sum(d$imputed_unlisted),
          alive = sum(d$missing - d$imputed_dead))
 }
-missing_total <- parts(ev$captives_mode, 0)$missing
-unlisted_total <- parts(ev$captives_mode, 0)$unlisted
-# the unresolved at the captives' ceiling: the missing less the projected
-# deaths, those leaving the register and the captives
-unresolved_at_max <- parts(ev$captives_max, 1)$alive - unlisted_total - ev$captives_max
-
-# the path, as a function of the number of the missing alive
-path_at <- function(alive) {
-  top <- ev$captives_max + unlisted_total
-  if (alive <= top) {
-    c(captives = alive - unlisted_total, other = 0)
-  } else {
-    c(captives = ev$captives_max, other = (alive - top) / unresolved_at_max)
-  }
-}
 alive_of <- function(captives, other) parts(captives, other)$alive
+missing_total <- parts(ev$captives_central, ev$other_central)$missing
+
+# the path's corners: the floor, the centre and the ceiling of the evidence,
+# and all the unresolved alive with the captives at their ceiling
+nodes <-
+  tibble(point = c("floor", "central", "cap", "all but the projected deaths"),
+         captives = c(ev$captives_min, ev$captives_central, ev$captives_max, ev$captives_max),
+         other = c(ev$other_min, ev$other_central, ev$other_max, 1)) |>
+  mutate(alive = map2_dbl(captives, other, alive_of))
+stopifnot(all(diff(nodes$alive) > 0))
+
+# the point of the path with a given number of the missing alive
+path_at <- function(alive) {
+  k <- min(max(findInterval(alive, nodes$alive), 1), nrow(nodes) - 1)
+  seg <- function(t) {
+    c(captives = nodes$captives[k] + t * (nodes$captives[k + 1] - nodes$captives[k]),
+      other = nodes$other[k] + t * (nodes$other[k + 1] - nodes$other[k]))
+  }
+  if (alive <= nodes$alive[k]) return(seg(0))
+  if (alive >= nodes$alive[k + 1]) return(seg(1))
+  seg(uniroot(\(t) { p <- seg(t); alive_of(p[["captives"]], p[["other"]]) - alive },
+              c(0, 1), tol = 1e-12)$root)
+}
 
 # the points of the evidence, and the 95% interval of the draws: each draw's
 # missing alive at the model's estimates and the point factors
@@ -104,30 +112,24 @@ alive_in_draws <-
   military_draws(mil, alive_draws$captives, alive_draws$alive_other) |>
   summarise(alive = sum(missing - imputed_dead), .by = sim_id) |>
   pull(alive)
-points <- tibble(
-  point = c("floor", "2.5th percentile of draws", "central", "97.5th percentile of draws", "cap"),
-  alive = c(alive_of(ev$captives_min, ev$other_min), quantile(alive_in_draws, 0.025, names = FALSE),
-            alive_of(ev$captives_mode, ev$other_mode), quantile(alive_in_draws, 0.975, names = FALSE),
-            alive_of(ev$captives_max, ev$other_max))
-)
-top_alive <- alive_of(ev$captives_max, 1)
-grid <-
-  tibble(alive = missing_total * c(seq(0.10, 0.30, by = 0.05), seq(0.4, 0.8, by = 0.1))) |>
-  filter(alive > points$alive[1], alive < top_alive) |>
-  bind_rows(tibble(alive = top_alive, point = "all but the projected deaths")) |>
-  mutate(point = coalesce(point, NA_character_))
-sweep_points <-
-  bind_rows(points, grid) |>
-  mutate(share_alive = alive / missing_total) |>
-  arrange(alive) |>
+top_alive <- nodes$alive[nrow(nodes)]
+between <-
+  tibble(point = c("2.5th percentile of draws", "97.5th percentile of draws"),
+         alive = quantile(alive_in_draws, c(0.025, 0.975), names = FALSE)) |>
+  bind_rows(tibble(alive = missing_total * c(seq(0.10, 0.30, by = 0.05), seq(0.4, 0.8, by = 0.1))) |>
+              filter(alive > nodes$alive[1], alive < top_alive)) |>
   mutate(par = map(alive, path_at),
          captives = map_dbl(par, \(v) v[["captives"]]),
          other = map_dbl(par, \(v) v[["other"]])) |>
   select(-par)
+sweep_points <-
+  bind_rows(nodes, between) |>
+  mutate(share_alive = alive / missing_total) |>
+  arrange(alive)
 # the path must pass through the evidence's own points
 stopifnot(
-  isTRUE(all.equal(sweep_points |> filter(point == "central") |> pull(captives), ev$captives_mode)),
-  isTRUE(all.equal(sweep_points |> filter(point == "cap") |> pull(other), ev$other_max))
+  isTRUE(all.equal(path_at(nodes$alive[2]), c(captives = ev$captives_central, other = ev$other_central))),
+  isTRUE(all.equal(path_at(nodes$alive[3]), c(captives = ev$captives_max, other = ev$other_max)))
 )
 
 military_by_alive <-

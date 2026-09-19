@@ -1,10 +1,10 @@
 scenario,male_2022,male_2023,male_2024,female_2025,male_2025
-Mode,4.72,4.16,5.64,0.129,6.38
-A2: western mode a third of the way from the crossings reading,4.71,4.14,5.62,0.128,6.38
-A9: Russia and Belarus on the Donetsk-Luhansk population structure,4.75,4.21,5.72,0.126,6.46
-"A5: crossings end, additive (as used)",4.7,4.11,5.58,0.125,6.38
-"A5: crossings end, proportional",4.72,4.16,5.65,0.129,6.42
-"A5: register end, additive (as used)",4.75,4.21,5.7,0.134,6.38
-"A5: register end, proportional",4.72,4.16,5.63,0.13,6.33
-A10: Canada and USA 30% lower,4.72,4.15,5.63,0.129,6.36
-A10: Canada and USA 30% higher,4.73,4.16,5.65,0.129,6.39
+Mode,4.7,4.19,5.76,0.13,6.63
+A2: western mode a third of the way from the crossings reading,4.69,4.17,5.74,0.128,6.63
+A9: Russia and Belarus on the Donetsk-Luhansk population structure,4.72,4.24,5.84,0.126,6.71
+"A5: crossings end, additive (as used)",4.67,4.14,5.7,0.126,6.63
+"A5: crossings end, proportional",4.7,4.19,5.78,0.129,6.68
+"A5: register end, additive (as used)",4.73,4.24,5.82,0.134,6.63
+"A5: register end, proportional",4.7,4.19,5.75,0.13,6.58
+A10: Canada and USA 30% lower,4.7,4.19,5.75,0.129,6.61
+A10: Canada and USA 30% higher,4.7,4.19,5.77,0.13,6.64

@@ -28,7 +28,7 @@
 #   table1_source_totals.csv                         07_*, 08
 #   table2_missing_imputation.csv                    09
 #   table3_pert_input_bounds.csv                     10
-#   table3b_missing_alive_inputs.csv                 09
+#   tableA26_missing_alive_inputs.csv                09
 #   table4_conflict_deaths_by_cause.csv              14   <- new
 #   table5_life_expectancy_loss.csv                  14
 #   tableA1_source_reconciliation.csv                07_ucdp, 07_acled
@@ -46,12 +46,13 @@
 #   tableA9_linkage_and_chain.csv                    09, 13b
 #   tableA10_registration_lag.csv                    08b, 13d
 #   tableA11_population_base_and_timing.csv          13e, 13f
-#   tableA12_counterfactual_window.csv               13g
+#   tableA12_counterfactual_window.csv               13g, 13j
 #   tableA13_pert_shape.csv                          13g
 #   tableA14_years_of_life_lost.csv                  14b
 #   tableA15_adult_mortality_45q15.csv               14b
 #   tableA25_civilian_age_profile.csv                13h
-#   table8_structural_sensitivity.csv                13, 13b-13h
+#   tableA27_donbas_fighters.csv                     13i
+#   table8_structural_sensitivity.csv                13, 13b-13j
 #   tableA16_missing_alive_by_lag_horizon.csv        13d
 #   tableA17_military_triangulation.csv              09, data_input/official_figures.csv
 #   tableA18_returned_prisoners_prior_status.csv     09
@@ -828,6 +829,23 @@ tab_imput <- bind_rows(
     year = if_else(is.na(year), "Total", as.character(year))
   )
 
+# beside the imputation at the central values, the military total the
+# simulation gives: its median and 95% interval, by year and in total
+mil_sim <- param_draws |> filter(role == "combatants")
+fmt_ui_count <- \(m, lo, hi) sprintf("%s (%s-%s)", scales::comma(round(m)), scales::comma(round(lo)), scales::comma(round(hi)))
+mil_ui <- bind_rows(
+  mil_sim |>
+    summarise(m = median(draw), lo = quantile(draw, 0.025, names = FALSE), hi = quantile(draw, 0.975, names = FALSE),
+              .by = year) |>
+    mutate(year = as.character(year)),
+  mil_sim |>
+    summarise(t = sum(draw), .by = sim_id) |>
+    summarise(m = median(t), lo = quantile(t, 0.025, names = FALSE), hi = quantile(t, 0.975, names = FALSE)) |>
+    mutate(year = "Total")
+) |>
+  transmute(year, military_deaths_simulated = fmt_ui_count(m, lo, hi))
+tab_imput <- tab_imput |> left_join(mil_ui, by = "year")
+stopifnot(!anyNA(tab_imput$military_deaths_simulated))
 save_tab(tab_imput, "table2_missing_imputation.csv")
 print(tab_imput)
 
@@ -877,6 +895,7 @@ tab_alive <-
               "Share of the unresolved missing alive for other reasons"),
     min = with(evidence, c(s_min, held_min, unrecorded_min, captives_min, other_min)),
     mode = with(evidence, c(s_mode, held_mode, unrecorded_mode, captives_mode, other_mode)),
+    central = with(evidence, c(s_central, held_central, unrecorded_central, captives_central, other_central)),
     max = with(evidence, c(s_max, held_max, unrecorded_max, captives_max, other_max)),
     basis = c(
       "Returned prisoners listed as missing before their return: every event year (min), 2024–2025 events (mode), all (max)",
@@ -884,11 +903,11 @@ tab_alive <-
       sprintf("Held plus %s military personnel returned, less the %s the register records as prisoners or released",
               scales::comma(evidence$returned_military), scales::comma(round(evidence$register_alive))),
       "Share among the missing times the unrecorded prisoners",
-      "None (min and mode); the share of the register's first resolutions that leave it (max)"
+      "None (min and mode); the share of the register's first resolutions that leave it beyond list maintenance (max)"
     )
   ) |>
-  mutate(across(c(min, mode, max), \(x) if_else(x < 1, round(x, 3), round(x))))
-save_tab(tab_alive, "table3b_missing_alive_inputs.csv")
+  mutate(across(c(min, mode, central, max), \(x) if_else(x < 1, round(x, 3), round(x))))
+save_tab(tab_alive, "tableA26_missing_alive_inputs.csv")
 print(tab_alive)
 
 # ==============================================================================
@@ -1064,6 +1083,16 @@ tab_e0 <-
     loss = sprintf("%.2f (%.2f-%.2f)", loss_median, loss_lo, loss_hi)
   ) |>
   select(year, sex, e0_expected, e0_observed, loss)
+# the loss with the counterfactual at its point forecast (14c): the
+# uncertainty of the war's toll alone
+tiers <- read_rds("data_inter/ukr_fixed_counterfactual_e0.rds")
+tab_e0 <-
+  tab_e0 |>
+  left_join(tiers |>
+              filter(counterfactual == "fixed at its point forecast") |>
+              transmute(year, sex, loss_counterfactual_fixed = sprintf("%.2f (%.2f-%.2f)", median, lo, hi)),
+            by = c("year", "sex"))
+stopifnot(!anyNA(tab_e0$loss_counterfactual_fixed))
 
 save_tab(tab_e0, "table5_life_expectancy_loss.csv")
 print(tab_e0)
@@ -1203,7 +1232,7 @@ print(tA5)
 # for other reasons; 11 draws both inside that range. 13b sweeps the missing
 # alive along one path, from the fewest alive the evidence allows to all but
 # the projected deaths, re-running the imputation and the downstream
-# projection with everything else at its mode, and this assembles the result
+# projection with everything else at its central value, and this assembles the result
 # into a manuscript table and figure with the range marked on it.
 tA6 <-
   alive_mil |>
@@ -1365,7 +1394,7 @@ figA4 <- figA4a + figA4b +
         "(%s to %s). Dashed: the central values, %s: the %s prisoners of war the official figures ",
         "place among the missing, and those projected to leave the register.\n",
         "Labels: the value at the central values, and how far it moves at the two ends of ",
-        "the dark band. Deterministic, at the mode of every other input - not a Monte ",
+        "the dark band. Deterministic, at the central value of every other input - not a Monte ",
         "Carlo re-run at each point."
       ),
       scales::percent(share_at("floor"), 0.1), scales::percent(share_at("cap"), 0.1),
@@ -1498,7 +1527,7 @@ save_fig(figA5, "figA5_migration_sensitivity.png", 12, 7)
 # section 5): where the western mode sits in the bracket (A2), the age-sex
 # profile of the Russia and Belarus flow (A9), additive versus proportional
 # allocation of a draw away from the mode (A5, at both ends of the western
-# bracket), and the Canada and USA placeholder 30% lower and higher (A10).
+# bracket), and the Canada and USA interpolation 30% lower and higher (A10).
 # Loss in years, every conflict input at its mode.
 spec <- read_rds("data_inter/ukr_migration_specification_e0.rds")
 spec_order <- unique(spec$scenario)
@@ -1522,7 +1551,7 @@ print(tA8)
 # ==============================================================================
 # TABLES A9-A15 - The remaining sensitivity analyses and summary measures
 # ==============================================================================
-# One row per scenario, the loss in years at the mode of every other input:
+# One row per scenario, the loss in years at the central value of every other input:
 # men in each year and women in 2025, the cells that move. A13 is the PERT
 # shape, and A14 and A15 the summary measures from the draws, with intervals.
 loss_wide <- function(d, keep_cols) {
@@ -1562,6 +1591,7 @@ timing <- read_rds("data_inter/ukr_timing_2022.rds")
 tA11 <-
   bind_rows(
     dl$loss |> mutate(check = "Population base of Donetsk and Luhansk"),
+    dl$migrants |> mutate(check = "Population base outside Donetsk and Luhansk"),
     timing$loss |> mutate(check = "Timing of 2022's deaths and departures")
   ) |>
   mutate(scenario = factor(scenario, levels = unique(scenario))) |>
@@ -1571,7 +1601,12 @@ save_tab(tA11, "tableA11_population_base_and_timing.csv")
 print(tA11)
 
 # A12: the Lee-Carter window (13g), with the counterfactual e0 in 2025
+# the windows (13g), with the coherent forecast (13j) before the rows one SD
+# either way
 baseline <- read_rds("data_inter/ukr_baseline_window_e0.rds")
+coherent <- read_rds("data_inter/ukr_coherent_forecast_e0.rds")
+sd_rows <- str_detect(baseline$window, "one SD")
+baseline <- bind_rows(baseline[!sd_rows, ], coherent$baseline, baseline[sd_rows, ])
 tA12 <-
   baseline |>
   mutate(window = factor(window, levels = unique(window))) |>
@@ -1582,6 +1617,17 @@ tA12 <-
               pivot_wider(names_from = sex, values_from = e0, names_prefix = "counterfactual_e0_2025_"),
             by = "window") |>
   arrange(window)
+spread <-
+  bind_rows(read_rds("data_inter/ukr_forecast_spread_by_window.rds"), coherent$spread) |>
+  filter(year == 2025, sex == "m")
+tA12 <-
+  tA12 |>
+  left_join(spread |>
+              summarise(band_counterfactual_e0_2025_m = sprintf("%.2f-%.2f", min(e0_bsn), max(e0_bsn)),
+                        band_male_loss_2025 = sprintf("%.2f-%.2f", min(loss), max(loss)),
+                        .by = window) |>
+              mutate(window = factor(window, levels = levels(tA12$window))),
+            by = "window")
 save_tab(tA12, "tableA12_counterfactual_window.csv")
 print(tA12)
 
@@ -1618,6 +1664,23 @@ tA25 <-
   select(scenario, civilian_60_plus_2022, civilian_mean_age_2022, female_2022, male_2022, female_2025, male_2025)
 save_tab(tA25, "tableA25_civilian_age_profile.csv")
 print(tA25)
+
+# A27: residents of occupied Donbas killed in Russian-controlled forces (13i)
+donbas <- read_rds("data_inter/ukr_donbas_fighters_e0.rds")
+tA27 <-
+  donbas$loss |>
+  filter(year %in% c(2022, 2023, 2025)) |>
+  mutate(col = paste0(if_else(sex == "m", "male_", "female_"), year),
+         loss = round(loss, if_else(sex == "f", 3, 2))) |>
+  select(scenario, col, loss) |>
+  pivot_wider(names_from = col, values_from = loss) |>
+  left_join(donbas$deaths |> summarise(deaths_added = round(sum(deaths)), .by = scenario), by = "scenario") |>
+  mutate(deaths_added = coalesce(deaths_added, 0),
+         scenario = factor(scenario, levels = unique(donbas$loss$scenario))) |>
+  arrange(scenario) |>
+  select(scenario, deaths_added, male_2022, male_2023, male_2025, female_2025)
+save_tab(tA27, "tableA27_donbas_fighters.csv")
+print(tA27)
 
 # A14: years of life lost and 45q15 (14b), medians and 95% intervals
 yq <- read_rds("data_inter/ukr_yll_45q15_summary.rds")
@@ -1684,7 +1747,8 @@ print(tA2)
 # TABLE 8 - How far the results move with each structural choice
 # ==============================================================================
 # The simulation's intervals cover the drawn inputs only. Each row here is a
-# set of deterministic projections, every input not under study at its mode,
+# set of deterministic projections, every input not under study at its central
+# value (the mode, or the median for the inputs on the missing alive),
 # and gives the range its alternatives span: the military total, and the male
 # and female loss in 2022 and 2025. The rows behind each range are
 # in the supplementary table named.
@@ -1714,7 +1778,8 @@ alternatives <- bind_rows(
     filter(!str_detect(design, "production")) |>
     mutate(analysis = paste0("Linkage rules, resolution model and prisoner-of-war evidence: ",
                              c("one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
-                               "ten", "eleven", "twelve")[n_distinct(design)], " alternatives"),
+                               "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
+                               "seventeen", "eighteen", "nineteen", "twenty")[n_distinct(design)], " alternatives"),
            table = "A9") |>
     select(military, year, sex, loss, analysis, table),
   read_rds("data_inter/ukr_denominator_donetsk_luhansk.rds")$loss |>
@@ -1726,15 +1791,25 @@ alternatives <- bind_rows(
     filter(scenario != "months of the events (used)") |>
     transmute(military = mode_military, year, sex, loss,
               analysis = "Timing within 2022: mid-year convention, or net outflow by 1 April", table = "A11"),
+  read_rds("data_inter/ukr_denominator_donetsk_luhansk.rds")$migrants |>
+    transmute(military = mode_military, year, sex, loss,
+              analysis = "Population base outside Donetsk and Luhansk: 0.5 or 1.0 million fewer aged 20-64",
+              table = "A11"),
+  donbas$loss |>
+    filter(scenario != "None (as estimated)") |>
+    transmute(military = mode_military, year, sex, loss,
+              analysis = "Residents of occupied Donbas killed in Russian-controlled forces: counted to September 2023, or continued to 2025",
+              table = "A27"),
   civ_age$loss |>
     filter(scenario != "OHCHR's profile (used)") |>
     transmute(military = mode_military, year, sex, loss,
               analysis = "Civilian age profile: deaths beyond OHCHR's verified count with half over 60, or aged as pre-war deaths",
               table = "A25"),
-  read_rds("data_inter/ukr_baseline_window_e0.rds") |>
+  bind_rows(read_rds("data_inter/ukr_baseline_window_e0.rds"),
+            read_rds("data_inter/ukr_coherent_forecast_e0.rds")$baseline) |>
     filter(window != "2000-2019 (used)") |>
     transmute(military = mode_military, year, sex, loss,
-              analysis = "Counterfactual: Lee–Carter window, and the forecast one SD lower or higher",
+              analysis = "Counterfactual: Lee–Carter window, a coherent forecast with eight neighbours, and the forecast one SD lower or higher",
               table = "A12"),
   mig_sens_t8 |>
     filter(point %in% c("min", "max")) |>
@@ -1767,7 +1842,7 @@ cells_t8 <- function(d) {
 mode_rows <- alive_e0 |> filter(point %in% "central") |> mutate(military = mode_military)
 tab8 <-
   bind_rows(
-    cells_t8(mode_rows) |> mutate(analysis = "Every input at its mode", table = "", .before = 1),
+    cells_t8(mode_rows) |> mutate(analysis = "Every input at its central value", table = "", .before = 1),
     alternatives |>
       mutate(analysis = factor(analysis, levels = unique(analysis))) |>
       nest(.by = c(analysis, table)) |>
@@ -1802,7 +1877,7 @@ print(tA16)
 # ==============================================================================
 # Each statement counts the deaths known at its date. The register (v19, as
 # registered) and this study (at the mode) count the deaths among events up
-# to that date, as known in September 2026. As in every other table, complete
+# to that date, as the register knew them in July 2026. As in every other table, complete
 # years enter as their rounded totals, so a date at the end of 2025 or later
 # gives the four-year total of Tables 2 and 3.
 official <- read_csv("data_input/official_figures.csv", show_col_types = FALSE)
@@ -1817,6 +1892,21 @@ through <- function(d, col) {
     sum(this_year[[col]][this_year$month == floor_date(d, "month")]) * day(d) / days_in_month(d)
   sum(round(years_done$n)) + round(part)
 }
+# the same in every draw: the draw's complete years, and its current year in
+# the proportion of that year's deaths the months to the date hold at the
+# central values
+mil_year_draws <- param_draws |> filter(role == "combatants") |> select(sim_id, year, draw)
+through_draws <- function(d) {
+  d <- as.Date(d)
+  this_year <- mil_month |> filter(year(month) == year(d))
+  share <- if (nrow(this_year) == 0) 0 else
+    (sum(this_year$military[this_year$month < floor_date(d, "month")]) +
+       sum(this_year$military[this_year$month == floor_date(d, "month")]) * day(d) / days_in_month(d)) /
+    sum(this_year$military)
+  mil_year_draws |>
+    summarise(v = sum(draw[year < year(d)]) + share * sum(draw[year == year(d)]), .by = sim_id) |>
+    pull(v)
+}
 tA17 <-
   official |>
   filter(key %in% c("military_killed_official", "military_killed_estimate")) |>
@@ -1826,10 +1916,16 @@ tA17 <-
     stated = if_else(is.na(value), sprintf("%s–%s", scales::comma(low), scales::comma(high)),
                      scales::comma(value)),
     register_named_dead = round(map_dbl(date, \(d) through(d, "registered_dead"))),
-    this_study = round(map_dbl(date, \(d) through(d, "military")))
+    this_study = round(map_dbl(date, \(d) through(d, "military"))),
+    ui = map(date, \(d) {
+      v <- through_draws(d)
+      tibble(this_study_median = round(median(v)), this_study_lo = round(quantile(v, 0.025, names = FALSE)),
+             this_study_hi = round(quantile(v, 0.975, names = FALSE)))
+    })
   ) |>
+  unnest(ui) |>
   arrange(date) |>
-  select(date, kind, source, stated, register_named_dead, this_study)
+  select(date, kind, source, stated, register_named_dead, this_study, this_study_median, this_study_lo, this_study_hi)
 save_tab(tA17, "tableA17_military_triangulation.csv")
 print(tA17)
 
@@ -1861,20 +1957,23 @@ print(tA18)
 windows_cache <- read_rds("data_inter/ualosses_window_transitions.rds")
 missing_dropout <-
   windows_cache |>
-  filter(table == "windows", rule == "alive") |>
+  filter(table == "windows", rule == "production") |>
   summarise(missing_at_risk = sum(n), missing_no_longer_listed = sum(n[to == "no_longer_listed"]),
             .by = c(year, from_release))
+dead_dropout_all <-
+  windows_cache |>
+  filter(table == "dead_windows") |>
+  summarise(dead_at_risk = sum(n), dead_dropped = sum(n[to == "no_longer_listed"]), .by = c(year, from_release))
 tA19 <-
   missing_dropout |>
-  left_join(linkage_checks$dead_dropout |>
-              select(year, from_release, dead_at_risk = at_risk, dead_dropped = dropped),
-            by = c("year", "from_release")) |>
+  left_join(dead_dropout_all, by = c("year", "from_release")) |>
   mutate(window = paste0(from_release, "-", ual_releases$release[match(from_release, ual_releases$release) + 1]),
          missing_pct = round(100 * missing_no_longer_listed / missing_at_risk, 2),
          dead_pct = round(100 * dead_dropped / dead_at_risk, 2)) |>
   arrange(year, match(from_release, ual_releases$release)) |>
   select(cohort = year, window, missing_at_risk, missing_no_longer_listed, missing_pct,
          dead_at_risk, dead_dropped, dead_pct)
+stopifnot(nrow(tA19) > 0, !anyNA(tA19))
 save_tab(tA19, "tableA19_register_dropout.csv")
 print(tA19)
 

@@ -6,7 +6,7 @@
 # ---------------------
 # Builds, for the multistate analysis in 09g, one history per person recorded
 # as missing, followed across the four register releases:
-#   v14 (16 Sep 2025), v16 (4 Dec 2025), v18 (23 Apr 2026), v19 (19 Sep 2026).
+#   v14 (16 Sep 2025), v16 (4 Dec 2025), v18 (23 Apr 2026), v19 (21 Jul 2026).
 # Each history becomes counting-process intervals (Tstart, Tstop] in real days
 # since the date of the event, so a person's later interval starts where the
 # earlier one ended instead of restarting the clock.

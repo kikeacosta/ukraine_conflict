@@ -7,8 +7,8 @@
 # The counterfactual is a Lee-Carter forecast fitted to 2000-2019 (04). Other
 # defensible windows start earlier, in the post-Soviet recovery, or later, or
 # keep the COVID years in. Each is fitted as 04 fits its own, forecast to
-# 2025, and put through the deterministic projection at the mode of every
-# conflict and migration input. The window used must reproduce 13's loss.
+# 2025, and put through the deterministic projection at the central value of
+# every conflict and migration input. The window used must reproduce 13's loss.
 # The forecast's own uncertainty, which 11 carries by drawing the forecast
 # index, is shown here on its own as well: the rates one standard deviation
 # of the index below and above its mean.
@@ -27,7 +27,7 @@
 # INPUTS   data_inter/ukr_life_tables_1989_2021.rds (03), data_input/DataDxEx.csv
 #          the static inputs at the mode; the parameter table (10), the
 #          military inputs (09) and the forecast error (04)
-# OUTPUTS  data_inter/ukr_baseline_window_e0.rds
+# OUTPUTS  data_inter/ukr_baseline_window_e0.rds, ukr_forecast_spread_by_window.rds
 #          data_inter/ukr_pert_shape_e0.rds
 # ==============================================================================
 
@@ -118,6 +118,39 @@ k_band <-
 baseline <- bind_rows(baseline, k_band)
 write_rds(baseline, "data_inter/ukr_baseline_window_e0.rds")
 
+# The forecast's spread by window: each window's forecast rates 1.96 standard
+# deviations of its index either way, as the counterfactual e0 and the loss in
+# each year, every other input at its mode. This is the width the drawn
+# forecast gives the intervals, window by window: a window that takes in the
+# 2005-2008 crisis has a more erratic index, so a wider band.
+spread <-
+  windows |>
+  mutate(res = map2(first, last, function(f, l) {
+    fc <-
+      dt |>
+      filter(year %in% f:l) |>
+      as_vital(index = year, key = c(sex, age), .age = "age", .sex = "sex",
+               .deaths = "deaths", .population = "pop") |>
+      model(lc = LC(log(mx), adjust = "e0", jump_choice = "fit")) |>
+      forecast(h = 2025 - l) |>
+      as_tibble() |>
+      filter(year %in% 2022:2025)
+    map_dfr(c(lower = 0.025, upper = 0.975), function(pp) {
+      st <- with_mx(fc |> transmute(year, sex, age, mx = quantile(mx, pp)))
+      stopifnot(all(st$mx > 0), !any(is.na(st$mx)))
+      loss_at_mode(mi$draws, st, mi$pop22_ini)
+    }, .id = "bound")
+  })) |>
+  unnest(res)
+write_rds(spread, "data_inter/ukr_forecast_spread_by_window.rds")
+cat("\n=== THE FORECAST'S 95% BAND BY WINDOW, 2025 ===\n")
+print(as.data.frame(
+  spread |> filter(year == 2025) |>
+    mutate(across(c(e0_bsn, loss), \(x) round(x, 2))) |>
+    select(window, bound, sex, e0_bsn, loss) |>
+    pivot_wider(names_from = c(sex, bound), values_from = c(e0_bsn, loss))
+))
+
 cat("\n=== COUNTERFACTUAL e0 AND LOSS BY LEE-CARTER WINDOW ===\n")
 print(as.data.frame(
   baseline |> filter(year == 2025) |>
@@ -130,7 +163,8 @@ print(as.data.frame(
 param_table <- read_rds("data_inter/ukr_param_table.rds")
 mil <- read_rds("data_inter/ukr_military_inputs.rds")
 lc_error <- read_rds("data_inter/ukr_lc_forecast_error.rds")
-n_shape <- 1000
+# 1,000 draws per shape at the production size; fewer in a quick test run
+n_shape <- min(1000, n_sim)
 # as 11: the draws carry their own counterfactual, so the static inputs carry
 # the forecast's loading and variance
 static_shape <-

@@ -91,7 +91,7 @@ evidence <- read_rds("data_inter/ukr_alive_missing.rds")
 
 # each year's registered count spread over its months as v19 lists them, as
 # in 09, and each month completed by its factor under the horizon
-military_at <- function(horizon, captives = evidence$captives_mode, other = evidence$other_mode) {
+military_at <- function(horizon, captives = evidence$captives_central, other = evidence$other_central) {
   st <- factors_under(horizon) |>
     mutate(share = n_v19 / sum(n_v19), .by = c(year, status)) |>
     left_join(stocks_registered |> rename(n_year = n), by = c("year", "status")) |>

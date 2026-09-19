@@ -9,7 +9,7 @@ source("code/00_setup.R")
 # counts before being written out, so the cached extract is a few kB AND
 # carries no personal data (no names, no dates of birth).
 
-# The most recent release, v19 of 19 September 2026. Every age-sex count comes
+# The most recent release, v19 of 21 July 2026. Every age-sex count comes
 # from it; the earlier releases are read only by 09, to follow the missing.
 ual_file <- "data_input/ualosses_hubert_datasets/260919_UKR_ualosses_Personnel_v19.xlsx"
 

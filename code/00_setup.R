@@ -278,9 +278,13 @@ excel_date <- function(x) {
 # transition counts, 09f into per-person histories without names, 13d into
 # counts by event month. Nothing these functions return may be written out
 # with the key, name or date-of-birth columns still in it.
+# Each release is dated by its Kaggle version (Olivier Hubert, "Confirmed
+# Ukrainian military personnel losses"): versions 14, 16, 18 and 19. Its latest
+# events fall a few days before that date - for v19, the version of 21 July
+# 2026, on 18 June 2026. The v19 file name carries the date it was saved.
 ual_releases <- tibble(
   release = c("v14", "v16", "v18", "v19"),
-  date = as.Date(c("2025-09-16", "2025-12-04", "2026-04-23", "2026-09-19")),
+  date = as.Date(c("2025-09-16", "2025-12-04", "2026-04-23", "2026-07-21")),
   path = file.path("data_input/ualosses_hubert_datasets", c(
     "250916_UKR_ualosses_Personnel_v14.xlsx", "251204_UKR_ualosses_Personnel_v16.xlsx",
     "260423_UKR_ualosses_Personnel_v18.xlsx", "260919_UKR_ualosses_Personnel_v19.xlsx"
@@ -336,7 +340,9 @@ ual_corrected_key <- function(p, later, before) {
 # not at all. regs: the releases in order, named, as read by
 # ual_read_release(). One row per person and later release; the person is
 # identified by a sequential `pid`, and no key, name or date of birth is kept.
-ual_follow_missing <- function(regs) {
+# keep_keys = TRUE adds the key at entry and the key found at each release,
+# for the clerical review only (09h), whose output stays local.
+ual_follow_missing <- function(regs, keep_keys = FALSE) {
   rel <- names(regs)
   lu <- map(regs, ual_one_per_key)
   seen <- character(0)    # keys listed in an earlier release
@@ -362,16 +368,18 @@ ual_follow_missing <- function(regs) {
                status = coalesce(status, status_new),
                key = coalesce(key_new, key))
       claimed <- c(claimed, at_j$key[at_j$found == "corrected"])
-      rows[[j]] <- at_j |> transmute(pid, release = rel[j], status, found)
+      rows[[j]] <- at_j |> transmute(pid, release = rel[j], status, found,
+                                      key = if_else(found == "absent", NA_character_, key))
       cur <- at_j |> select(pid, key, name, dob, date_evnt)
     }
     out[[i]] <-
       entrants |>
-      transmute(pid, year, date_evnt, entry = rel[i]) |>
+      transmute(pid, year, date_evnt, entry = rel[i], entry_key = key) |>
       left_join(bind_rows(rows), by = "pid", relationship = "one-to-many")
     seen <- union(seen, lu[[i]]$key)
   }
-  bind_rows(out)
+  out <- bind_rows(out)
+  if (keep_keys) out else out |> select(-entry_key, -key)
 }
 
 # The windows between consecutive releases in which each person is at risk
@@ -529,7 +537,13 @@ ual_fit_durations <- function(cells, horizon, breaks = ual_duration_breaks) {
                upper = c(rep(0, nb * k), rep(10, (nw - 1) * k)),
                hessian = TRUE, control = list(maxit = 5000, factr = 1e5))
   stopifnot(fit$convergence == 0)
-  free <- c(fit$par[seq_len(nb * k)] > -19.9, rep(TRUE, (nw - 1) * k))
+  # A parameter estimated at or near its bound has no usable normal
+  # approximation, so it is held at its estimate, with no variance: a
+  # log-hazard below -12 (a monthly hazard under six in a million: an outcome
+  # effectively never seen in that band), or a window multiplier at either bound
+  # (an outcome the window records almost never, or in one batch).
+  log_mult <- fit$par[nb * k + seq_len((nw - 1) * k)]
+  free <- c(fit$par[seq_len(nb * k)] > -12, log_mult > -9.9 & log_mult < 9.9)
   vcov <- matrix(0, n_par, n_par)
   vcov[free, free] <- solve(fit$hessian[free, free])
   hz <- ual_theta_hazards(fit$par, nb, k)
@@ -705,7 +719,7 @@ impute_missing_cohorts <- function(alive_other, tasas_long, stock_missing) {
 #
 # Why the model's projection is not used for captivity: v19 is the first
 # release to record returns from captivity, and it recorded past returns in
-# one batch - 2,539 of the 2,582 moves from missing to captivity the model is
+# one batch - nearly all the moves from missing to captivity the model is
 # fitted to fall in the window before it (09). Carried forward as a rate, that
 # batch projects more future prisoners among today's missing than the
 # official figures leave unrecorded at all.
@@ -713,8 +727,9 @@ impute_missing_cohorts <- function(alive_other, tasas_long, stock_missing) {
 # The rest of the projected captivity and those still missing at the horizon
 # are the unresolved. A share of them may be alive for some other reason, and
 # no source counts them: the floor and the mode are 0, the ceiling the share
-# of the register's own first resolutions that leave it - the unresolved no
-# more often alive, outside captivity, than those resolved.
+# of the register's own first resolutions that leave it in excess of list
+# maintenance (09) - the unresolved no more often alive, outside captivity,
+# than those resolved.
 #
 # SOURCES
 #   pow_held           "about 7,000 Ukrainian prisoners of war" held by
@@ -763,9 +778,24 @@ alive_evidence <- function(resolved, register_alive, released_prior) {
     other_mode = 0,
     other_max = resolved[["no_longer_listed"]] / sum(resolved)
   )
+  # The central values every deterministic analysis uses: the median of each
+  # input's Beta-PERT (shape 4), so the analyses sit where the draws do. The
+  # share alive for other reasons has its mode at its minimum, so it is a
+  # Beta(1, 5) on [0, other_max], positive in every draw, and its median is
+  # 0.129 of the ceiling. The captives at the centre are the medians' product.
+  out <- out |>
+    mutate(
+      s_central = qpert(0.5, min = s_min, mode = s_mode, max = s_max, shape = 4),
+      held_central = qpert(0.5, min = held_min, mode = held_mode, max = held_max, shape = 4),
+      unrecorded_central = held_central + returned_military - register_alive,
+      captives_central = s_central * unrecorded_central,
+      other_central = qpert(0.5, min = other_min, mode = other_mode, max = other_max, shape = 4)
+    )
   stopifnot(
     out$s_min <= out$s_mode, out$s_mode <= out$s_max,
-    out$unrecorded_min > 0, out$other_max < 1
+    out$unrecorded_min > 0, out$other_max < 1,
+    out$captives_min <= out$captives_central, out$captives_central <= out$captives_max,
+    out$other_min <= out$other_central, out$other_central <= out$other_max
   )
   out
 }
@@ -1145,7 +1175,8 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
 #                    every year's two readings; Russia and Belarus once
 # The military total follows from the four inputs of the missing
 # (military_draws()). Each of them is also run alone, the others at their
-# point values, so that 15 can attribute the spread of the results.
+# central values or point estimates, so that 15 can attribute the spread of
+# the results.
 # Returns the draws by simulation and year (draws_df), the same by role
 # (param_draws) and the inputs on the missing by simulation (alive_draws).
 simulation_draws <- function(param_table, mil, lc_error, n, shape = 4, seed = 42) {
@@ -1175,11 +1206,11 @@ simulation_draws <- function(param_table, mil, lc_error, n, shape = 4, seed = 42
   alive_draws$lag <- lag
 
   mil_all <- military_draws(mil, alive_draws$captives, alive_draws$alive_other, theta, lag)
-  at_mode <- rep(ev$captives_mode, n)
-  none <- rep(ev$other_mode, n)
+  captives_c <- rep(ev$captives_central, n)
+  other_c <- rep(ev$other_central, n)
   mil_alive <- military_draws(mil, alive_draws$captives, alive_draws$alive_other)
-  mil_model <- military_draws(mil, at_mode, none, theta = theta)
-  mil_lag <- military_draws(mil, at_mode, none, lag = lag)
+  mil_model <- military_draws(mil, captives_c, other_c, theta = theta)
+  mil_lag <- military_draws(mil, captives_c, other_c, lag = lag)
   alive_draws <-
     alive_draws |>
     left_join(mil_all |> summarise(across(c(missing, imputed_unlisted, alive_other, imputed_dead), sum),
@@ -1247,10 +1278,15 @@ simulation_draws <- function(param_table, mil, lc_error, n, shape = 4, seed = 42
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # the deterministic projection at the mode, for the sensitivity steps ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Every input at its mode, set up as 13 sets it up: the conflict and migration
-# totals from the parameter table, the counterfactual, fertility carried
-# forward from 2023, and the age-sex profiles of civilian, registered and
-# imputed deaths. A sensitivity step changes one of these and projects again.
+# Every input at its central value, set up as 13 sets it up: the conflict and
+# migration totals from the parameter table, the counterfactual, fertility
+# carried forward from 2023, and the age-sex profiles of civilian, registered
+# and imputed deaths. A sensitivity step changes one of these and projects
+# again. "At the mode" is shorthand, here and in the sensitivity steps, for
+# these central values: every input at the mode of its distribution, except
+# the three inputs on how many of the missing are alive, at their medians
+# (alive_evidence()), which set the military total (the "mode" column of the
+# parameter table's combatant rows, 10).
 mode_projection_inputs <- function() {
   param_table <- read_rds("data_inter/ukr_param_table.rds")
   exp_mort <- read_rds("data_inter/ukr_mxs_obs_plus_frcst_1989_2025.rds") |>

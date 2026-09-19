@@ -5,7 +5,7 @@
 # WHY
 # ---
 # The register keeps adding deaths and disappearances long after the event:
-# for 2025 events, v14 (16 Sep 2025) listed 9,001 dead, v19 (19 Sep 2026)
+# for 2025 events, v14 (16 Sep 2025) listed 9,001 dead, v19 (21 Jul 2026)
 # 16,457, and even 2022 events keep growing. The imputation in 09 only
 # reclassifies people already listed, so a loss not yet registered would not
 # be counted. This step measures how far each event month's v19 count falls

@@ -13,16 +13,18 @@ is catalogued in `documents/data_sources.md`.
 | `unhcr/unhcr_population_coo_UKR_2021_2025_page1.json` | Raw API response, retrieved 2026-09-16 |
 | `unhcr/unhcr_border_crossings_2022.csv` | UNHCR Operational Data Portal, Ukraine refugee situation: border crossings out of Ukraine and into it, cumulative since 24 February 2022 (population groups 5460 and 5472), at 1 March and each month end of 2022, read on 2026-09-19. Step 10 takes the timing of 2022's net outflow from it |
 | `ces_2026_figures.csv` | Figures transcribed from the CES fifth-wave report, with printed page and quote. `used_by_code = yes` marks the ones step 06 reads |
-| `national_programme_arrivals_PLACEHOLDER.csv` | **Placeholder.** Dated cumulative arrivals for Canada (CUAET) and the USA (Uniting for Ukraine), interpolated to year ends |
+| `national_programme_counts.csv` | Dated counts for Canada (CUAET) and the USA (Uniting for Ukraine), each with its source: programme arrivals in the first years, when few had yet left, and people present later. Step 06 interpolates between them to year ends |
 
 The Eurostat temporary-protection stock that step 06 also reads lives in
 `../refugees_eurostat/`.
 
-## ⚠️ TODO-PLACEHOLDER: Canada and USA year-end arrivals
+## Canada and USA: what would improve the series
 
-`national_programme_arrivals_PLACEHOLDER.csv` holds only a few dated totals,
-and step 06 interpolates between them. To replace it you need, for **each of
-31 Dec 2022, 2023, 2024 and 2025**:
+Neither country publishes a year-end count of Ukrainians present, so
+`national_programme_counts.csv` holds the dated counts that are published, and
+step 06 interpolates between them; step 13c moves the two series 30% up and down
+(table A8). A better series would need, for **each of 31 Dec 2022, 2023, 2024 and
+2025**:
 
 - **Canada:** cumulative CUAET holders who *arrived* in Canada since 17 March
   2022 (not applications or approvals). Source: archived versions of IRCC's
@@ -33,8 +35,8 @@ and step 06 interpolates between them. To replace it you need, for **each of
   2022. Source: DHS Office of Homeland Security Statistics, USCIS, or a FOIA
   request.
 
-Add them as rows to the CSV; no code changes are needed. The full instructions
-are at the top of `code/06_net_migration.R`.
+Add them as rows to the CSV; no code changes are needed (see the note at the top
+of `code/06_net_migration.R`).
 
 ## Reference copies (not read by code)
 
@@ -52,8 +54,8 @@ are at the top of `code/06_net_migration.R`.
 
 ### Still to save by hand
 
-canada.ca refuses automated downloads, so these two sources behind the
-placeholder anchors are not yet in `web_snapshots/`. Open each in a browser
+canada.ca refuses automated downloads, so these two sources behind the Canadian
+counts are not yet in `web_snapshots/`. Open each in a browser
 and save it as PDF:
 
 - <https://www.canada.ca/en/immigration-refugees-citizenship/services/immigrate-canada/ukraine-measures/key-figures.html> (298,128 arrivals to 1 Apr 2024)

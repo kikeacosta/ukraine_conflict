@@ -18,6 +18,13 @@
 # The conflict deaths are not changed. Taking the population out while keeping
 # its deaths is the upper end of the bias, not a scenario for the true count.
 #
+# The rest of the base has an overcount of its own: people registered in
+# Ukraine but living abroad before 2022, mostly labour migrants of working
+# age. The 2019 electronic census counted 37.29 million on the territory the
+# government controlled; SSSU carries more. So the base outside the two
+# oblasts is also made 0.5 and 1.0 million smaller at ages 20-64, men and
+# women in proportion to their numbers at those ages.
+#
 # INPUTS   data_inter/ukr_pop_sssu.rds (01) and the static inputs at the mode
 # OUTPUTS  data_inter/ukr_denominator_donetsk_luhansk.rds
 # ==============================================================================
@@ -56,6 +63,24 @@ loss <-
   mutate(res = map(keep, \(k) loss_at_mode(mi$draws, mi$static_inputs, base_with(k)))) |>
   unnest(res)
 
+# labour migrants: the base outside Donetsk and Luhansk smaller at ages 20-64
+working_rest <-
+  mi$pop22_ini |>
+  left_join(pop_dl, by = c("sex", "age")) |>
+  mutate(rest = pop - coalesce(pop_dl, 0), working = age >= 20 & age <= 64)
+base_without <- function(million) {
+  w <- working_rest |> mutate(cut = if_else(working, million * 1e6 * rest / sum(rest[working]), 0))
+  stopifnot(all(w$cut <= w$rest))
+  w |> mutate(pop = pop - cut) |> select(all_of(names(mi$pop22_ini)))
+}
+migrants <-
+  tibble(scenario = c("Outside Donetsk and Luhansk, 0.5 million fewer aged 20-64",
+                      "Outside Donetsk and Luhansk, 1.0 million fewer aged 20-64"),
+         million = c(0.5, 1.0)) |>
+  mutate(res = map(million, \(m) loss_at_mode(mi$draws, mi$static_inputs, base_without(m)))) |>
+  unnest(res) |>
+  select(-million)
+
 # the base used must reproduce 13's loss at the mode
 stopifnot(isTRUE(all.equal(
   loss |> filter(keep == 1) |> arrange(year, sex) |> pull(loss),
@@ -63,11 +88,17 @@ stopifnot(isTRUE(all.equal(
   tolerance = 1e-8
 )))
 
-write_rds(list(share = share_dl, loss = loss), "data_inter/ukr_denominator_donetsk_luhansk.rds")
+write_rds(list(share = share_dl, loss = loss, migrants = migrants),
+          "data_inter/ukr_denominator_donetsk_luhansk.rds")
 
 cat("\n=== LOSS BY THE POPULATION BASE OF DONETSK AND LUHANSK ===\n")
 print(as.data.frame(
   loss |> mutate(col = paste0(sex, "_", year), loss = round(loss, 3)) |>
+    select(scenario, col, loss) |> pivot_wider(names_from = col, values_from = loss)
+))
+cat("\n=== LOSS WITH THE BASE OUTSIDE DONETSK AND LUHANSK SMALLER AT WORKING AGES ===\n")
+print(as.data.frame(
+  migrants |> mutate(col = paste0(sex, "_", year), loss = round(loss, 3)) |>
     select(scenario, col, loss) |> pivot_wider(names_from = col, values_from = loss)
 ))
 message("Done. data_inter/ukr_denominator_donetsk_luhansk.rds written.")

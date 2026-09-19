@@ -17,12 +17,11 @@
 #      + UNHCR Refugee Data Finder, refugees + asylum seekers, for every other
 #          country of asylum except Russia, Belarus, Canada and the USA, net
 #          of each country's pre-war 2021 stock
-#      + Canada (CUAET) and USA (Uniting for Ukraine) from national arrival
-#          figures. The Data Finder cannot be used for either: it counts only
-#          ~20k in the USA (parolees are not refugees) and holds Canada flat at
-#          75k before a +98k reclassification step in 2025.
-#          >>> PLACEHOLDER: approximated by linear interpolation between
-#          >>> published anchor points until year-end series are obtained.
+#      + Canada (CUAET) and USA (Uniting for Ukraine) from national programme
+#          figures, interpolated between published counts (section 1c). The
+#          Data Finder cannot be used for either: it counts only ~20k in the
+#          USA (parolees are not refugees) and holds Canada flat at 75k before
+#          a +98k reclassification step in 2025.
 #
 #   2. AGE-SEX NET FLOW BY COHORT DIFFERENCING. Eurostat's age-sex structure
 #      is scaled to the register stock, ungrouped to single ages separately by
@@ -55,7 +54,7 @@
 #
 # INPUTS   data_input/refugees_eurostat/migr_asytpsm__custom_21093689_page_spreadsheet.xlsx
 #          data_input/migration/unhcr/unhcr_population_coo_UKR_2021_2025.csv
-#          data_input/migration/national_programme_arrivals_PLACEHOLDER.csv
+#          data_input/migration/national_programme_counts.csv
 #          data_input/migration/ces_2026_figures.csv
 #          data_inter/ukr_mxs_obs_plus_frcst_1989_2025.rds     (from 04)
 # OUTPUTS  data_inter/ukr_migrants_unchr_eurostat_sex_age_2022_2025.rds
@@ -65,63 +64,21 @@
 # ==============================================================================
 
 # ==============================================================================
-# !!! TODO-PLACEHOLDER: CANADA AND USA ARRIVALS (search for this tag) !!!
+# CANADA AND USA
 # ==============================================================================
 # The register stock includes Ukrainians who went to Canada and the USA. The
 # UNHCR Data Finder does not count them properly (see section 1c), so they
-# come from national programme figures. Year-end series were not available
-# when this was written, so section 1c APPROXIMATES them by linear
-# interpolation between a few published cumulative totals stored in
-#   data_input/migration/national_programme_arrivals_PLACEHOLDER.csv
+# come from national programme figures. Neither country publishes a year-end
+# count of Ukrainians present, so section 1c interpolates between the counts
+# that are published, stored with their sources in
+#   data_input/migration/national_programme_counts.csv
+# 13c moves the two series 30% up and down to show what they carry.
 #
-# DATA NEEDED TO REPLACE IT
-#
-#   CANADA - Canada-Ukraine Authorization for Emergency Travel (CUAET)
-#     What:  CUMULATIVE number of CUAET holders who ARRIVED in Canada since
-#            17 March 2022 (entries, not applications or approvals), at
-#            31 Dec 2022, 31 Dec 2023, 31 Dec 2024 and 31 Dec 2025, or at the
-#            nearest dates available. Monthly would be better still.
-#            Useful if it exists: number of CUAET holders still residing in
-#            Canada at each year end (a stock rather than arrivals).
-#     Known: 298,128 arrivals 17 Mar 2022 - 1 Apr 2024 (entry deadline was
-#            31 Mar 2024, so later years change little).
-#     Where: (1) IRCC page "Canada-Ukraine authorization for emergency travel:
-#                Key figures"
-#                https://www.canada.ca/en/immigration-refugees-citizenship/services/immigrate-canada/ukraine-measures/key-figures.html
-#                It was updated about weekly while CUAET ran. Open its history
-#                in the Wayback Machine, https://web.archive.org/ , and read
-#                the arrivals figure on the snapshots nearest each 31 Dec.
-#            (2) IRCC open data, https://open.canada.ca , search "CUAET".
-#            (3) If neither works: an access-to-information request to IRCC
-#                for monthly CUAET arrivals, March 2022 - December 2025.
-#
-#   USA - Uniting for Ukraine (U4U) parole
-#     What:  CUMULATIVE number of Ukrainians PAROLED INTO THE USA under U4U
-#            (arrivals, not supporter applications or travel authorisations)
-#            at 31 Dec 2022, 2023, 2024 and 2025. Ideally ALSO Ukrainians
-#            paroled at ports of entry between 24 Feb and 25 Apr 2022, before
-#            U4U existed, which the current anchors leave out.
-#     Known: 93,928 U4U arrivals by 13 Dec 2022 (USCIS letter, FOIA library);
-#            about 260,000 Ukrainians in the USA in Nov 2025 (CES 2026 citing
-#            Reuters; a count present, not arrivals).
-#     Where: (1) DHS Office of Homeland Security Statistics, https://ohss.dhs.gov ,
-#                parole and immigration statistics tables, if they break out U4U.
-#            (2) USCIS Uniting for Ukraine pages and the USCIS FOIA reading
-#                room (congressional correspondence often quotes totals).
-#            (3) If neither works: a FOIA request to USCIS/CBP for monthly U4U
-#                parole arrivals, April 2022 - December 2025.
-#
-# HOW TO ADD IT (no code changes needed)
-#   1. Append one row per country and year end to the CSV above:
-#        country (CAN or USA), date (YYYY-12-31), value, basis ("arrivals"),
-#        qualifier ("exact"), source, url, accessed, note.
-#      Delete any anchor the new rows make redundant.
-#   2. Save a copy of each source page or file (PDF/HTML/XLSX) in
-#        data_input/migration/web_snapshots/
-#   3. Rename the CSV (drop "_PLACEHOLDER") and update the path in section 1c.
-#   4. Re-run 06, 10, 11, 12, 13, 14, 15, and update
-#        documents/migration_methodology.md (section "Placeholder: Canada
-#        and USA") and documents/data_sources.md.
+# A better series, if it appears: CUAET arrivals and holders present at each
+# year end (IRCC key-figures page history in the Wayback Machine, or IRCC open
+# data), and Uniting for Ukraine parolees by month (DHS Office of Homeland
+# Security Statistics). New rows in the CSV need no code change; re-run 06,
+# 10, 11 onwards.
 # ==============================================================================
 
 rm(list = ls())
@@ -228,18 +185,15 @@ unhcr_ru_by <-
   summarise(ru_by = sum(net), .by = year)
 
 # ==============================================================================
-# 1c. CANADA AND USA - PLACEHOLDER
+# 1c. CANADA AND USA
 # ==============================================================================
-# !!! TODO-PLACEHOLDER - see the note at the top of this script for exactly
-# which data replace this and where to find them.
-#
 # Why not the Data Finder: it counts ~15-22k Ukrainians in the USA (asylum
 # seekers and refugees only; U4U parolees are not refugees, and US arrivals
 # were ~260k), and holds Canada flat at ~75k in 2022-2024 before jumping to
 # 174k in 2025, a reporting change rather than a flow.
 #
-# Current approximation: linear interpolation between dated anchors, evaluated
-# at 31 December, flat after the last one. What the register stock needs is
+# Linear interpolation between dated counts, evaluated at 31 December, flat
+# after the last one. What the register stock needs is
 # PEOPLE PRESENT, so each series ends on a published count of people present
 # and uses programme arrivals only for the earlier years, when the programmes
 # had just opened and few had yet left, so arrivals still approximate a stock:
@@ -248,7 +202,8 @@ unhcr_ru_by <-
 #           31 Mar 2024), then 274,000 people in Canada at May 2025
 #           (CES 2026 p. 12). The fall is departure and onward movement, which
 #           the earlier arrivals-only series could not show at all.
-#   USA     93,928 U4U arrivals to Dec 2022, then 260,000 people present.
+#   USA     93,928 U4U arrivals to Dec 2022 and over 158,000 to Sep 2023
+#           (DHS assessment of U4U, Nov 2024), then 260,000 people present.
 #           CES dates that count at Nov 2025, but also reports (p. 22) that
 #           U4U "was effectively suspended for new applications in early
 #           2025". The anchor is therefore placed at 31 Jan 2025: with intake
@@ -260,7 +215,7 @@ unhcr_ru_by <-
 # definition rather than pure return; see documents/migration_methodology.md
 # section 8.
 anchors <-
-  read_csv("data_input/migration/national_programme_arrivals_PLACEHOLDER.csv",
+  read_csv("data_input/migration/national_programme_counts.csv",
            show_col_types = FALSE) |>
   mutate(date = as.Date(date))
 
@@ -276,13 +231,13 @@ programme <-
     )$y
   ) |>
   pivot_wider(names_from = country, values_from = present) |>
-  rename(canada_placeholder = CAN, usa_placeholder = USA)
+  rename(canada = CAN, usa = USA)
 
 register_stock <-
   eurostat_tot |>
   left_join(unhcr_other, by = "year") |>
   left_join(programme, by = "year") |>
-  mutate(register_stock = eurostat + unhcr_other + canada_placeholder + usa_placeholder)
+  mutate(register_stock = eurostat + unhcr_other + canada + usa)
 
 print(as.data.frame(register_stock))
 
@@ -478,16 +433,16 @@ nice <- function(d) d |> mutate(sex = if_else(sex == "f", "Females", "Males"))
 
 # register stock and its parts
 register_stock |>
-  select(year, eurostat, unhcr_other, canada_placeholder, usa_placeholder) |>
+  select(year, eurostat, unhcr_other, canada, usa) |>
   pivot_longer(-year, names_to = "part", values_to = "stock") |>
-  mutate(part = factor(part, levels = c("usa_placeholder", "canada_placeholder",
+  mutate(part = factor(part, levels = c("usa", "canada",
                                         "unhcr_other", "eurostat"))) |>
   ggplot(aes(factor(year), stock / 1e6, fill = part)) +
   geom_col(width = 0.7) +
   scale_fill_manual(values = c(eurostat = "#0A9396", unhcr_other = "#94D2BD",
-                               canada_placeholder = "#EE9B00", usa_placeholder = "#CA6702")) +
+                               canada = "#EE9B00", usa = "#CA6702")) +
   labs(x = NULL, y = "Stock at 31 December (millions)", fill = NULL,
-       caption = "Canada and USA are placeholders interpolated between published anchors.") +
+       caption = "Canada and USA interpolated between published counts.") +
   theme_minimal()
 ggsave("figures/exploratory/migration_register_stock_components.png", w = 7, h = 4)
 
