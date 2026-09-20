@@ -42,6 +42,7 @@ steps_to_run <- list(
   list(name = "14", file = "code/14_e0_loss_decomposition_by_cause.R"),
   list(name = "14b", file = "code/14b_yll_45q15.R"),
   list(name = "14c", file = "code/14c_fixed_counterfactual.R"),
+  list(name = "14d", file = "code/14d_drawn_population_base.R"),
   # 15 builds every manuscript figure and table. It was missing from this
   # list, so a full pipeline run produced none of the deliverables.
   list(name = "15", file = "code/15_paper_figures_tables.R")

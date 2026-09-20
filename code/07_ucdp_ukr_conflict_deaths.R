@@ -45,8 +45,8 @@ source("code/00_setup.R")
 all2 <- cache_rds("data_inter/ucdp_ged_events_slim.rds", {
   keep <- c(
     "year", "type_of_violence", "conflict_name", "side_a", "side_b",
-    "country", "deaths_a", "deaths_b", "deaths_civilians", "deaths_unknown",
-    "best", "low", "high"
+    "country", "adm_1", "deaths_a", "deaths_b", "deaths_civilians",
+    "deaths_unknown", "best", "low", "high"
   )
   read_csv(
     require_raw("data_input/ucdp/GEDEvent_v26_1.csv"),
@@ -56,6 +56,8 @@ all2 <- cache_rds("data_inter/ucdp_ged_events_slim.rds", {
     select(
       year,
       country,
+      adm1 = adm_1,
+      conflict_name,
       type_of_violence,
       side_a,
       side_b,
@@ -70,6 +72,25 @@ all2 <- cache_rds("data_inter/ucdp_ged_events_slim.rds", {
     replace_na(list(a = 0, b = 0, c = 0, t = 0)) %>%
     filter(t_l + t > 0)
 })
+
+# Crimea and Sevastopol are outside the population this study measures, so the
+# civilians killed there are outside its numerator. Civilians are counted by the
+# place of the event, so the events themselves are dropped; combatants are
+# counted by the side they fought for, wherever they died, and are unaffected -
+# the few Ukrainian personnel killed there stay in the Ukrainian total, as they
+# are in the register (Methods 1, Supplementary S1.3).
+crimea_adm1 <- regex("crimea|sevastopol", ignore_case = TRUE)
+in_crimea <- all2$country == "Ukraine" & str_detect(coalesce(all2$adm1, ""), crimea_adm1)
+crimea_civ <- sum(all2$c[in_crimea])
+cat(sprintf("\nCrimea and Sevastopol: %s civilian deaths in %d events left out of the count\n",
+            format(crimea_civ, big.mark = ","), sum(in_crimea)))
+# the civilian deaths come off the event's totals and bounds before anything is
+# aggregated, so the redistribution of the unknown-side deaths sees the same book
+all2$t[in_crimea]   <- all2$t[in_crimea]   - all2$c[in_crimea]
+all2$t_l[in_crimea] <- pmax(0, all2$t_l[in_crimea] - all2$c[in_crimea])
+all2$t_u[in_crimea] <- pmax(0, all2$t_u[in_crimea] - all2$c[in_crimea])
+all2$c[in_crimea]   <- 0
+stopifnot(all(all2$c >= 0), all(all2$t >= 0))
 
 all_sum <-
   all2 |>
@@ -337,6 +358,40 @@ copy_this(
 )
 
 write_rds(ukr, "data_inter/ukr_ucdp_invals.rds")
+
+# How UCDP attributes this war's deaths: by the side the dead fought for, and by
+# the place the event happened. The two do not coincide, which is why residents
+# of the occupied east who died in Russian-controlled forces cannot be recovered
+# from it (Methods 1, Supplementary S1.3), and why Ukrainian losses inside Russia
+# are in the Ukrainian total although the events are not in Ukraine.
+dyad <- all2 |> filter(year >= 2022, str_detect(conflict_name, "Russia - Ukraine"))
+crimea <- regex("crimea|sevastopol", ignore_case = TRUE)
+attribution <- list(
+  # deaths of Ukraine's side (side B of the state dyad), by where the event was
+  ukr_side_by_country = dyad |> summarise(deaths = sum(b), .by = c(country, year)),
+  # civilians, by where the event was: the estimand counts those in Ukraine
+  civilians_by_country = dyad |> summarise(deaths = sum(c), .by = c(country, year)),
+  # the fighting in the occupied east is located in Ukraine, under Kyiv's names
+  by_adm1 = dyad |>
+    filter(country == "Ukraine") |>
+    summarise(events = n(), deaths = sum(t), .by = adm1) |>
+    arrange(desc(deaths)),
+  # Ukraine's own losses in events outside Ukraine, by region: the Kursk
+  # incursion of August 2024 onwards is almost all of it
+  ukr_side_outside = dyad |>
+    filter(country != "Ukraine") |>
+    summarise(events = n(), deaths = sum(b), .by = c(country, adm1)) |>
+    arrange(desc(deaths)),
+  # Crimea and Sevastopol are outside the estimand's territory
+  crimea_civilians = dyad |>
+    filter(country == "Ukraine", str_detect(coalesce(adm1, ""), crimea)) |>
+    summarise(events = n(), civilians = sum(c), deaths = sum(t))
+)
+write_rds(attribution, "data_inter/ukr_ucdp_attribution.rds")
+cat("\n=== HOW UCDP ATTRIBUTES THE DEAD: SIDE AGAINST PLACE ===\n")
+print(as.data.frame(attribution$ukr_side_by_country |>
+                      summarise(`Ukraine's side` = sum(deaths), .by = country)))
+print(as.data.frame(attribution$crimea_civilians))
 
 # Unadjusted vs adjusted totals for Ukraine and Russia, used by the source
 # tables assembled in 15.

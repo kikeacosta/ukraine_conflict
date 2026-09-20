@@ -26,15 +26,15 @@
 #
 # TABLES (written to tables/ as .csv)
 #   table1_source_totals.csv                         07_*, 08
-#   table2_missing_imputation.csv                    09
-#   table3_pert_input_bounds.csv                     10
+#   table3_missing_imputation.csv                    09
+#   table2_pert_input_bounds.csv                     10
 #   tableA26_missing_alive_inputs.csv                09
 #   table4_conflict_deaths_by_cause.csv              14   <- new
-#   table5_life_expectancy_loss.csv                  14
+#   table7_life_expectancy_loss.csv                  14
 #   tableA1_source_reconciliation.csv                07_ucdp, 07_acled
 #   tableA2_status_transitions.csv                   09
-#   table6_totals_by_cause.csv                       14   <- new
-#   table7_totals_by_year.csv                        14   <- new
+#   table5_totals_by_cause.csv                       14   <- new
+#   table6_totals_by_year.csv                        14   <- new
 #   tableA3_e0_loss_by_cause.csv                     14
 #   tableA4_uncertainty_shares.csv                   11, 14 <- new
 #   tableA5_military_reconciliation.csv              07_ucdp, 08, 10, 11
@@ -52,6 +52,7 @@
 #   tableA15_adult_mortality_45q15.csv               14b
 #   tableA25_civilian_age_profile.csv                13h
 #   tableA27_donbas_fighters.csv                     13i
+#   tableA28_out_of_sample.csv                       09i (where it has run)
 #   table8_structural_sensitivity.csv                13, 13b-13j
 #   tableA16_missing_alive_by_lag_horizon.csv        13d
 #   tableA17_military_triangulation.csv              09, data_input/official_figures.csv
@@ -846,7 +847,7 @@ mil_ui <- bind_rows(
   transmute(year, military_deaths_simulated = fmt_ui_count(m, lo, hi))
 tab_imput <- tab_imput |> left_join(mil_ui, by = "year")
 stopifnot(!anyNA(tab_imput$military_deaths_simulated))
-save_tab(tab_imput, "table2_missing_imputation.csv")
+save_tab(tab_imput, "table3_missing_imputation.csv")
 print(tab_imput)
 
 # ==============================================================================
@@ -879,7 +880,7 @@ tab_pert <- bind_rows(
   tab_pert |> summarise(across(-year, \(x) sum(x, na.rm = TRUE))) |> mutate(year = "Total")
 )
 
-save_tab(tab_pert, "table3_pert_input_bounds.csv")
+save_tab(tab_pert, "table2_pert_input_bounds.csv")
 print(tab_pert)
 
 # The inputs on the missing alive behind the combatant bounds, each drawn once
@@ -1050,7 +1051,7 @@ tab_by_cause <-
   bind_rows(bind_cols(tibble(role = "Total"), grand_row)) |>
   select(role, Females, Males, Total)
 
-save_tab(tab_by_cause, "table6_totals_by_cause.csv")
+save_tab(tab_by_cause, "table5_totals_by_cause.csv")
 print(tab_by_cause)
 
 tab_by_year <-
@@ -1060,7 +1061,7 @@ tab_by_year <-
   bind_rows(bind_cols(tibble(year = "Total"), grand_row)) |>
   select(year, Females, Males, Total)
 
-save_tab(tab_by_year, "table7_totals_by_year.csv")
+save_tab(tab_by_year, "table6_totals_by_year.csv")
 print(tab_by_year)
 
 # ==============================================================================
@@ -1094,7 +1095,7 @@ tab_e0 <-
             by = c("year", "sex"))
 stopifnot(!anyNA(tab_e0$loss_counterfactual_fixed))
 
-save_tab(tab_e0, "table5_life_expectancy_loss.csv")
+save_tab(tab_e0, "table7_life_expectancy_loss.csv")
 print(tab_e0)
 
 # ==============================================================================
@@ -1682,6 +1683,27 @@ tA27 <-
 save_tab(tA27, "tableA27_donbas_fighters.csv")
 print(tA27)
 
+# A28: the resolution model against the releases held out of the fit (09i).
+# Written only where 09i has run: it needs the two releases the estimates do
+# not use, v15 and v17.
+oos_file <- "data_inter/ukr_ualosses_out_of_sample.rds"
+if (file.exists(oos_file)) {
+  oos <- read_rds(oos_file)
+  nxt <- set_names(oos$releases$release[-1], head(oos$releases$release, -1))
+  tA28 <-
+    oos$by_window |>
+    transmute(window = paste0(from_release, " to ", nxt[from_release]),
+              boundary = if_else(held_out, "held out of the fit", "fitted"),
+              missing_at_start = round(at_risk),
+              dead_observed = round(dead), dead_predicted = round(pred_dead),
+              resolved_observed = round(resolved), resolved_predicted = round(pred_resolved),
+              predicted_over_observed = round(ratio, 2))
+  save_tab(tA28, "tableA28_out_of_sample.csv")
+  print(tA28)
+} else {
+  message("  no out-of-sample test (09i has not run): table A28 is not written")
+}
+
 # A14: years of life lost and 45q15 (14b), medians and 95% intervals
 yq <- read_rds("data_inter/ukr_yll_45q15_summary.rds")
 fmt_ui <- function(m, lo, hi, digits = 0) {
@@ -1879,7 +1901,7 @@ print(tA16)
 # registered) and this study (at the mode) count the deaths among events up
 # to that date, as the register knew them in July 2026. As in every other table, complete
 # years enter as their rounded totals, so a date at the end of 2025 or later
-# gives the four-year total of Tables 2 and 3.
+# gives the four-year total of Tables 3 and 3.
 official <- read_csv("data_input/official_figures.csv", show_col_types = FALSE)
 mil_month <- read_rds("data_inter/ukr_military_by_month.rds")
 through <- function(d, col) {
