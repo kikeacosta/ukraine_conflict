@@ -19,7 +19,12 @@
 #   group        log m_G(x,t) = A(x) + B(x) K(t): Lee-Carter on the pooled
 #                rates of Ukraine and eight EU neighbours - Poland, Slovakia,
 #                Hungary, Romania, Bulgaria, Lithuania, Latvia, Estonia.
-#                Belarus, Russia and Moldova are not in Eurostat's series.
+#                Belarus, Russia and Moldova are not in Eurostat's series. The
+#                Human Mortality Database holds Belarus to 2018 and Russia to
+#                2014, and not Moldova; since the pooled rate is the sum of
+#                deaths over the sum of exposures, a country covering part of
+#                the window alone would move K(t) by its own weight, so either
+#                the pool or the fit window would have to be balanced first.
 #   Ukraine      log m_U(x,t) = a_U(x) + B(x) K(t) + b(x) k(t), with b and k
 #                the first singular component of what the common factor
 #                leaves.
