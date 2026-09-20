@@ -53,6 +53,7 @@ size every table was built at.
 | `09f`, `09g` | Investigation, not part of the estimates: per-person histories across the four releases and a competing-risks multistate model, with the pass/fail test that keeps it out of production | `ukr_ualosses_multistate_test.rds` |
 | `09h` | Not part of the estimates: a random sample of 600 links and drop-outs for clerical review by hand. Its output holds names and dates of birth, is written to the gitignored `documents/clerical_review/` and must never be committed | (local only) |
 | `09i` | Not part of the estimates: the resolution model against the two releases held out of every fit, v15 and v17, which cut the first two windows of the linkage in half. Needs those two files in `data_input/ualosses_hubert_datasets/` | `ukr_ualosses_out_of_sample.rds`, `ualosses_window_transitions_six.rds` |
+| `09j` | Not part of the estimates: fits the resolution model on two of the three release windows and predicts the third with the length-weighted average multiplier, the rule the projection itself uses. Reports the predictive error by cause. Reads 09's cached linkage, so it needs no register files | `ukr_ualosses_held_out_window.rds` |
 | `10` | min / mode / max parameter table, and the timing of 2022's deaths and net outflow within the year | `ukr_param_table.rds`, `ukr_timing_absent.rds` |
 | `11` | Monte Carlo cohort-component projection, drawing every uncertain input that has a distribution | `ukr_sim_draws_2022_2025_n<n_sim>.rds` |
 | `12` | Figures for the mortality estimates | `figures/mort_rates_*.png` |
