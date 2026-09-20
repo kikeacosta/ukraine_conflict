@@ -132,6 +132,28 @@ nb_dx <-
          .by = c(geo, sex, year)) |>
   filter(old_complete | age < 85, !is.na(deaths), !is.na(exposure)) |>
   select(geo, sex, age, year, deaths, exposure)
+
+# Countries from the Human Mortality Database, when 13k has fetched them: the
+# same columns, already closed at 100. A country that covers part of the window
+# only moves the pooled rate by its own weight, so one that does is taken out
+# here rather than allowed to bend the common index.
+hmd_file <- "data_input/hmd_neighbours/hmd_deaths_exposures.csv"
+if (file.exists(hmd_file)) {
+  hmd <- read_csv(hmd_file, show_col_types = FALSE) |>
+    filter(year %in% fit_years) |>
+    select(geo, sex, age, year, deaths, exposure)
+  span <- hmd |> summarise(last = max(year), n = n_distinct(year), .by = geo)
+  short <- span$geo[span$n < length(fit_years)]
+  if (length(short))
+    message("  left out of the pool, covering part of ", min(fit_years), "-",
+            max(fit_years), " only: ",
+            paste0(span$geo[match(short, span$geo)], " (to ",
+                   span$last[match(short, span$geo)], ")", collapse = ", "),
+            ". Ending fit_years at that year would let it in, at the cost of a ",
+            "jump-off earlier than 04's.")
+  nb_dx <- bind_rows(nb_dx, hmd |> filter(!geo %in% short))
+  message("  pool: ", paste(sort(unique(nb_dx$geo)), collapse = ", "))
+}
 stopifnot(all(nb_dx$exposure >= 0), all(nb_dx$deaths >= 0))
 pool_size <- nb_dx |> count(sex, age, year)
 stopifnot(nrow(pool_size) == 2 * 101 * length(fit_years), min(pool_size$n) >= 2,

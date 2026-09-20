@@ -65,6 +65,7 @@ size every table was built at.
 | `13h` | Sensitivity: an older age profile for the civilian deaths beyond OHCHR's verified count, mostly in occupied territory and besieged cities | `ukr_civilian_age_profile_e0.rds` |
 | `13i` | Sensitivity: residents of occupied Donbas killed in Russian-controlled forces, counted to September 2023 or continued to 2025 | `ukr_donbas_fighters_e0.rds` |
 | `13j` | Sensitivity: a coherent (Li-Lee) counterfactual, Ukraine forecast with eight EU neighbours from Eurostat, with its 95% band | `ukr_coherent_forecast_e0.rds` |
+| `13k` | Not part of the estimates: fetches Belarus and Russia from the Human Mortality Database for `13j`'s pool, reading an account from `HMD_USER` and `HMD_PASS` in `~/.Renviron`. Neither series reaches 2019, so `13j` leaves out any country that does not cover its whole fit window; using them means ending that window earlier. The cache is gitignored: the HMD agreement governs redistribution | `data_input/hmd_neighbours/` (local) |
 | `14` | **Life expectancy loss decomposed by cause** | `ukr_e0_loss_by_cause_*.rds` |
 | `14b` | Years of life lost and adult mortality (45q15) | `ukr_yll_45q15_summary.rds` |
 | `14c` | The loss with the counterfactual fixed at its point forecast, beside it drawn: the two tiers of uncertainty | `ukr_fixed_counterfactual_e0.rds` |

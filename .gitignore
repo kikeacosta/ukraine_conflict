@@ -89,3 +89,6 @@ documents/
 
 # SSSU deaths by cause, month, region, age and sex, 2005-2022 (data.gov.ua; 338 MB)
 data_input/sssu_death_cause/
+
+# HMD cache: the user agreement governs redistribution, so it stays local
+data_input/hmd_neighbours/
