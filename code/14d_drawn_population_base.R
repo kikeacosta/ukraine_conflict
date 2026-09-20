@@ -72,7 +72,7 @@ cut_draw <- qpert(runif(n_sim), min = base_cut[["min"]], mode = base_cut[["mode"
                   max = base_cut[["max"]], shape = 4)
 keep <- 1 - cut_draw / dl_total
 cat(sprintf("\nDonetsk and Luhansk: %.2f million of %.2f; the draw takes out %.0f (%.0f-%.0f) thousand\n",
-            dl_total / 1e6, sum(mi$pop22_ini$pop) / 1e6, median(cut_draw) / 1e3,
+            dl_total / 1e6, sum(mi$pop22_ini$pop) / 1e6, mean(cut_draw) / 1e3,
             quantile(cut_draw, 0.025) / 1e3, quantile(cut_draw, 0.975) / 1e3))
 
 base_for <- function(i) ini |> mutate(pop = pop - (1 - keep[i]) * pop_dl) |> select(-pop_dl)
@@ -117,24 +117,27 @@ sims[, loss := e0_bsn - e0_war]
 stopifnot(nrow(sims) == n_sim * 8)
 
 # 3. THE TWO TIERS =============================================================
+# the estimate is the mean of the draws, as everywhere (11)
 drawn_base <-
   as_tibble(sims) |>
-  summarise(median = median(loss), lo = quantile(loss, 0.025, names = FALSE),
+  summarise(mean = mean(loss), lo = quantile(loss, 0.025, names = FALSE),
             hi = quantile(loss, 0.975, names = FALSE), sd = sd(loss),
-            e0_bsn = median(e0_bsn), .by = c(year, sex)) |>
+            e0_bsn = mean(e0_bsn), .by = c(year, sex)) |>
   mutate(base = "drawn")
 fixed_base <-
   ref_all |>
-  summarise(median = median(loss_total), lo = quantile(loss_total, 0.025, names = FALSE),
+  summarise(mean = mean(loss_total), lo = quantile(loss_total, 0.025, names = FALSE),
             hi = quantile(loss_total, 0.975, names = FALSE), sd = sd(loss_total),
-            e0_bsn = median(e0_bsn), .by = c(year, sex)) |>
+            e0_bsn = mean(e0_bsn), .by = c(year, sex)) |>
   mutate(base = "at the published estimates")
 two_tiers <- bind_rows(fixed_base, drawn_base) |> arrange(year, sex, base)
 
 write_rds(list(tiers = two_tiers, cut = base_cut, seed = base_seed,
                dl_total = dl_total, cut_draw = cut_draw),
           "data_inter/ukr_drawn_base_e0.rds")
+# every draw's life expectancies, so that another summary of them needs no rerun
+write_rds(as_tibble(sims), "data_inter/ukr_drawn_base_draws.rds", compress = "gz")
 
 cat("\n=== THE LOSS WITH THE POPULATION BASE FIXED AND DRAWN ===\n")
-print(as.data.frame(two_tiers |> mutate(across(c(median, lo, hi, sd, e0_bsn), \(x) round(x, 3)))))
+print(as.data.frame(two_tiers |> mutate(across(c(mean, lo, hi, sd, e0_bsn), \(x) round(x, 3)))))
 message("Done. data_inter/ukr_drawn_base_e0.rds written.")

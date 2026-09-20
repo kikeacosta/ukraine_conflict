@@ -26,7 +26,7 @@
 # the unresolved, alive for other reasons (impute_missing(), 00_setup.R). The
 # sweep follows one path through the two free quantities, in straight
 # segments: from the floor of the evidence (captives at their floor, none of
-# the unresolved alive) to its central values (both at their medians), on to
+# the unresolved alive) to its central values (both at their means), on to
 # its ceiling (both at their ceilings), and then to all the unresolved alive
 # with the captives at their ceiling. Each point is labelled by the share of
 # all the missing alive. Each point is propagated through the same deterministic,

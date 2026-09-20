@@ -70,6 +70,12 @@ all2 <- cache_rds("data_inter/ucdp_ged_events_slim.rds", {
       t_u = high
     ) %>%
     replace_na(list(a = 0, b = 0, c = 0, t = 0)) %>%
+    # Events with no deaths at their best and low estimates are left out although
+    # their high estimate is positive. They are unverified aggregate claims, nearly
+    # all of military losses (one is a press report of 70,000 soldiers killed, high
+    # 32,440), and carry no split by category: kept, they would raise the
+    # dyad-year ratio of high to best that sets the CIVILIAN upper bound, by a
+    # third in 2023, with deaths that are not civilian.
     filter(t_l + t > 0)
 })
 

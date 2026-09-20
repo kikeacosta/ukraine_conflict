@@ -52,22 +52,25 @@ sims[, loss := e0_bsn - e0_war]
 # the counterfactual is the same in every draw
 stopifnot(sims[, sd(e0_bsn), by = .(year, sex)][, all(V1 < 1e-9)], nrow(sims) == n_sim * 8)
 
+# the estimate is the mean of the draws, as everywhere (11)
 fixed <-
   as_tibble(sims) |>
-  summarise(median = median(loss), lo = quantile(loss, 0.025, names = FALSE),
+  summarise(mean = mean(loss), lo = quantile(loss, 0.025, names = FALSE),
             hi = quantile(loss, 0.975, names = FALSE), sd = sd(loss), e0_bsn = e0_bsn[1],
             .by = c(year, sex)) |>
   mutate(counterfactual = "fixed at its point forecast")
 drawn <-
   read_rds("data_inter/ukr_e0_loss_by_cause_draws_2022_2025.rds") |>
   as_tibble() |>
-  summarise(median = median(loss_total), lo = quantile(loss_total, 0.025, names = FALSE),
+  summarise(mean = mean(loss_total), lo = quantile(loss_total, 0.025, names = FALSE),
             hi = quantile(loss_total, 0.975, names = FALSE), sd = sd(loss_total),
-            e0_bsn = median(e0_bsn), .by = c(year, sex)) |>
+            e0_bsn = mean(e0_bsn), .by = c(year, sex)) |>
   mutate(counterfactual = "drawn")
 two_tiers <- bind_rows(fixed, drawn) |> arrange(year, sex, counterfactual)
 write_rds(two_tiers, "data_inter/ukr_fixed_counterfactual_e0.rds")
+# every draw's life expectancies, so that another summary of them needs no rerun
+write_rds(as_tibble(sims), "data_inter/ukr_fixed_counterfactual_draws.rds", compress = "gz")
 
 cat("\n=== THE LOSS WITH THE COUNTERFACTUAL FIXED AND DRAWN ===\n")
-print(as.data.frame(two_tiers |> mutate(across(c(median, lo, hi, sd, e0_bsn), \(x) round(x, 3)))))
+print(as.data.frame(two_tiers |> mutate(across(c(mean, lo, hi, sd, e0_bsn), \(x) round(x, 3)))))
 message("Done. data_inter/ukr_fixed_counterfactual_e0.rds written.")

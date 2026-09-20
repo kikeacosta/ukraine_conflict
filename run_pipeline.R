@@ -39,10 +39,16 @@ steps_to_run <- list(
   list(name = "13h", file = "code/13h_sensitivity_civilian_age_profile.R"),
   list(name = "13i", file = "code/13i_sensitivity_donbas_fighters.R"),
   list(name = "13j", file = "code/13j_sensitivity_coherent_forecast.R"),
+  # 13l checks itself against 13d, and 13m against 13e, so they follow them
+  list(name = "13l", file = "code/13l_sensitivity_lag_tail.R"),
+  list(name = "13m", file = "code/13m_sensitivity_base_coherent.R"),
+  list(name = "13n", file = "code/13n_sensitivity_covid_carryover.R"),
   list(name = "14", file = "code/14_e0_loss_decomposition_by_cause.R"),
   list(name = "14b", file = "code/14b_yll_45q15.R"),
   list(name = "14c", file = "code/14c_fixed_counterfactual.R"),
   list(name = "14d", file = "code/14d_drawn_population_base.R"),
+  # 14e reads the draws (14) and every sensitivity step's output (13b-13n)
+  list(name = "14e", file = "code/14e_structural_uncertainty.R"),
   # 15 builds every manuscript figure and table. It was missing from this
   # list, so a full pipeline run produced none of the deliverables.
   list(name = "15", file = "code/15_paper_figures_tables.R")

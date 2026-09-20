@@ -7,10 +7,11 @@
 # 08b brings v19's dead and missing to the completeness events reach at four
 # years, and 09 imputes on those completed counts. Four years is where the
 # register's growth is last measured on enough event months, not where it
-# stops: the dead still grow by about 0.2% a month at 42-48 months. So the
-# correction is a lower bound on the lag. This step shows how far the results
-# move without the correction, and with the growth extrapolated beyond four
-# years.
+# stops: at 42-48 months the dead still grow by about 0.07% a month and the
+# missing by about 0.3%. So the correction is a lower bound on the lag. This
+# step shows how far the results move without the correction, and with the
+# growth extrapolated beyond four years at a constant rate; 13l fits a curve to
+# the tail instead.
 #
 # SCENARIOS
 # ---------

@@ -137,12 +137,28 @@ reg_counts <- cache_rds("data_inter/ualosses_registration_by_month.rds", {
     # leaves and returns cancels. Only the missing who became dead under a
     # corrected key are taken out of the additions, counted here so that the
     # growth can subtract them.
-    added_dead <- losses(b) |> filter(status == "dead") |> anti_join(a, by = "key")
+    #
+    # A record is added only if its key is absent from the WHOLE earlier
+    # release, and dropped only if absent from the whole later one - not from
+    # `a` and `b`, which hold the dated records of 2022-2025 alone. The register
+    # lists thousands of deaths with no event date (4,199 in v14, 3,151 in v19)
+    # and dates them as it goes: tested against `a`, a death undated in one
+    # release and dated in the next counts as newly registered (193, 652 and
+    # 1,161 of the additions in the three pairs), although 08 has already spread
+    # the undated deaths over the event years, so the base the factors multiply
+    # holds it. What this leaves out is the death that ENTERS the register
+    # undated, which has no event month to be counted in: 659, 679 and 529 such
+    # records against 774, 338 and 112 undated ones dropped, a net 643 over the
+    # three pairs beside the 6,235 measured here, so the factors remain a
+    # slight lower bound on that account.
+    in_a <- regs[[i]] |> distinct(key)
+    in_b <- regs[[i + 1]] |> distinct(key)
+    added_dead <- losses(b) |> filter(status == "dead") |> anti_join(in_a, by = "key")
     mtd <- added_dead |>
       anti_join(drop_keys(added_dead, gone |> filter(status == "missing"), "np"), by = "key")
     bind_rows(
-      losses(b) |> anti_join(a, by = "key") |> count(m, status, name = "n") |> mutate(kind = "added"),
-      losses(a) |> anti_join(b, by = "key") |> count(m, status, name = "n") |> mutate(kind = "dropped"),
+      losses(b) |> anti_join(in_a, by = "key") |> count(m, status, name = "n") |> mutate(kind = "added"),
+      losses(a) |> anti_join(in_b, by = "key") |> count(m, status, name = "n") |> mutate(kind = "dropped"),
       new_missing |> count(m, status, name = "n") |> mutate(kind = "added_new"),
       mtd |> count(m, status, name = "n") |> mutate(kind = "added_recoded")
     ) |> mutate(from = releases$release[i], to = releases$release[i + 1])
@@ -271,9 +287,12 @@ print(as.data.frame(
     arrange(status, year)
 ))
 
+# growth: the rates the bands pool, one row per event month, status and pair of
+# releases, for 13l to fit a curve through
 write_rds(
   list(lambda_band = lambda_band, L_ref = L_ref, month = completion_month, year = completion_year,
-       factor_draws = lag_factors),
+       factor_draws = lag_factors,
+       growth = growth_band |> select(m, status, from, to, Lmid, band, lambda, wt)),
   "data_inter/ukr_registration_completion.rds"
 )
-message("Done. data_inter/ukr_registration_completion.rds written for 09, 11 and 13d.")
+message("Done. data_inter/ukr_registration_completion.rds written for 09, 11, 13d and 13l.")

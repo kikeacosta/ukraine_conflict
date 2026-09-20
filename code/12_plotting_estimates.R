@@ -82,7 +82,7 @@ sce_all_probabilistic |>
     aes(age, ymin = mx_lower, ymax = mx_upper, fill = cause),
     alpha = 0.4
   ) +
-  geom_line(aes(age, mx_median, color = cause)) +
+  geom_line(aes(age, mx_mean, color = cause)) +
   scale_y_log10() +
   scale_x_continuous(breaks = seq(0, 100, by = 20)) +
   scale_fill_manual(values = c("red", "black")) +
@@ -115,7 +115,7 @@ sim_output_raw |>
   geom_line(
     data = sce_all_probabilistic |>
       filter(cause == "all") |>
-      rename(mx = mx_median),
+      rename(mx = mx_mean),
     aes(age, mx, color = "all"),
     lwd = 0.5
   ) +
@@ -171,11 +171,11 @@ lt3 <-
 loss_sum <-
   lt3 |>
   summarise(
-    lss_m = median(loss),
+    lss_m = mean(loss),
     lss_l = quantile(loss, 0.025),
     lss_u = quantile(loss, 0.975),
-    ex_m = median(ex),
-    ex_bsn = median(ex_bsn),
+    ex_m = mean(ex),
+    ex_bsn = mean(ex_bsn),
     .by = c(year, sex)
   ) |>
   arrange(year, sex)

@@ -52,8 +52,14 @@
 #   tableA15_adult_mortality_45q15.csv               14b
 #   tableA25_civilian_age_profile.csv                13h
 #   tableA27_donbas_fighters.csv                     13i
+#   tableA33_registration_lag_tail.csv               13l
+#   tableA34_base_coherent.csv                       13m
+#   tableA35_covid_carryover.csv                     13n
+#   tableA36_held_out_window.csv                     09j
+#   tableA37_structural_intervals.csv                14e
+#   figA8_structural_tornado.png                     14e
 #   out_of_sample_releases.csv                       09i (where it has run)
-#   table6_structural_sensitivity.csv                13, 13b-13j
+#   table6_structural_sensitivity.csv                13, 13b-13n
 #   tableA16_missing_alive_by_lag_horizon.csv        13d
 #   tableA17_military_triangulation.csv              09, data_input/official_figures.csv
 #   tableA18_returned_prisoners_prior_status.csv     09
@@ -224,7 +230,7 @@ fig2 <-
     aes(age, ymin = mx_lower, ymax = mx_upper, fill = cause),
     alpha = 0.35
   ) +
-  geom_line(aes(age, mx_median, colour = cause), linewidth = 0.5) +
+  geom_line(aes(age, mx_mean, colour = cause), linewidth = 0.5) +
   scale_y_log10() +
   scale_x_continuous(breaks = seq(0, 100, 20)) +
   scale_fill_manual(values = COL_RATE, labels = c("All-cause", "Expected")) +
@@ -249,7 +255,7 @@ save_fig(fig2, "fig2_mortality_rates_by_age.png", 9, 5)
 # is about. Everywhere else in the pipeline the same quantity is carried as a
 # positive "loss"; only the sign of the display is flipped here.
 #
-# Each box is annotated with its median (bold) and its quartiles, so the
+# Each box is annotated with its mean (bold, and a diamond) and its quartiles, so the
 # spread across draws is readable without going back to table 5.
 f3_dat <-
   loss_draws |>
@@ -261,7 +267,7 @@ f3_sum <-
   f3_dat |>
   summarise(
     Q1 = quantile(chg, 0.25),
-    Median = median(chg),
+    Mean = mean(chg),
     Q3 = quantile(chg, 0.75),
     .by = c(year, sex)
   )
@@ -272,9 +278,10 @@ fig3 <-
   geom_boxplot(outlier.shape = NA, alpha = 0.6, fill = "white") +
   # seeded, so the figure is the same in every run
   geom_point(position = position_jitter(width = 0.2, seed = 1), alpha = 0.04, size = 0.1, colour = "black") +
+  geom_point(data = f3_sum, aes(y = Mean), shape = 18, size = 1.6, colour = "black") +
   geom_text(
     data = f3_sum,
-    aes(y = Median, label = sprintf("%.2f", Median)),
+    aes(y = Mean, label = sprintf("%.2f", Mean)),
     hjust = -1.5, size = 2.5, colour = "black", fontface = "bold"
   ) +
   geom_text(
@@ -293,7 +300,7 @@ fig3 <-
     y = "Change in life expectancy at birth (years)", x = NULL,
     caption = paste0(
       "Distribution across ", n_sim,
-      " simulation draws. Bold: median. Small: 25th and 75th percentiles."
+      " simulation draws. Bold and diamond: mean, the estimate. Box: median and quartiles. Small: 25th and 75th percentiles."
     )
   ) +
   theme_paper() +
@@ -347,7 +354,7 @@ f5_share <-
   loss_sum |>
   filter(cause %in% three_way) |>
   nice_sex() |>
-  mutate(sh = loss_median / sum(loss_median), .by = c(year, sex))
+  mutate(sh = loss_mean / sum(loss_mean), .by = c(year, sex))
 
 # Proportions only, for the same reason as figure 4: on a shared axis the
 # female bars are too small to read against the male ones, and the absolute
@@ -831,17 +838,17 @@ tab_imput <- bind_rows(
   )
 
 # beside the imputation at the central values, the military total the
-# simulation gives: its median and 95% interval, by year and in total
+# simulation gives: its mean and 95% interval, by year and in total
 mil_sim <- param_draws |> filter(role == "combatants")
 fmt_ui_count <- \(m, lo, hi) sprintf("%s (%s-%s)", scales::comma(round(m)), scales::comma(round(lo)), scales::comma(round(hi)))
 mil_ui <- bind_rows(
   mil_sim |>
-    summarise(m = median(draw), lo = quantile(draw, 0.025, names = FALSE), hi = quantile(draw, 0.975, names = FALSE),
+    summarise(m = mean(draw), lo = quantile(draw, 0.025, names = FALSE), hi = quantile(draw, 0.975, names = FALSE),
               .by = year) |>
     mutate(year = as.character(year)),
   mil_sim |>
     summarise(t = sum(draw), .by = sim_id) |>
-    summarise(m = median(t), lo = quantile(t, 0.025, names = FALSE), hi = quantile(t, 0.975, names = FALSE)) |>
+    summarise(m = mean(t), lo = quantile(t, 0.025, names = FALSE), hi = quantile(t, 0.975, names = FALSE)) |>
     mutate(year = "Total")
 ) |>
   transmute(year, military_deaths_simulated = fmt_ui_count(m, lo, hi))
@@ -949,7 +956,7 @@ fmt_ci <- function(m, lo, hi) {
 cell_sex <-
   d4_draws |>
   summarise(
-    m = median(dx), lo = quantile(dx, 0.025), hi = quantile(dx, 0.975),
+    m = mean(dx), lo = quantile(dx, 0.025), hi = quantile(dx, 0.975),
     .by = c(year, role, sex)
   ) |>
   mutate(
@@ -964,7 +971,7 @@ cell_tot <-
   d4_draws |>
   summarise(dx = sum(dx), .by = c(sim_id, year, role)) |>
   summarise(
-    m = median(dx), lo = quantile(dx, 0.025), hi = quantile(dx, 0.975),
+    m = mean(dx), lo = quantile(dx, 0.025), hi = quantile(dx, 0.975),
     .by = c(year, role)
   ) |>
   mutate(Total = fmt_ci(m, lo, hi)) |>
@@ -975,7 +982,7 @@ grand_sex <-
   d4_draws |>
   summarise(dx = sum(dx), .by = c(sim_id, sex)) |>
   summarise(
-    m = median(dx), lo = quantile(dx, 0.025), hi = quantile(dx, 0.975),
+    m = mean(dx), lo = quantile(dx, 0.025), hi = quantile(dx, 0.975),
     .by = sex
   ) |>
   mutate(
@@ -989,7 +996,7 @@ grand_tot <-
   d4_draws |>
   summarise(dx = sum(dx), .by = sim_id) |>
   summarise(
-    m = median(dx), lo = quantile(dx, 0.025), hi = quantile(dx, 0.975)
+    m = mean(dx), lo = quantile(dx, 0.025), hi = quantile(dx, 0.975)
   ) |>
   mutate(Total = fmt_ci(m, lo, hi)) |>
   select(Total)
@@ -1018,7 +1025,7 @@ totals_by <- function(gv) {
     d4_draws |>
     summarise(dx = sum(dx), .by = all_of(c("sim_id", gv, "sex"))) |>
     summarise(
-      m = median(dx), lo = quantile(dx, 0.025), hi = quantile(dx, 0.975),
+      m = mean(dx), lo = quantile(dx, 0.025), hi = quantile(dx, 0.975),
       .by = all_of(c(gv, "sex"))
     ) |>
     mutate(
@@ -1032,7 +1039,7 @@ totals_by <- function(gv) {
     d4_draws |>
     summarise(dx = sum(dx), .by = all_of(c("sim_id", gv))) |>
     summarise(
-      m = median(dx), lo = quantile(dx, 0.025), hi = quantile(dx, 0.975),
+      m = mean(dx), lo = quantile(dx, 0.025), hi = quantile(dx, 0.975),
       .by = all_of(gv)
     ) |>
     mutate(Total = fmt_ci(m, lo, hi)) |>
@@ -1071,9 +1078,9 @@ tab_e0 <-
   loss_draws |>
   as_tibble() |>
   summarise(
-    e0_expected = median(e0_bsn),
-    e0_observed = median(e0_war),
-    loss_median = median(loss_total),
+    e0_expected = mean(e0_bsn),
+    e0_observed = mean(e0_war),
+    loss_mean = mean(loss_total),
     loss_lo = quantile(loss_total, 0.025),
     loss_hi = quantile(loss_total, 0.975),
     .by = c(year, sex)
@@ -1081,7 +1088,7 @@ tab_e0 <-
   arrange(year, sex) |>
   mutate(
     across(c(e0_expected, e0_observed), ~round(.x, 2)),
-    loss = sprintf("%.2f (%.2f-%.2f)", loss_median, loss_lo, loss_hi)
+    loss = sprintf("%.2f (%.2f-%.2f)", loss_mean, loss_lo, loss_hi)
   ) |>
   select(year, sex, e0_expected, e0_observed, loss)
 # the loss with the counterfactual at its point forecast (14c): the
@@ -1091,7 +1098,7 @@ tab_e0 <-
   tab_e0 |>
   left_join(tiers |>
               filter(counterfactual == "fixed at its point forecast") |>
-              transmute(year, sex, loss_counterfactual_fixed = sprintf("%.2f (%.2f-%.2f)", median, lo, hi)),
+              transmute(year, sex, loss_counterfactual_fixed = sprintf("%.2f (%.2f-%.2f)", mean, lo, hi)),
             by = c("year", "sex"))
 stopifnot(!anyNA(tab_e0$loss_counterfactual_fixed))
 
@@ -1109,7 +1116,7 @@ tab_e0_cause <-
   loss_sum |>
   filter(cause %in% three_way) |>
   mutate(
-    loss = sprintf("%.3f (%.3f-%.3f)", loss_median, loss_lo, loss_hi),
+    loss = sprintf("%.3f (%.3f-%.3f)", loss_mean, loss_lo, loss_hi),
     sex = case_when(sex == "f" ~ "Females", sex == "m" ~ "Males")
   ) |>
   select(year, role = cause, sex, loss) |>
@@ -1183,7 +1190,7 @@ dyad <-
   )
 
 cmb_draws <- param_draws |> filter(role == "combatants")
-q3 <- function(x) tibble(med = median(x), lo = quantile(x, 0.025), hi = quantile(x, 0.975))
+q3 <- function(x) tibble(med = mean(x), lo = quantile(x, 0.025), hi = quantile(x, 0.975))
 
 recon_year <-
   dyad |>
@@ -1632,11 +1639,11 @@ tA12 <-
 save_tab(tA12, "tableA12_counterfactual_window.csv")
 print(tA12)
 
-# A13: the PERT shape (13g): median and 95% interval of the loss
+# A13: the PERT shape (13g): mean and 95% interval of the loss
 tA13 <-
   read_rds("data_inter/ukr_pert_shape_e0.rds") |>
   mutate(sex = if_else(sex == "f", "Females", "Males"),
-         loss = sprintf("%.2f (%.2f-%.2f)", median, lo, hi)) |>
+         loss = sprintf("%.2f (%.2f-%.2f)", mean, lo, hi)) |>
   select(year, sex, shape, loss) |>
   pivot_wider(names_from = shape, values_from = loss, names_prefix = "pert_shape_") |>
   arrange(sex, year)
@@ -1704,7 +1711,7 @@ if (file.exists(oos_file)) {
   message("  no out-of-sample test (09i has not run): the out-of-sample linkage table is not written")
 }
 
-# A14: years of life lost and 45q15 (14b), medians and 95% intervals
+# A14: years of life lost and 45q15 (14b), means and 95% intervals
 yq <- read_rds("data_inter/ukr_yll_45q15_summary.rds")
 fmt_ui <- function(m, lo, hi, digits = 0) {
   f <- if (digits == 0) \(x) scales::comma(round(x)) else \(x) formatC(x, format = "f", digits = digits)
@@ -1718,7 +1725,7 @@ tA14_yll <-
             yq$all_years_both |> mutate(year = "2022–2025")) |>
   filter(measure %in% names(yll_labels)) |>
   mutate(cause = factor(yll_labels[as.character(measure)], levels = yll_labels),
-         yll = fmt_ui(median, lo, hi)) |>
+         yll = fmt_ui(mean, lo, hi)) |>
   select(year, cause, yll) |>
   pivot_wider(names_from = year, values_from = yll) |>
   arrange(cause)
@@ -1729,7 +1736,7 @@ tA14_q <-
   filter(measure %in% names(q_labels)) |>
   mutate(sex = if_else(sex == "f", "Females", "Males"),
          measure = factor(q_labels[as.character(measure)], levels = q_labels),
-         q = fmt_ui(1000 * median, 1000 * lo, 1000 * hi, digits = 1)) |>
+         q = fmt_ui(1000 * mean, 1000 * lo, 1000 * hi, digits = 1)) |>
   select(sex, measure, year, q) |>
   pivot_wider(names_from = year, values_from = q) |>
   arrange(sex, measure)
@@ -1770,7 +1777,7 @@ print(tA2)
 # ==============================================================================
 # The simulation's intervals cover the drawn inputs only. Each row here is a
 # set of deterministic projections, every input not under study at its central
-# value (the mode, or the median for the inputs on the missing alive),
+# value (the mode, or the mean for the inputs on the missing alive),
 # and gives the range its alternatives span: the military total, and the male
 # and female loss in 2022 and 2025. The rows behind each range are
 # in the supplementary table named.
@@ -1796,6 +1803,13 @@ alternatives <- bind_rows(
     left_join(lag_t8$military |> summarise(military = sum(round(total)), .by = scenario), by = "scenario") |>
     select(military, year, sex, loss) |>
     mutate(analysis = "Registration lag: no correction, or corrected to 60 or 72 months", table = "A10, A16"),
+  read_rds("data_inter/ukr_registration_lag_tail.rds") |>
+    (\(lt) lt$loss |>
+       filter(scenario != "to 48 months (used)") |>
+       left_join(lt$military |> summarise(military = sum(round(total)), .by = scenario), by = "scenario"))() |>
+    select(military, year, sex, loss) |>
+    mutate(analysis = "Registration lag beyond four years: a fitted tail, exponential or inverse power, to 72-120 months",
+           table = "A33"),
   read_rds("data_inter/ukr_linkage_rules_e0.rds") |>
     filter(!str_detect(design, "production")) |>
     mutate(analysis = paste0("Linkage rules, resolution model and prisoner-of-war evidence: ",
@@ -1817,6 +1831,11 @@ alternatives <- bind_rows(
     transmute(military = mode_military, year, sex, loss,
               analysis = "Population base outside Donetsk and Luhansk: 0.5 or 1.0 million fewer aged 20-64",
               table = "A11"),
+  read_rds("data_inter/ukr_base_coherent_e0.rds")$loss |>
+    filter(million > 0, counterfactual != "as fitted") |>
+    transmute(military = mode_military, year, sex, loss,
+              analysis = "The same, 0.5 to 2.0 million fewer, with the counterfactual refitted on exposures smaller by the same share",
+              table = "A34"),
   donbas$loss |>
     filter(scenario != "None (as estimated)") |>
     transmute(military = mode_military, year, sex, loss,
@@ -1833,6 +1852,11 @@ alternatives <- bind_rows(
     transmute(military = mode_military, year, sex, loss,
               analysis = "Counterfactual: Lee–Carter window, a coherent forecast with eight neighbours, and the forecast one SD lower or higher",
               table = "A12"),
+  read_rds("data_inter/ukr_covid_carryover_e0.rds")$loss |>
+    filter(fraction > 0) |>
+    transmute(military = mode_military, year, sex, loss,
+              analysis = "Counterfactual: a quarter or a half of 2021's pandemic excess carried into 2022",
+              table = "A35"),
   mig_sens_t8 |>
     filter(point %in% c("min", "max")) |>
     transmute(military = mode_military, year, sex, loss,
@@ -1941,13 +1965,13 @@ tA17 <-
     this_study = round(map_dbl(date, \(d) through(d, "military"))),
     ui = map(date, \(d) {
       v <- through_draws(d)
-      tibble(this_study_median = round(median(v)), this_study_lo = round(quantile(v, 0.025, names = FALSE)),
+      tibble(this_study_mean = round(mean(v)), this_study_lo = round(quantile(v, 0.025, names = FALSE)),
              this_study_hi = round(quantile(v, 0.975, names = FALSE)))
     })
   ) |>
   unnest(ui) |>
   arrange(date) |>
-  select(date, kind, source, stated, register_named_dead, this_study, this_study_median, this_study_lo, this_study_hi)
+  select(date, kind, source, stated, register_named_dead, this_study, this_study_mean, this_study_lo, this_study_hi)
 save_tab(tA17, "tableA17_military_triangulation.csv")
 print(tA17)
 
@@ -2042,7 +2066,7 @@ vital <-
             births = sum(coalesce(fx, 0) * pop),
             .by = c(sim_id, year)) |>
   mutate(deaths = expected + conflict) |>
-  summarise(across(c(population, expected, conflict, deaths, births), median), .by = year)
+  summarise(across(c(population, expected, conflict, deaths, births), mean), .by = year)
 registered <-
   official |>
   filter(key %in% c("registered_deaths", "registered_births")) |>
@@ -2098,6 +2122,103 @@ figA6 <-
   theme_paper()
 save_fig(figA6, "figA6_duration_lexis.png", 9, 4.6)
 
+
+# ==============================================================================
+# TABLES A33-A37 AND FIGURE A8 - the tail of the registration lag, the base with
+# a coherent counterfactual, pandemic mortality in 2022, the held-out windows by
+# outcome, and the intervals with the structural choices folded in
+# ==============================================================================
+# A33: the registration lag beyond four years, a modelled tail (13l)
+lag_tail <- read_rds("data_inter/ukr_registration_lag_tail.rds")
+tA33 <-
+  lag_tail$loss |>
+  left_join(lag_tail$military |> summarise(military_deaths = sum(round(total)), .by = scenario), by = "scenario") |>
+  left_join(lag_tail$boot_summary |> transmute(scenario, military_lo = round(lo), military_hi = round(hi)),
+            by = "scenario") |>
+  mutate(scenario = factor(scenario, levels = lag_tail$scenarios$scenario)) |>
+  loss_wide(c("scenario", "military_deaths", "military_lo", "military_hi")) |>
+  arrange(scenario)
+save_tab(tA33, "tableA33_registration_lag_tail.csv")
+print(tA33)
+
+# A34: a smaller base outside Donetsk and Luhansk, the counterfactual as fitted
+# and refitted on exposures smaller by the same share (13m)
+base_coh <- read_rds("data_inter/ukr_base_coherent_e0.rds")
+tA34 <-
+  base_coh$loss |>
+  mutate(scenario = if_else(million == 0, "SSSU (used)",
+                            sprintf("%.1f million fewer aged 20-64, counterfactual %s", million, counterfactual))) |>
+  mutate(scenario = factor(scenario, levels = unique(scenario))) |>
+  (\(d) loss_wide(d, "scenario") |>
+     left_join(d |> filter(sex == "m", year == 2025) |>
+                 transmute(scenario, counterfactual_e0_2025_m = round(e0_bsn, 2)), by = "scenario"))() |>
+  arrange(scenario)
+save_tab(tA34, "tableA34_base_coherent.csv")
+print(tA34)
+
+# A35: pandemic mortality carried into the 2022 counterfactual (13n)
+covid <- read_rds("data_inter/ukr_covid_carryover_e0.rds")
+tA35 <-
+  covid$loss |>
+  filter(year == 2022) |>
+  transmute(scenario = factor(scenario, levels = unique(scenario)),
+            col = if_else(sex == "m", "male", "female"), loss = round(loss, 2), e0 = round(e0_bsn, 2)) |>
+  pivot_wider(names_from = col, values_from = c(loss, e0)) |>
+  rename(male_2022 = loss_male, female_2022 = loss_female,
+         counterfactual_e0_2022_m = e0_male, counterfactual_e0_2022_f = e0_female)
+save_tab(tA35, "tableA35_covid_carryover.csv")
+print(tA35)
+
+# A36: the projection's rule against each window it was not fitted to, by
+# outcome, with the interval the simulation's draws of the model give (09j)
+held_out <- read_rds("data_inter/ukr_ualosses_held_out_window.rds")
+tA36 <-
+  held_out$by_cause |>
+  transmute(case, fitted_on, predicted_window = from_release, outcome,
+            missing_at_start = round(at_risk), observed = round(observed), predicted = round(predicted),
+            predicted_over_observed = round(ratio, 2),
+            predicted_lo = round(pred_lo), predicted_hi = round(pred_hi), observed_within = covered)
+save_tab(tA36, "tableA36_held_out_window.csv")
+print(tA36)
+
+# A37: the intervals, the drawn inputs alone and with the structural choices (14e)
+structural <- read_rds("data_inter/ukr_structural_uncertainty.rds")
+tA37 <-
+  structural$intervals |>
+  mutate(digits = if_else(what == "Loss of life expectancy", 2, 0),
+         across(c(mean, lo, hi), \(x) round(x, digits))) |>
+  select(what, year, sex, interval, mean, lo, hi)
+save_tab(tA37, "tableA37_structural_intervals.csv")
+print(tA37, n = 40)
+
+# Figure A8: a tornado of the structural choices beside the drawn inputs, for
+# the military total and the 2025 male loss
+tornado_data <-
+  structural$ranges |>
+  filter(what == "Military deaths, 2022-2025" | (year == 2025 & sex == "m")) |>
+  mutate(panel = if_else(what == "Military deaths, 2022-2025",
+                         "Military deaths, 2022-2025", "Male loss of life expectancy, 2025 (years)"),
+         kind = if_else(str_detect(dimension, "^Drawn inputs"), "Drawn inputs", "Structural choice")) |>
+  filter(abs(hi - lo) > 0) |>
+  mutate(dimension = str_wrap(dimension, 38))
+order_dim <- tornado_data |> filter(str_detect(panel, "^Male")) |> arrange(hi - lo) |> pull(dimension)
+order_dim <- c(setdiff(unique(tornado_data$dimension), order_dim), order_dim)
+figA8 <-
+  tornado_data |>
+  mutate(dimension = factor(dimension, levels = order_dim),
+         panel = factor(panel, levels = c("Military deaths, 2022-2025", "Male loss of life expectancy, 2025 (years)"))) |>
+  ggplot() +
+  geom_vline(xintercept = 0, linewidth = 0.3) +
+  geom_segment(aes(x = lo, xend = hi, y = dimension, yend = dimension, colour = kind), linewidth = 3.2) +
+  facet_wrap(~panel, scales = "free_x") +
+  scale_colour_manual(values = c("Drawn inputs" = "#457b9d", "Structural choice" = "#e63946")) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(x = "Shift from the estimate", y = NULL, colour = NULL,
+       caption = paste0("Red: the range of each structural choice's alternatives, every other input at its central value. ",
+                        "Blue: the 95% interval of the ", scales::comma(n_sim), " simulations, about its mean.")) +
+  theme_paper() +
+  theme(panel.grid.major.x = element_line(colour = "grey90"), panel.grid.major.y = element_blank())
+save_fig(figA8, "figA8_structural_tornado.png", 10, 5.2)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # provenance stamp for the whole table set

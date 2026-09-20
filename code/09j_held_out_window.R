@@ -17,6 +17,7 @@
 #
 #   case A   fit v14>v16 and v16>v18, predict v18>v19
 #   case B   fit v16>v18 and v18>v19, predict v14>v16
+#   case C   fit v14>v16 and v18>v19, predict v16>v18
 #
 # Reported by cause, because the causes do not matter equally. By the identity of
 # S3.5 a death the model misses returns to the unresolved pool and is imputed dead
@@ -29,7 +30,8 @@
 # INPUTS   data_inter/ualosses_window_transitions.rds (09's cached linkage),
 #          data_inter/ukr_registration_completion.rds (08b)
 # OUTPUTS  data_inter/ukr_ualosses_held_out_window.rds:
-#            by_cause   observed and predicted, per case and outcome
+#            by_cause   observed and predicted, per case and outcome, with the
+#                       interval the simulation's two draws of the model give
 #            by_band    the same by months since the event
 # ==============================================================================
 
@@ -92,17 +94,21 @@ predict_window <- function(m, w) {
 }
 
 cases <- tribble(
-  ~case, ~keep,  ~fit_windows,        ~held_out,
-  "A",   1:3,    c("v14", "v16"),     "v18",
-  "B",   2:4,    c("v16", "v18"),     "v14"
+  ~case, ~keep,       ~fit_windows,        ~held_out,
+  "A",   1:3,         c("v14", "v16"),     "v18",
+  "B",   2:4,         c("v16", "v18"),     "v14",
+  "C",   c(1, 3, 4),  c("v14", "v18"),     "v16"
 )
 
+models <- pmap(cases, function(case, keep, fit_windows, held_out) {
+  message("  case ", case, ": fitting on ", paste(fit_windows, collapse = " and "),
+          ", to predict ", held_out)
+  fit_without(keep, fit_windows)
+}) |> set_names(cases$case)
+
 runs <- pmap(cases, function(case, keep, fit_windows, held_out) {
-  m <- fit_without(keep, fit_windows)
-  message("  case ", case, ": fitted on ", paste(fit_windows, collapse = " and "),
-          ", predicting ", held_out)
   obs <- cells_all |> filter(from_release == held_out) |> select(month, all_of(ual_resolutions))
-  predict_window(m, held_out) |>
+  predict_window(models[[case]], held_out) |>
     left_join(obs, by = "month") |>
     mutate(case = case, fitted_on = paste(fit_windows, collapse = " + "), .before = 1)
 })
@@ -133,11 +139,45 @@ by_band <-
             .by = c(case, band)) |>
   arrange(case, band)
 
+# 4. DOES THE SPREAD THE SIMULATION CARRIES COVER THE ERROR? ====================
+# In every simulation the resolution model varies in two ways (11): its estimates
+# are drawn from their sampling distribution, and the projection averages the
+# fitted windows' multipliers under weights drawn around the windows' lengths
+# (window_weight_draws(), 00_setup.R). The same two draws, made from each case's
+# fit, give the interval the simulation would have put around the held-out
+# window's resolutions. An observed count outside it is an error the
+# simulation's interval does not carry: the interval is for the average of many
+# future windows, and one window can sit far from it.
+set.seed(20260920)
+n_pred <- 2000
+predictive <- pmap_dfr(cases, function(case, keep, fit_windows, held_out) {
+  m <- models[[case]]
+  lens <- months_all[head(keep, -1)]
+  n_theta <- length(m$theta)
+  theta <- sweep(matrix(rnorm(n_pred * n_theta), n_pred) %*% chol(m$vcov + diag(1e-12, n_theta)),
+                 2, m$theta, "+")
+  w <- window_weight_draws(n_pred, lens)
+  cells <- cells_all |> filter(from_release == held_out)
+  at_risk <- rowSums(cells[, c("missing", ual_resolutions)])
+  pred <- vapply(seq_len(n_pred), function(i) {
+    hz <- ual_theta_hazards(theta[i, ], m$nb, m$k, windows = lens)
+    p <- ual_resolve(sweep(hz$h, 2, colSums(hz$mult * w[i, ]), "*"), cells$d0, cells$d1, m$breaks)
+    colSums(p[, ual_resolutions, drop = FALSE] * at_risk)
+  }, numeric(length(ual_resolutions)))
+  tibble(case = case, outcome = ual_resolutions,
+         pred_lo = apply(pred, 1, quantile, 0.025), pred_hi = apply(pred, 1, quantile, 0.975))
+})
+by_cause <-
+  by_cause |>
+  left_join(predictive, by = c("case", "outcome")) |>
+  mutate(covered = observed >= pred_lo & observed <= pred_hi)
+
 cat("\n=== THE PROJECTION'S RULE AGAINST A WINDOW IT WAS NOT FITTED TO ===\n")
 print(as.data.frame(by_cause |> mutate(across(where(is.double), \(x) round(x, 3)))))
 cat("\n=== THE SAME, BY MONTHS SINCE THE EVENT ===\n")
 print(as.data.frame(by_band |> mutate(across(where(is.double), \(x) round(x, 1)))))
 
-write_rds(list(by_cause = by_cause, by_band = by_band, cells = cmp),
+write_rds(list(by_cause = by_cause, by_band = by_band, cells = cmp,
+               dispersion = map_dbl(models, "dispersion")),
           "data_inter/ukr_ualosses_held_out_window.rds")
 cat("\nWritten: data_inter/ukr_ualosses_held_out_window.rds\n")

@@ -73,7 +73,7 @@ mil <- read_rds("data_inter/ukr_military_inputs.rds")
 ev <- mil$evidence
 at_evidence <- function(captives, other) military_draws(mil, captives, other)
 # the "mode" column of the combatant rows is the total at the central values
-# of the evidence, the medians of its inputs (alive_evidence(), 00_setup.R):
+# of the evidence, the means of its inputs (alive_evidence(), 00_setup.R):
 # the reference every deterministic analysis starts from
 at_central <- at_evidence(ev$captives_central, ev$other_central)
 

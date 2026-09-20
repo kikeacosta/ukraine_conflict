@@ -25,7 +25,7 @@ source("code/00_setup.R")
 # official figures, compared with the prisoners the register records; and a
 # share of the rest may be alive for other reasons. alive_evidence() in
 # 00_setup.R sets out the evidence, its ranges and the sources. This script
-# imputes at the central values - the medians of the evidence's inputs - and
+# imputes at the central values - the means of the evidence's inputs - and
 # records the ranges, 10 turns them into the combatant bounds, and 11 draws
 # them together with the sampling error of the model and of the
 # registration-lag factors (military_draws()).
@@ -370,7 +370,7 @@ write_rds(tasas_long, "data_inter/ukr_ualosses_transition_rates.rds")
 # how much the linkage rules, the model and the evidence matter
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # The military total under alternatives, each at the central values of the
-# evidence (the medians of its inputs), each differing from the rules used in
+# evidence (the means of its inputs), each differing from the rules used in
 # one respect:
 #   - every person no longer listed found alive, list maintenance included;
 #   - a person no longer listed held as still missing;

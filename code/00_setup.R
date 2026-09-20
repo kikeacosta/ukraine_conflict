@@ -546,9 +546,20 @@ ual_fit_durations <- function(cells, horizon, breaks = ual_duration_breaks) {
   free <- c(fit$par[seq_len(nb * k)] > -12, log_mult > -9.9 & log_mult < 9.9)
   vcov <- matrix(0, n_par, n_par)
   vcov[free, free] <- solve(fit$hessian[free, free])
+  # The cells are fitted as multinomial, but event months differ by more than
+  # that allows - a release records resolutions in batches, some months and not
+  # others - so the counts are overdispersed and the inverse Hessian alone
+  # understates the error. The covariance is scaled by the Pearson dispersion,
+  # as a quasi-likelihood fit would scale it, and never below one. Cells expected
+  # to hold less than one person are left out of the statistic, where it is
+  # unstable.
+  expected <- cell_probs(fit$par)[, colnames(y)] * rowSums(y)
+  pearson <- ((y - expected)^2 / expected)[expected > 1]
+  dispersion <- max(1, sum(pearson) / (nrow(y) * k - sum(free)))
+  vcov <- vcov * dispersion
   hz <- ual_theta_hazards(fit$par, nb, k)
   list(breaks = breaks, h = hz$projection, h_reference = hz$h, window_multipliers = hz$mult,
-       theta = fit$par, vcov = vcov, nb = nb, k = k, horizon = horizon,
+       theta = fit$par, vcov = vcov, dispersion = dispersion, nb = nb, k = k, horizon = horizon,
        resolved = colSums(y[, ual_resolutions]),
        fitted = cells |> bind_cols(as_tibble(cell_probs(fit$par), .name_repair = \(x) paste0("p_", x))))
 }
@@ -778,18 +789,22 @@ alive_evidence <- function(resolved, register_alive, released_prior) {
     other_mode = 0,
     other_max = resolved[["no_longer_listed"]] / sum(resolved)
   )
-  # The central values every deterministic analysis uses: the median of each
-  # input's Beta-PERT (shape 4), so the analyses sit where the draws do. The
-  # share alive for other reasons has its mode at its minimum, so it is a
-  # Beta(1, 5) on [0, other_max], positive in every draw, and its median is
-  # 0.129 of the ceiling. The captives at the centre are the medians' product.
+  # The central values every deterministic analysis uses: the MEAN of each
+  # input's Beta-PERT (shape 4), (min + 4 mode + max) / 6, so the analyses sit
+  # where the estimate does - the estimate is the mean of the draws (11), and the
+  # military total is linear in these inputs. The share alive for other reasons
+  # has its mode at its minimum, so it is a Beta(1, 5) on [0, other_max],
+  # positive in every draw, and its mean is a sixth of the ceiling. The two
+  # inputs behind the captives are drawn independently, so the captives at the
+  # centre are the means' product.
+  pert_mean <- function(min, mode, max, shape = 4) (min + shape * mode + max) / (shape + 2)
   out <- out |>
     mutate(
-      s_central = qpert(0.5, min = s_min, mode = s_mode, max = s_max, shape = 4),
-      held_central = qpert(0.5, min = held_min, mode = held_mode, max = held_max, shape = 4),
+      s_central = pert_mean(s_min, s_mode, s_max),
+      held_central = pert_mean(held_min, held_mode, held_max),
       unrecorded_central = held_central + returned_military - register_alive,
       captives_central = s_central * unrecorded_central,
-      other_central = qpert(0.5, min = other_min, mode = other_mode, max = other_max, shape = 4)
+      other_central = pert_mean(other_min, other_mode, other_max)
     )
   stopifnot(
     out$s_min <= out$s_mode, out$s_mode <= out$s_max,
@@ -811,7 +826,9 @@ captives_for <- function(ev, s, held) s * (held + ev$returned_military - ev$regi
 #   the missing alive     captives (from the share among the missing and the
 #                         prisoners held) and alive_other
 #   the resolution model  the log-hazards and window multipliers, drawn from
-#                         their sampling distribution (theta)
+#                         their sampling distribution (theta), and the weights
+#                         on the fitted windows under which the projection
+#                         averages those multipliers (window)
 #   registration lag      the completion factors, one of 08b's resampled
 #                         replicates per draw (lag)
 # mil holds 09's inputs (data_inter/ukr_military_inputs.rds): the registered
@@ -819,14 +836,16 @@ captives_for <- function(ev, s, held) s * (held + ev$returned_military - ev$regi
 # row of 08b's factor tables), the point and resampled factors, the model and
 # the evidence. theta: a matrix of drawn theta, one row per draw, or NULL for
 # the estimate; lag: the replicate for each draw, or NULL for the point
-# factors. Returns one row per draw and year: confirmed (registered and late),
+# factors; window: a matrix of weights on the fitted windows, one row per draw,
+# or NULL for the point rule. Returns one row per draw and year: confirmed (registered and late),
 # missing, captives, imputed_unlisted, alive_other, imputed_dead and military.
 military_draws <- function(mil, captives, alive_other, theta = NULL, lag = NULL,
                            window = NULL) {
   n <- length(captives)
   stopifnot(length(alive_other) == n, is.null(lag) || length(lag) == n,
             is.null(theta) || nrow(theta) == n,
-            is.null(window) || length(window) == n)
+            is.null(window) || (is.matrix(window) && nrow(window) == n &&
+                                  all(abs(rowSums(window) - 1) < 1e-9)))
   dead <- mil$month |> filter(status == "dead")
   miss <- mil$month |> filter(status == "missing")
   factors <- function(rows) {
@@ -846,13 +865,14 @@ military_draws <- function(mil, captives, alive_other, theta = NULL, lag = NULL,
   } else {
     # The projection to 48 months has to choose a multiplier for windows it has
     # not seen. Its point rule is the length-weighted average of the fitted
-    # windows; `window` instead gives each draw one of the fitted windows,
-    # sampled with probability proportional to its length, so that the interval
-    # carries the variation between them rather than only the estimation error
-    # around their average.
+    # windows' multipliers. `window` gives each draw its own weights on the
+    # fitted windows, one row per draw (window_weight_draws() below), and the
+    # draw takes the average under them: the projection runs over many future
+    # windows, so what is uncertain is their average, not which one of the
+    # fitted windows the future will repeat.
     proj <- function(i) {
       hz <- ual_theta_hazards(theta[i, ], model$nb, model$k)
-      if (is.null(window)) hz$projection else sweep(hz$h, 2, hz$mult[window[i], ], "*")
+      if (is.null(window)) hz$projection else sweep(hz$h, 2, colSums(hz$mult * window[i, ]), "*")
     }
     arr <- vapply(seq_len(n), \(i) resolve(proj(i))[, outcome],
                   matrix(0, nrow(miss), length(outcome)))
@@ -884,6 +904,22 @@ military_draws <- function(mil, captives, alive_other, theta = NULL, lag = NULL,
     imputed_dead = long(imputed_dead),
     military = long(confirmed + imputed_dead)
   )
+}
+
+# The weights a draw puts on the fitted windows' multipliers. The point rule of
+# the projection is their average weighted by the windows' lengths. Three
+# windows say little about that average, and how little is what the draws carry:
+# the weights come from a Dirichlet distribution whose mean is the lengths'
+# shares and whose concentration is the number of windows - the Bayesian
+# bootstrap (Rubin 1981) of a weighted mean. So the mean of the draws is the
+# point rule, a draw can sit close to any one window, and most sit between them.
+# Drawing ONE window per simulation instead treats a release's batch of
+# recordings as the regime of the next four years, and splits the draws of the
+# military total into one cluster per window. n draws, one row each.
+window_weight_draws <- function(n, windows = ual_window_months) {
+  nw <- length(windows)
+  g <- matrix(rgamma(n * nw, shape = rep(nw * windows / sum(windows), each = n)), n, nw)
+  g / rowSums(g)
 }
 
 # The late registrations' share of the confirmed military deaths in every
@@ -1215,11 +1251,9 @@ simulation_draws <- function(param_table, mil, lc_error, n, shape = 4, seed = 42
                  2, model$theta, "+")
   lag <- sample.int(ncol(mil$factor_draws), n, replace = TRUE)
   alive_draws$lag <- lag
-  # Which fitted window the projection's future is taken to resemble, drawn with
-  # probability proportional to the window's length.
-  window <- sample.int(length(ual_window_months), n, replace = TRUE,
-                       prob = ual_window_months / sum(ual_window_months))
-  alive_draws$window <- window
+  # the weights each draw puts on the fitted windows' multipliers
+  window <- window_weight_draws(n)
+  alive_draws <- bind_cols(alive_draws, as_tibble(window, .name_repair = \(x) paste0("window_w", seq_along(x))))
 
   mil_all <- military_draws(mil, alive_draws$captives, alive_draws$alive_other, theta, lag, window)
   captives_c <- rep(ev$captives_central, n)
@@ -1300,7 +1334,7 @@ simulation_draws <- function(param_table, mil, lc_error, n, shape = 4, seed = 42
 # and imputed deaths. A sensitivity step changes one of these and projects
 # again. "At the mode" is shorthand, here and in the sensitivity steps, for
 # these central values: every input at the mode of its distribution, except
-# the three inputs on how many of the missing are alive, at their medians
+# the three inputs on how many of the missing are alive, at their means
 # (alive_evidence()), which set the military total (the "mode" column of the
 # parameter table's combatant rows, 10).
 mode_projection_inputs <- function() {

@@ -48,7 +48,7 @@
 #
 # The life expectancy decomposition that used to live at the bottom of this
 # script now has its own step, 14, which runs it inside every draw instead of
-# once on the medians.
+# once on a summary of them.
 # ==============================================================================
 
 rm(list = ls())
@@ -276,13 +276,19 @@ sim_long <-
   mutate(mx = dx / pop)
 
 # 9. SUMMARY ACROSS DRAWS ======================================================
+# THE ESTIMATE IS THE MEAN OF THE DRAWS, here and in every step that summarises
+# them, with the 2.5th and 97.5th percentiles as its interval. The mean is what
+# the central projection of the deterministic steps stands for - every input at
+# the centre of its distribution - so the two agree; and means add up, across
+# ages, sexes, years and components, which medians do not, so every table sums
+# to its own total.
 sce_all_probabilistic <- sim_long %>%
   summarise(
-    mx_median = median(mx, na.rm = TRUE),
+    mx_mean = mean(mx, na.rm = TRUE),
     mx_lower = quantile(mx, 0.025, na.rm = TRUE),
     mx_upper = quantile(mx, 0.975, na.rm = TRUE),
-    dx_median = median(dx, na.rm = TRUE),
-    pop_median = median(pop, na.rm = TRUE),
+    dx_mean = mean(dx, na.rm = TRUE),
+    pop_mean = mean(pop, na.rm = TRUE),
     .by = c(year, sex, age, cause)
   ) %>%
   arrange(year, sex, age, cause)
@@ -300,8 +306,8 @@ sim_output_raw %>%
     .by = c(sim_id, year)
   ) %>%
   summarise(
-    civilian = median(civilian),
-    combatant = median(combatant),
+    civilian = mean(civilian),
+    combatant = mean(combatant),
     .by = year
   ) %>%
   print()

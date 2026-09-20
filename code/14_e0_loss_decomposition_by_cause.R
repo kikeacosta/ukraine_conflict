@@ -28,9 +28,10 @@
 # exposure denominator, so mx_all - mx_expected IS the conflict death rate,
 # and conflict deaths are additive across causes. The script asserts this.
 #
-# Doing all of this INSIDE each draw (rather than once on the medians, as the
-# original version in step 11 did) means the cause-specific contributions
-# carry the same 95% credible intervals as the total.
+# Doing all of this INSIDE each draw (rather than once on a summary of the
+# draws, as the original version in step 11 did) means the cause-specific
+# contributions carry the same 95% intervals as the total, and their means add
+# up to the total's.
 #
 # SIGN CONVENTION: positive = years of life expectancy LOST.
 #
@@ -144,6 +145,7 @@ cat(
 cat("any negative total loss           :", any(sims$loss_total < 0), "\n")
 stopifnot(
   max(abs(sims$loss_total - (sims$e0_bsn - sims$e0_war))) < 1e-8,
+  max(abs(sims$loss_civilian + sims$loss_cmb_confirmed + sims$loss_cmb_imputed - sims$loss_total)) < 1e-8,
   !any(sims$loss_total < 0)
 )
 
@@ -175,7 +177,7 @@ e0_loss_by_cause <-
   ) |>
   pivot_longer(-c(sim_id, year, sex), names_to = "cause", values_to = "loss") |>
   summarise(
-    loss_median = median(loss),
+    loss_mean = mean(loss),
     loss_lo = quantile(loss, 0.025),
     loss_hi = quantile(loss, 0.975),
     .by = c(year, sex, cause)
@@ -183,11 +185,11 @@ e0_loss_by_cause <-
   left_join(
     sims |>
       as_tibble() |>
-      summarise(total_median = median(loss_total), .by = c(year, sex)),
+      summarise(total_mean = mean(loss_total), .by = c(year, sex)),
     by = c("year", "sex")
   ) |>
   mutate(
-    share = loss_median / total_median,
+    share = loss_mean / total_mean,
     cause = factor(cause, levels = CAUSE_LEVELS)
   ) |>
   arrange(year, sex, cause)
@@ -205,7 +207,7 @@ deaths_by_cause <-
   ) |>
   pivot_longer(-c(sim_id, year, sex), names_to = "cause", values_to = "dx") |>
   summarise(
-    dx_median = median(dx),
+    dx_mean = mean(dx),
     dx_lo = quantile(dx, 0.025),
     dx_hi = quantile(dx, 0.975),
     .by = c(year, sex, cause)
@@ -224,21 +226,21 @@ write_rds(
 
 fmt <- function(m, l, h) sprintf("%.2f [%.2f-%.2f]", m, l, h)
 
-cat("\n=== TWO-WAY: e0 loss in years, median [95% UI] ===\n")
+cat("\n=== TWO-WAY: e0 loss in years, mean [95% UI] ===\n")
 print(
   e0_loss_by_cause |>
     filter(cause %in% c("Civilians", "Combatants", "Total")) |>
-    mutate(out = fmt(loss_median, loss_lo, loss_hi)) |>
+    mutate(out = fmt(loss_mean, loss_lo, loss_hi)) |>
     select(year, sex, cause, out) |>
     pivot_wider(names_from = cause, values_from = out),
   n = 50
 )
 
-cat("\n=== THREE-WAY: e0 loss in years, median [95% UI] ===\n")
+cat("\n=== THREE-WAY: e0 loss in years, mean [95% UI] ===\n")
 print(
   e0_loss_by_cause |>
     filter(cause != "Combatants") |>
-    mutate(out = fmt(loss_median, loss_lo, loss_hi)) |>
+    mutate(out = fmt(loss_mean, loss_lo, loss_hi)) |>
     select(year, sex, cause, out) |>
     pivot_wider(names_from = cause, values_from = out),
   n = 50
@@ -294,14 +296,14 @@ plot_abs <- function(causes, total_cause = "Total", min_label = 0.05,
   ggplot() +
     geom_col(
       data = dat,
-      aes(x = factor(year), y = loss_median, fill = cause),
+      aes(x = factor(year), y = loss_mean, fill = cause),
       width = 0.68, colour = "white", linewidth = 0.2
     ) +
     geom_text(
       data = dat,
       aes(
-        x = factor(year), y = loss_median, group = cause,
-        label = if_else(loss_median >= min_label, sprintf("%.2f", loss_median), "")
+        x = factor(year), y = loss_mean, group = cause,
+        label = if_else(loss_mean >= min_label, sprintf("%.2f", loss_mean), "")
       ),
       position = position_stack(vjust = 0.5),
       colour = "black", size = 3
@@ -318,7 +320,7 @@ plot_abs <- function(causes, total_cause = "Total", min_label = 0.05,
       y = "Life expectancy loss (years)",
       fill = "Cause of loss",
       caption = caption %||% paste0(
-        "Bars: median contribution. Whiskers: 95% UI on the ",
+        "Bars: mean contribution. Whiskers: 95% UI on the ",
         tolower(total_cause), " loss."
       )
     ) +
@@ -335,7 +337,7 @@ plot_share <- function(causes, min_label = 0.03, y_lab = NULL,
     e0_loss_by_cause |>
     filter(cause %in% causes) |>
     nice_sex() |>
-    mutate(share_plot = loss_median / sum(loss_median), .by = c(year, sex))
+    mutate(share_plot = loss_mean / sum(loss_mean), .by = c(year, sex))
 
   # when the split does not vary by sex, showing two identical panels implies
   # a comparison that is not there

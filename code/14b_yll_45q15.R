@@ -64,7 +64,7 @@ key[, `:=`(yll_civilian = yll_civ,
            deaths = colSums(DCV + DCC + DCI))]
 key[, yll_total := yll_civilian + yll_registered + yll_late + yll_imputed]
 
-q3 <- function(x) list(median = median(x), lo = quantile(x, 0.025), hi = quantile(x, 0.975))
+q3 <- function(x) list(mean = mean(x), lo = quantile(x, 0.025), hi = quantile(x, 0.975))
 long <- melt(key, id.vars = c("sim_id", "year", "sex"), variable.name = "measure")
 
 by_year_sex <- long[, q3(value), by = .(year, sex, measure)]
@@ -89,9 +89,9 @@ write_rds(out, "data_inter/ukr_yll_45q15_summary.rds")
 cat("\n=== 45q15 (per 1,000): COUNTERFACTUAL, WITH CONFLICT DEATHS, DIFFERENCE ===\n")
 print(as.data.frame(
   out$by_year_sex |> filter(str_starts(measure, "q4515")) |>
-    mutate(across(c(median, lo, hi), \(x) round(1000 * x, 1))) |>
+    mutate(across(c(mean, lo, hi), \(x) round(1000 * x, 1))) |>
     arrange(sex, measure, year)
 ))
 cat("\n=== YEARS OF LIFE LOST, BOTH SEXES, ALL FOUR YEARS ===\n")
-print(as.data.frame(out$all_years_both |> mutate(across(c(median, lo, hi), round))))
+print(as.data.frame(out$all_years_both |> mutate(across(c(mean, lo, hi), round))))
 message("Done. data_inter/ukr_yll_45q15_summary.rds written.")

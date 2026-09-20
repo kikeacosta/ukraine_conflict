@@ -198,14 +198,14 @@ pert_shape <-
   map_dfr(shapes, function(s) {
     draws <- simulation_draws(param_table, mil, lc_error, n = n_shape, shape = s)$draws_df
     loss_by_draw(draws) |>
-      summarise(median = median(loss), lo = quantile(loss, 0.025), hi = quantile(loss, 0.975),
+      summarise(mean = mean(loss), lo = quantile(loss, 0.025), hi = quantile(loss, 0.975),
                 .by = c(year, sex)) |>
       mutate(shape = s)
   }) |>
   mutate(width = hi - lo)
 write_rds(pert_shape, "data_inter/ukr_pert_shape_e0.rds")
 
-cat("\n=== LOSS BY PERT SHAPE: MEDIAN AND 95% INTERVAL ===\n")
-print(as.data.frame(pert_shape |> mutate(across(c(median, lo, hi, width), \(x) round(x, 2))) |>
+cat("\n=== LOSS BY PERT SHAPE: MEAN AND 95% INTERVAL ===\n")
+print(as.data.frame(pert_shape |> mutate(across(c(mean, lo, hi, width), \(x) round(x, 2))) |>
                       arrange(sex, year, shape)))
 message("Done. data_inter/ukr_baseline_window_e0.rds and ukr_pert_shape_e0.rds written.")
