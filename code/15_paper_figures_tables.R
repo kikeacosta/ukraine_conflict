@@ -30,11 +30,11 @@
 #   table2_pert_input_bounds.csv                     10
 #   tableA26_missing_alive_inputs.csv                09
 #   table4_conflict_deaths_by_cause.csv              14   <- new
-#   table7_life_expectancy_loss.csv                  14
+#   table5_life_expectancy_loss.csv                  14
 #   tableA1_source_reconciliation.csv                07_ucdp, 07_acled
 #   tableA2_status_transitions.csv                   09
-#   table5_totals_by_cause.csv                       14   <- new
-#   table6_totals_by_year.csv                        14   <- new
+#   tableA31_totals_by_cause.csv                       14   <- new
+#   tableA32_totals_by_year.csv                        14   <- new
 #   tableA3_e0_loss_by_cause.csv                     14
 #   tableA4_uncertainty_shares.csv                   11, 14 <- new
 #   tableA5_military_reconciliation.csv              07_ucdp, 08, 10, 11
@@ -52,8 +52,8 @@
 #   tableA15_adult_mortality_45q15.csv               14b
 #   tableA25_civilian_age_profile.csv                13h
 #   tableA27_donbas_fighters.csv                     13i
-#   tableA28_out_of_sample.csv                       09i (where it has run)
-#   table8_structural_sensitivity.csv                13, 13b-13j
+#   out_of_sample_releases.csv                       09i (where it has run)
+#   table6_structural_sensitivity.csv                13, 13b-13j
 #   tableA16_missing_alive_by_lag_horizon.csv        13d
 #   tableA17_military_triangulation.csv              09, data_input/official_figures.csv
 #   tableA18_returned_prisoners_prior_status.csv     09
@@ -1051,7 +1051,7 @@ tab_by_cause <-
   bind_rows(bind_cols(tibble(role = "Total"), grand_row)) |>
   select(role, Females, Males, Total)
 
-save_tab(tab_by_cause, "table5_totals_by_cause.csv")
+save_tab(tab_by_cause, "tableA31_totals_by_cause.csv")
 print(tab_by_cause)
 
 tab_by_year <-
@@ -1061,7 +1061,7 @@ tab_by_year <-
   bind_rows(bind_cols(tibble(year = "Total"), grand_row)) |>
   select(year, Females, Males, Total)
 
-save_tab(tab_by_year, "table6_totals_by_year.csv")
+save_tab(tab_by_year, "tableA32_totals_by_year.csv")
 print(tab_by_year)
 
 # ==============================================================================
@@ -1095,7 +1095,7 @@ tab_e0 <-
             by = c("year", "sex"))
 stopifnot(!anyNA(tab_e0$loss_counterfactual_fixed))
 
-save_tab(tab_e0, "table7_life_expectancy_loss.csv")
+save_tab(tab_e0, "table5_life_expectancy_loss.csv")
 print(tab_e0)
 
 # ==============================================================================
@@ -1690,7 +1690,7 @@ oos_file <- "data_inter/ukr_ualosses_out_of_sample.rds"
 if (file.exists(oos_file)) {
   oos <- read_rds(oos_file)
   nxt <- set_names(oos$releases$release[-1], head(oos$releases$release, -1))
-  tA28 <-
+  t_oos <-
     oos$by_window |>
     transmute(window = paste0(from_release, " to ", nxt[from_release]),
               boundary = if_else(held_out, "held out of the fit", "fitted"),
@@ -1698,10 +1698,10 @@ if (file.exists(oos_file)) {
               dead_observed = round(dead), dead_predicted = round(pred_dead),
               resolved_observed = round(resolved), resolved_predicted = round(pred_resolved),
               predicted_over_observed = round(ratio, 2))
-  save_tab(tA28, "tableA28_out_of_sample.csv")
-  print(tA28)
+  save_tab(t_oos, "out_of_sample_releases.csv")
+  print(t_oos)
 } else {
-  message("  no out-of-sample test (09i has not run): table A28 is not written")
+  message("  no out-of-sample test (09i has not run): the out-of-sample linkage table is not written")
 }
 
 # A14: years of life lost and 45q15 (14b), medians and 95% intervals
@@ -1874,7 +1874,7 @@ tab8 <-
       mutate(analysis = as.character(analysis))
   ) |>
   rename(supplementary_table = table)
-save_tab(tab8, "table8_structural_sensitivity.csv")
+save_tab(tab8, "table6_structural_sensitivity.csv")
 print(tab8)
 
 # ==============================================================================

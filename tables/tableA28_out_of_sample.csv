@@ -1,6 +1,0 @@
-window,boundary,missing_at_start,dead_observed,dead_predicted,resolved_observed,resolved_predicted,predicted_over_observed
-v14 to v15,held out of the fit,77188,743,901,993,1037,1.04
-v15 to v16,held out of the fit,81090,838,652,850,759,0.89
-v16 to v17,held out of the fit,85219,1632,1487,1644,1492,0.91
-v17 to v18,held out of the fit,88272,1768,1849,1768,1856,1.05
-v18 to v19,fitted,87617,2208,2210,5044,5041,1

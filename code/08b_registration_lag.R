@@ -16,14 +16,29 @@
 # --------------------------------------------
 # For each event month m, each status s (dead, missing) and each consecutive
 # pair of releases r -> r+1, the growth of the register:
-#   dead      net additions = records listed as dead in r+1 whose key is
-#             absent from r in any status
-#             - records listed as dead in r whose key is absent from r+1 in
-#             any status
-#   missing   new persons = records listed as missing in r+1 whose key is
-#             absent from every release up to r, and that are not a
-#             corrected key of a record those releases held (same surname
-#             and first name, and the same date of birth or event month)
+#   dead      records listed as dead in r+1 whose key is absent from r in any
+#             status, less those that are a missing person of r under a
+#             corrected key, less records listed as dead in r whose key is
+#             absent from r+1 in any status
+#   missing   new persons listed as missing in r+1, a record whose key is
+#             absent from every release up to r and is not a corrected key of
+#             a record those releases held
+#
+# The two statuses are treated differently on purpose. The dead keep the
+# SYMMETRIC net, additions less drops, so that a record which leaves and returns
+# cancels; only a missing person recoded as dead under a corrected key is taken
+# out of the additions, since that is a resolution and not a new death. The
+# missing count new persons only, because a missing person who drops off the
+# register is a resolution that 09 counts as found alive, and netting the drops
+# here would take them out twice.
+#
+# Applying the corrected-key test to the dead's additions against ALL departed
+# records breaks this: a re-keyed death is then dropped without being re-added
+# and nets to -1, which drives the growth rates negative and the completion
+# factors below one - a register that loses deaths as it ages. Measured, the
+# loose test removes 934, 345 and 494 records per release pair against 1, 0 and
+# 0 for the strict one, so nearly all of it was matching namesakes. The guards
+# below stop the asymmetry recurring.
 # A key present in both releases is left out whatever its status, so a missing
 # person who is found dead, taken prisoner or released is a resolution, not a
 # registration or a de-registration. The dead leave the register only through
@@ -64,10 +79,11 @@ reg_counts <- cache_rds("data_inter/ualosses_registration_by_month.rds", {
   regs <- map(set_names(releases$path, releases$release), ual_read_release)
   rd <- function(r) {
     r |>
-      mutate(m = floor_date(date_evnt, "month")) |>
+      mutate(m = floor_date(date_evnt, "month"),
+             np = str_squish(str_remove(key, "\\s+\\S+$"))) |>
       filter(ukrainian, !is.na(m), m >= as.Date("2022-02-01"), m <= as.Date("2025-12-01")) |>
       ual_one_per_key() |>
-      select(key, name, dob, m, status)
+      select(key, np, name, dob, m, status)
   }
   d <- map(regs, rd)
   losses <- \(x) filter(x, status %in% c("dead", "missing"))
@@ -84,19 +100,51 @@ reg_counts <- cache_rds("data_inter/ualosses_registration_by_month.rds", {
   flows <- map_dfr(1:3, function(i) {
     a <- d[[i]]; b <- d[[i + 1]]
     earlier <- bind_rows(regs[1:i]) |>
-      transmute(key, name, dob, m = floor_date(date_evnt, "month")) |>
+      transmute(key, np = str_squish(str_remove(key, "\\s+\\S+$")), name, dob, status,
+                m = floor_date(date_evnt, "month")) |>
       distinct()
     gone <- earlier |> anti_join(regs[[i + 1]] |> distinct(key), by = "key")
-    new_missing <-
-      losses(b) |>
-      filter(status == "missing") |>
-      anti_join(earlier, by = "key") |>
-      anti_join(gone |> filter(!is.na(dob)) |> distinct(name, dob), by = c("name", "dob")) |>
-      anti_join(gone |> filter(!is.na(m)) |> distinct(name, m), by = c("name", "m"))
+    # The corrected-key test, applied to each status by what it is for.
+    #
+    # For the MISSING it removes anyone already in the register under another
+    # key, so that "new persons" are new.
+    #
+    # For the DEAD it must remove only the missing who became dead under a
+    # corrected key: those are resolutions, not newly registered deaths. It must
+    # NOT remove a dead record that was merely re-keyed, because that record's
+    # old key is counted among the drops, and excluding the new key as well
+    # would net it to -1 - which is what makes the growth rates go negative and
+    # the completion factors fall below one. A register cannot lose deaths as it
+    # ages.
+    # The missing keep the linkage's own test: surname and first name, and
+    # either the date of birth or the event month, against every departed
+    # record. The dead use the patronymic as well and look only among departed
+    # MISSING records, because in a register of this size a surname, first name
+    # and event month coincide often: matched loosely against all departures
+    # the test removes 934, 345 and 494 of the new dead per release pair,
+    # against 1, 0 and 0 once the patronymic is required - so the loose version
+    # is matching namesakes, not the same person.
+    drop_keys <- function(x, g, k) {
+      x |>
+        anti_join(g |> filter(!is.na(dob)) |> distinct(across(all_of(c(k, "dob")))),
+                  by = c(k, "dob")) |>
+        anti_join(g |> filter(!is.na(m)) |> distinct(across(all_of(c(k, "m")))),
+                  by = c(k, "m"))
+    }
+    new_missing <- drop_keys(losses(b) |> filter(status == "missing") |>
+                               anti_join(earlier, by = "key"), gone, "name")
+    # The dead keep the symmetric net, added - dropped, so that a record which
+    # leaves and returns cancels. Only the missing who became dead under a
+    # corrected key are taken out of the additions, counted here so that the
+    # growth can subtract them.
+    added_dead <- losses(b) |> filter(status == "dead") |> anti_join(a, by = "key")
+    mtd <- added_dead |>
+      anti_join(drop_keys(added_dead, gone |> filter(status == "missing"), "np"), by = "key")
     bind_rows(
       losses(b) |> anti_join(a, by = "key") |> count(m, status, name = "n") |> mutate(kind = "added"),
       losses(a) |> anti_join(b, by = "key") |> count(m, status, name = "n") |> mutate(kind = "dropped"),
-      new_missing |> count(m, status, name = "n") |> mutate(kind = "added_new")
+      new_missing |> count(m, status, name = "n") |> mutate(kind = "added_new"),
+      mtd |> count(m, status, name = "n") |> mutate(kind = "added_recoded")
     ) |> mutate(from = releases$release[i], to = releases$release[i + 1])
   })
   bind_rows(stock, flows)
@@ -116,7 +164,7 @@ growth <-
   mutate(
     L0 = lag_months(rel_date[from], m), L1 = lag_months(rel_date[to], m),
     dL = L1 - L0, Lmid = (L0 + L1) / 2,
-    growth = if_else(status == "missing", added_new, added - dropped),
+    growth = if_else(status == "missing", added_new, added - added_recoded - dropped),
     lambda = log1p(growth / n_from) / dL
   ) |>
   # February 2022 holds five days of events and takes the register's batch
@@ -133,6 +181,12 @@ lambda_band <-
   summarise(lambda = weighted.mean(lambda, n_from * dL), n_obs = n(), .by = c(status, band)) |>
   mutate(lo = bands[as.integer(band)], hi = bands[as.integer(band) + 1]) |>
   arrange(status, lo)
+
+# Guard against the asymmetry that broke this step once: the register cannot
+# lose deaths as it ages, so no band rate may be negative. The tolerance is for
+# a band where additions and drops balance exactly and the weighted mean lands a
+# few parts in ten million below zero.
+stopifnot(all(lambda_band$lambda >= -1e-6))
 
 cat("\n=== MONTHLY GROWTH OF THE REGISTER BY LAG SINCE THE EVENT ===\n")
 print(as.data.frame(lambda_band |> mutate(lambda_pct = round(100 * lambda, 3)) |>
@@ -159,7 +213,7 @@ completion_month <-
   mutate(year = year(m), lag = lag_months(rel_date[["v19"]], m),
          factor = map2_dbl(lag, status, chain_factor)) |>
   select(m, year, status, lag, n_v19 = n, factor)
-stopifnot(all(completion_month$factor > 0))
+stopifnot(all(completion_month$factor >= 1 - 1e-9))   # a lag correction can only add
 
 completion_year <-
   completion_month |>

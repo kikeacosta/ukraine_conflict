@@ -54,29 +54,34 @@ dt <-
   mutate(deaths = mx * pop) |>
   drop_na(mx, pop)
 
-# as 04: Lee-Miller variant, adjusted on e0, jumping off the fitted rates
-forecast_window <- function(years) {
+# as 04: adjusted on e0, jumping off the FITTED rates of the last year. The
+# Lee-Miller variant jumps off the OBSERVED rates instead, which is the last row
+# below: it moves the level of the counterfactual more than it moves the loss.
+forecast_window <- function(years, jump = "fit") {
   dt |>
     filter(year %in% years) |>
     as_vital(index = year, key = c(sex, age), .age = "age", .sex = "sex",
              .deaths = "deaths", .population = "pop") |>
-    model(lc = LC(log(mx), adjust = "e0", jump_choice = "fit")) |>
+    model(lc = LC(log(mx), adjust = "e0", jump_choice = jump)) |>
     forecast(h = 2025 - max(years)) |>
     as_tibble() |>
     select(year, sex, age, mx = .mean) |>
     filter(year %in% 2022:2025)
 }
 windows <- tibble(
-  window = c("2000-2019 (used)", "1995-2019", "2005-2019", "2010-2019", "2000-2021, with the COVID years"),
-  first = c(2000, 1995, 2005, 2010, 2000),
-  last = c(2019, 2019, 2019, 2019, 2021)
+  window = c("2000-2019 (used)", "1995-2019", "2005-2019", "2010-2019",
+             "2000-2021, with the COVID years",
+             "2000-2019, jumping off the observed rates (Lee-Miller)"),
+  first = c(2000, 1995, 2005, 2010, 2000, 2000),
+  last = c(2019, 2019, 2019, 2019, 2021, 2019),
+  jump = c("fit", "fit", "fit", "fit", "fit", "actual")
 )
 with_mx <- function(fc) mi$static_inputs |> select(-mx) |> left_join(fc, by = c("year", "sex", "age"))
 
 baseline <-
   windows |>
-  mutate(res = map2(first, last, function(f, l) {
-    fc <- forecast_window(f:l)
+  mutate(res = pmap(list(first, last, jump), function(f, l, j) {
+    fc <- forecast_window(f:l, j)
     st <- with_mx(fc)
     stopifnot(all(st$mx > 0), !any(is.na(st$mx)))
     loss_at_mode(mi$draws, st, mi$pop22_ini)
@@ -85,7 +90,7 @@ baseline <-
 
 # the window used must reproduce 04's forecast and 13's loss
 stopifnot(isTRUE(all.equal(
-  baseline |> filter(first == 2000, last == 2019) |> arrange(year, sex) |> pull(loss),
+  baseline |> filter(first == 2000, last == 2019, jump == "fit") |> arrange(year, sex) |> pull(loss),
   read_rds("data_inter/ukr_migration_decomposition.rds") |> arrange(year, sex) |> pull(loss),
   tolerance = 1e-6
 )))
@@ -125,6 +130,7 @@ write_rds(baseline, "data_inter/ukr_baseline_window_e0.rds")
 # 2005-2008 crisis has a more erratic index, so a wider band.
 spread <-
   windows |>
+  filter(jump == "fit") |>   # the jump-off is not a window; it has no band of its own
   mutate(res = map2(first, last, function(f, l) {
     fc <-
       dt |>

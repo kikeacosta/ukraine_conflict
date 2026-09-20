@@ -821,10 +821,12 @@ captives_for <- function(ev, s, held) s * (held + ev$returned_military - ev$regi
 # the estimate; lag: the replicate for each draw, or NULL for the point
 # factors. Returns one row per draw and year: confirmed (registered and late),
 # missing, captives, imputed_unlisted, alive_other, imputed_dead and military.
-military_draws <- function(mil, captives, alive_other, theta = NULL, lag = NULL) {
+military_draws <- function(mil, captives, alive_other, theta = NULL, lag = NULL,
+                           window = NULL) {
   n <- length(captives)
   stopifnot(length(alive_other) == n, is.null(lag) || length(lag) == n,
-            is.null(theta) || nrow(theta) == n)
+            is.null(theta) || nrow(theta) == n,
+            is.null(window) || length(window) == n)
   dead <- mil$month |> filter(status == "dead")
   miss <- mil$month |> filter(status == "missing")
   factors <- function(rows) {
@@ -842,8 +844,17 @@ military_draws <- function(mil, captives, alive_other, theta = NULL, lag = NULL)
     p <- resolve(model$h)
     part <- lapply(set_names(outcome), \(o) missing_m * p[, o])
   } else {
-    arr <- vapply(seq_len(n),
-                  \(i) resolve(ual_theta_hazards(theta[i, ], model$nb, model$k)$projection)[, outcome],
+    # The projection to 48 months has to choose a multiplier for windows it has
+    # not seen. Its point rule is the length-weighted average of the fitted
+    # windows; `window` instead gives each draw one of the fitted windows,
+    # sampled with probability proportional to its length, so that the interval
+    # carries the variation between them rather than only the estimation error
+    # around their average.
+    proj <- function(i) {
+      hz <- ual_theta_hazards(theta[i, ], model$nb, model$k)
+      if (is.null(window)) hz$projection else sweep(hz$h, 2, hz$mult[window[i], ], "*")
+    }
+    arr <- vapply(seq_len(n), \(i) resolve(proj(i))[, outcome],
                   matrix(0, nrow(miss), length(outcome)))
     part <- lapply(set_names(seq_along(outcome), outcome), \(j) missing_m * arr[, j, ])
   }
@@ -1204,12 +1215,17 @@ simulation_draws <- function(param_table, mil, lc_error, n, shape = 4, seed = 42
                  2, model$theta, "+")
   lag <- sample.int(ncol(mil$factor_draws), n, replace = TRUE)
   alive_draws$lag <- lag
+  # Which fitted window the projection's future is taken to resemble, drawn with
+  # probability proportional to the window's length.
+  window <- sample.int(length(ual_window_months), n, replace = TRUE,
+                       prob = ual_window_months / sum(ual_window_months))
+  alive_draws$window <- window
 
-  mil_all <- military_draws(mil, alive_draws$captives, alive_draws$alive_other, theta, lag)
+  mil_all <- military_draws(mil, alive_draws$captives, alive_draws$alive_other, theta, lag, window)
   captives_c <- rep(ev$captives_central, n)
   other_c <- rep(ev$other_central, n)
   mil_alive <- military_draws(mil, alive_draws$captives, alive_draws$alive_other)
-  mil_model <- military_draws(mil, captives_c, other_c, theta = theta)
+  mil_model <- military_draws(mil, captives_c, other_c, theta = theta, window = window)
   mil_lag <- military_draws(mil, captives_c, other_c, lag = lag)
   alive_draws <-
     alive_draws |>
