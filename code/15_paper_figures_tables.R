@@ -400,14 +400,14 @@ save_fig(fig5, "fig5_decomposition_by_cause.png", 8, 4.4)
 # combined term is dominated by combatant variation - which is nearly
 # irrelevant to the female loss, where civilians drive almost all of it. The
 # combatants are split by what moves them: the evidence on the missing alive,
-# the resolution model's estimates and the registration-lag factors, each
+# the release windows behind the bound on them and the registration-lag factors, each
 # summarised by the military total it gives with the other two at their point
 # values (simulation_draws(), 00_setup.R). The counterfactual enters through
 # the draw's forecast index for the sex and year.
 UNC_LAB <- c(
   cvs   = "Civilian deaths",
   alive = "Missing alive",
-  model = "Resolution model",
+  model = "Bound's release windows",
   lag   = "Registration lag",
   lc    = "Counterfactual forecast",
   mig_w = "Migration: western",
@@ -417,7 +417,7 @@ UNC_LAB <- c(
 COL_UNC <- c(
   "Civilian deaths"             = "#AE2012",
   "Missing alive"               = "#333333",
-  "Resolution model"            = "#7F7F7F",
+  "Bound's release windows"     = "#7F7F7F",
   "Registration lag"            = "#B8B8B8",
   "Counterfactual forecast"     = "#94D2BD",
   "Migration: western"          = "#0A9396",
@@ -808,18 +808,18 @@ tab_imput <-
     imputed_dead,
     pct_dead,
     prisoners_of_war = captives,
-    projected_no_longer_listed = imputed_unlisted,
+    bound_alive_other = bound,
     alive_other = alive_other,
     pct_alive,
     total_deaths = total_estimado
   )
 stopifnot(isTRUE(all.equal(imput$imputed_dead + imput$imputed_alive, imput$missing_stock)),
-          isTRUE(all.equal(imput$captives + imput$imputed_unlisted + imput$alive_other, imput$imputed_alive)))
+          isTRUE(all.equal(imput$captives + imput$alive_other, imput$imputed_alive)))
 
 # The Total row sums the rounded years, as tables 1 and 3 do, so the tables
 # print the same totals; rounding the four-year sum once can differ by one.
 count_cols <- c("registered_deaths", "late_registrations", "missing", "imputed_dead",
-                "prisoners_of_war", "projected_no_longer_listed", "alive_other",
+                "prisoners_of_war", "alive_other",
                 "total_deaths")
 tab_imput <- bind_rows(
   tab_imput,
@@ -828,12 +828,14 @@ tab_imput <- bind_rows(
     mutate(
       year = NA_integer_,
       pct_dead = imputed_dead / missing,
-      pct_alive = (prisoners_of_war + projected_no_longer_listed + alive_other) / missing
+      pct_alive = (prisoners_of_war + alive_other) / missing,
+      # the bound of the four years together: the alive it allows over the missing it applies to
+      bound_alive_other = sum(imput$bound * imput$unresolved) / sum(imput$unresolved)
     )
 ) |>
   mutate(
     across(all_of(count_cols), ~round(.x)),
-    across(c(pct_dead, pct_alive), ~scales::percent(.x, accuracy = 0.1)),
+    across(c(pct_dead, pct_alive, bound_alive_other), ~scales::percent(.x, accuracy = 0.1)),
     year = if_else(is.na(year), "Total", as.character(year))
   )
 
@@ -891,18 +893,18 @@ save_tab(tab_pert, "table2_pert_input_bounds.csv")
 print(tab_pert)
 
 # The inputs on the missing alive behind the combatant bounds, each drawn once
-# per simulation from a Beta-PERT (alive_evidence(), 00_setup.R), with the two
-# counts they give: the prisoners of war the register does not record as such,
-# and those among its missing.
+# per simulation (alive_evidence(), 00_setup.R) - the first two from a Beta-PERT, the
+# last uniformly up to its bound - with the two counts they give: the prisoners
+# of war the register does not record as such, and those among its missing.
 tab_alive <-
   tibble(
     input = c("Share of the unrecorded prisoners of war among the missing",
               "Prisoners of war held, February 2026",
               "Prisoners of war the register does not record (held + returned − recorded)",
               "Prisoners of war among the missing",
-              "Share of the unresolved missing alive for other reasons"),
+              "Share of the missing, prisoners apart, alive outside captivity (all event years pooled)"),
     min = with(evidence, c(s_min, held_min, unrecorded_min, captives_min, other_min)),
-    mode = with(evidence, c(s_mode, held_mode, unrecorded_mode, captives_mode, other_mode)),
+    mode = with(evidence, c(s_mode, held_mode, unrecorded_mode, captives_mode, NA)),
     central = with(evidence, c(s_central, held_central, unrecorded_central, captives_central, other_central)),
     max = with(evidence, c(s_max, held_max, unrecorded_max, captives_max, other_max)),
     basis = c(
@@ -911,7 +913,7 @@ tab_alive <-
       sprintf("Held plus %s military personnel returned, less the %s the register records as prisoners or released",
               scales::comma(evidence$returned_military), scales::comma(round(evidence$register_alive))),
       "Share among the missing times the unrecorded prisoners",
-      "None (min and mode); the share of the register's first resolutions that leave it beyond list maintenance (max)"
+      "Uniform between none (min) and the bound (max): of the first resolutions outside captivity, the share that leave the register beyond list maintenance; by event year in the imputation (table 3)"
     )
   ) |>
   mutate(across(c(min, mode, central, max), \(x) if_else(x < 1, round(x, 3), round(x))))
@@ -1246,7 +1248,7 @@ tA6 <-
   alive_mil |>
   # summed over rounded years, as table 3 builds its totals, so the two agree
   summarise(total_military_deaths = sum(round(total_military)),
-            .by = c(point, alive, share_alive, captives, other)) |>
+            .by = c(point, alive, share_alive, captives, other, share_otherwise)) |>
   left_join(
     alive_e0 |>
       summarise(
@@ -1262,7 +1264,7 @@ tA6 <-
     evidence = point,
     missing_alive = round(alive),
     prisoners_of_war_among_missing = round(captives),
-    share_of_unresolved_alive_otherwise = round(other, 3),
+    share_alive_outside_captivity = round(share_otherwise, 3),
     total_military_deaths,
     male_e0_loss_2025 = round(male_loss_2025, 2),
     female_e0_loss_2025 = round(female_loss_2025, 3)
@@ -1745,11 +1747,11 @@ save_tab(tA14_q, "tableA15_adult_mortality_45q15.csv")
 print(tA14_yll)
 print(tA14_q)
 # ==============================================================================
-# TABLE A2 - Resolution of the missing over twelve months
+# TABLE A2 - Resolution of the missing between the first and the last release
 # ==============================================================================
-# From 09: everyone listed as missing in v14, v16 or v18, followed to v19, the
-# three windows between the four releases composed into the twelve months
-# from v14 to v19. A return from captivity is a resolution to captivity; the
+# From 09: everyone listed as missing in any release but the last, followed to
+# the last, the windows between the releases composed into the months from the
+# first release to the last. A return from captivity is a resolution to captivity; the
 # people whose first resolution it was are counted apart. Shares of the
 # cohort's missing.
 res12 <- read_rds("data_inter/ukr_ualosses_resolution_12m.rds")
@@ -1762,7 +1764,7 @@ tA2 <-
   transmute(
     year,
     missing_v14 = at_risk_v14,
-    first_listed_v16_v18 = later_entrants,
+    first_listed_later = later_entrants,
     returned_from_captivity,
     across(c(dead, prisoner, no_longer_listed, still_missing = missing),
            \(x) scales::percent(x, accuracy = 0.1))
@@ -2028,7 +2030,7 @@ print(tA19)
 # ==============================================================================
 # Monthly hazards (%) of leaving "missing" for each outcome, as projected: the
 # first window's hazards times each outcome's average multiplier over the
-# three windows. Below them, each window's multiplier against the first.
+# windows. Below them, each window's multiplier against the first.
 model_09 <- read_rds("data_inter/ukr_ualosses_resolution_model.rds")
 mult <- model_09$window_multipliers
 colnames(mult) <- ual_resolutions
@@ -2039,7 +2041,7 @@ tA20 <-
       rename(months_since_event = band),
     as_tibble(round(mult, 3)) |>
       mutate(row = "multiplier against the first window",
-             months_since_event = c("v14-v16", "v16-v18", "v18-v19"), .before = 1)
+             months_since_event = paste0(head(ual_releases$release, -1), "-", ual_releases$release[-1]), .before = 1)
   )
 save_tab(tA20, "tableA20_resolution_hazards.csv")
 print(tA20)
@@ -2112,7 +2114,8 @@ figA6 <-
                aes(x = month, xend = month, y = d0, yend = d1, colour = window),
                linewidth = 1.1) +
   geom_hline(yintercept = model_09$horizon, linewidth = 0.3) +
-  scale_colour_manual(values = c("v14-v16" = "#0A9396", "v16-v18" = "#EE9B00", "v18-v19" = "#AE2012")) +
+  scale_colour_manual(values = set_names(c("#005F73", "#0A9396", "#94D2BD", "#EE9B00", "#AE2012")[seq_len(nrow(ual_releases) - 1)],
+                                         paste0(head(ual_releases$release, -1), "-", ual_releases$release[-1]))) +
   scale_y_continuous(breaks = seq(0, 60, 6)) +
   scale_x_date(date_breaks = "6 months", date_labels = "%b\n%Y") +
   labs(x = "Month of the event", y = "Months since the event", colour = "Window",
@@ -2169,15 +2172,14 @@ tA35 <-
 save_tab(tA35, "tableA35_covid_carryover.csv")
 print(tA35)
 
-# A36: the projection's rule against each window it was not fitted to, by
-# outcome, with the interval the simulation's draws of the model give (09j)
+# A36: the duration model against each window it was not fitted to, by outcome:
+# fitted on the other windows, predicting with the average of their multipliers (09j)
 held_out <- read_rds("data_inter/ukr_ualosses_held_out_window.rds")
 tA36 <-
   held_out$by_cause |>
   transmute(case, fitted_on, predicted_window = from_release, outcome,
             missing_at_start = round(at_risk), observed = round(observed), predicted = round(predicted),
-            predicted_over_observed = round(ratio, 2),
-            predicted_lo = round(pred_lo), predicted_hi = round(pred_hi), observed_within = covered)
+            predicted_over_observed = round(ratio, 2))
 save_tab(tA36, "tableA36_held_out_window.csv")
 print(tA36)
 

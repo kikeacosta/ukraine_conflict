@@ -10,20 +10,20 @@
 #
 #   COMBATANTS (ualosses register)
 #     The total is the registered dead, completed for registration lag, plus
-#     the missing imputed as dead by 09's model. How many of the missing are
-#     alive rests on the evidence alive_evidence() (00_setup.R) sets out: the
-#     prisoners of war among the missing and the share of the unresolved
-#     alive for other reasons. The bounds are the total at the ends and the
-#     centre of that evidence, at the model's estimates and 08b's point
-#     factors (military_draws(), 00_setup.R):
+#     the missing counted as dead: all of them but the prisoners of war among
+#     them and a share of the rest no larger than the register's resolutions
+#     allow (alive_evidence(), military_draws(), 00_setup.R). The bounds are the
+#     total at the ends and the centre of that evidence, at 08b's point factors:
 #     min  = the most alive: every unrecorded prisoner among the missing, the
-#            most prisoners held, and the unresolved alive at their ceiling
-#     mode = the central values
+#            most prisoners held, and the alive outside captivity at their
+#            bound in every cohort
+#     mode = the central values: the inputs on the prisoners at their means,
+#            half the bound
 #     max  = the fewest alive: the unrecorded prisoners among the missing as
-#            the returned of every year had been, the fewest held, none of
-#            the unresolved alive
-#     11 draws the evidence together with the sampling error of the model
-#     and of the lag factors, so a draw can fall slightly outside these
+#            the returned of every year had been, the fewest held, none alive
+#            outside captivity
+#     11 draws the evidence together with the error of the bound and of the
+#     lag factors, so a draw can fall slightly outside these
 #     bounds. Two further columns describe the register rather than the
 #     estimate: confirmed (its dead with their late registrations, used to
 #     split confirmed from imputed) and listed (confirmed plus everyone still
@@ -71,11 +71,11 @@ ual2 <-
 # --- combatants -------------------------------------------------------------
 mil <- read_rds("data_inter/ukr_military_inputs.rds")
 ev <- mil$evidence
-at_evidence <- function(captives, other) military_draws(mil, captives, other)
+at_evidence <- function(captives, other = NULL) military_draws(mil, captives, other)
 # the "mode" column of the combatant rows is the total at the central values
 # of the evidence, the means of its inputs (alive_evidence(), 00_setup.R):
 # the reference every deterministic analysis starts from
-at_central <- at_evidence(ev$captives_central, ev$other_central)
+at_central <- at_evidence(ev$captives_central)
 
 cmb <-
   at_central |>
@@ -83,8 +83,8 @@ cmb <-
     year,
     role = "combatants",
     mode = military,
-    min = at_evidence(ev$captives_max, ev$other_max)$military,
-    max = at_evidence(ev$captives_min, ev$other_min)$military,
+    min = at_evidence(ev$captives_max, composition_bound(mil$composition))$military,
+    max = at_evidence(ev$captives_min, 0)$military,
     confirmed,
     listed = confirmed + missing
   )

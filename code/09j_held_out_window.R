@@ -4,34 +4,29 @@
 #
 # WHY
 # ---
-# S8.6 sets out why the two interior releases cannot test the duration model: a
-# half-window predicted with the multiplier of the window it sits inside
-# reproduces a fitted total by construction. This is the test that can be run
-# with the same data.
+# The duration model of 09 describes how the missing resolve: hazards by months
+# since the event, with one multiplier per window between releases and outcome.
+# It is no longer part of the estimate - the imputation is an accounting
+# identity (military_draws(), 00_setup.R) - but it is the project's account of
+# the register, and an account should be checked where it can be. With six
+# releases there are five windows: the model is fitted on four of them and asked
+# to predict the fifth with the average of the fitted windows' multipliers, each
+# window held out in turn.
 #
-# The projection carries each event month's missing to 48 months with the
-# LENGTH-WEIGHTED AVERAGE of the fitted windows' multipliers (ual_theta_hazards(),
-# the `projection` element). Whether that rule forecasts a window it has not seen
-# is a question the three windows can answer: fit on two of them and predict the
-# third.
-#
-#   case A   fit v14>v16 and v16>v18, predict v18>v19
-#   case B   fit v16>v18 and v18>v19, predict v14>v16
-#   case C   fit v14>v16 and v18>v19, predict v16>v18
-#
-# Reported by cause, because the causes do not matter equally. By the identity of
-# S3.5 a death the model misses returns to the unresolved pool and is imputed dead
-# at 1 - a anyway, so the military total barely moves; a resolution ALIVE that the
-# model misses does change it. The death channel is what carries the estimate, and
-# the captivity channel is expected to miss badly in case A, because the last
-# release recorded a batch of past returns that no earlier window anticipates.
-# That is a property of the register worth reporting, not a failure of the model.
+# Reported by outcome, because the outcomes behave differently. Resolutions to
+# death come from a pipeline of recovery and identification that runs at a
+# steady pace, and forecast well. Resolutions to captivity were recorded by the
+# last release in one batch, and exits from the register come with the
+# register's clean-ups, in some releases and not others: neither can be forecast
+# from the other windows, which is why the prisoners among the missing come from
+# official counts and the alive outside captivity from a bound and not from a
+# projection. Each held-out window is one and a half to three months long: this
+# is a test of a short forecast.
 #
 # INPUTS   data_inter/ualosses_window_transitions.rds (09's cached linkage),
 #          data_inter/ukr_registration_completion.rds (08b)
 # OUTPUTS  data_inter/ukr_ualosses_held_out_window.rds:
-#            by_cause   observed and predicted, per case and outcome, with the
-#                       interval the simulation's two draws of the model give
+#            by_cause   observed and predicted, per case and outcome
 #            by_band    the same by months since the event
 # ==============================================================================
 
@@ -66,13 +61,13 @@ maintained <-
             maintained |> filter(n_maint > 0) |> mutate(to = "missing", n = n_maint)) |>
   summarise(n = sum(n), .by = c(year, month, entry, from_release, to))
 
-# Durations come from the full four-release calendar, so the held-out window's
+# Durations come from the full calendar of releases, so the held-out window's
 # cells keep the durations the projection would meet.
 cells_all <- ual_duration_cells(maintained)
 rel_all <- ual_releases
 months_all <- ual_window_months
 
-# 2. FIT ON TWO WINDOWS, PREDICT THE THIRD ======================================
+# 2. FIT ON THE OTHER WINDOWS, PREDICT THE ONE HELD OUT ==========================
 # ual_fit_durations() reads ual_releases and ual_window_months, so the two are
 # restricted around the fit and restored after it.
 fit_without <- function(keep_rows, fit_windows) {
@@ -93,12 +88,13 @@ predict_window <- function(m, w) {
               rename_with(\(x) paste0("pred_", x)))
 }
 
-cases <- tribble(
-  ~case, ~keep,       ~fit_windows,        ~held_out,
-  "A",   1:3,         c("v14", "v16"),     "v18",
-  "B",   2:4,         c("v16", "v18"),     "v14",
-  "C",   c(1, 3, 4),  c("v14", "v18"),     "v16"
-)
+# every window held out in turn: the fit keeps the other windows, and the rows
+# of ual_releases they start from, with the last release to close the last one
+n_win <- nrow(rel_all) - 1
+cases <- tibble(case = LETTERS[seq_len(n_win)]) |>
+  mutate(keep = map(seq_len(n_win), function(j) c(setdiff(seq_len(n_win), j), n_win + 1)),
+         fit_windows = map(keep, function(k) rel_all$release[head(k, -1)]),
+         held_out = rel_all$release[seq_len(n_win)])
 
 models <- pmap(cases, function(case, keep, fit_windows, held_out) {
   message("  case ", case, ": fitting on ", paste(fit_windows, collapse = " and "),
@@ -138,39 +134,6 @@ by_band <-
             across(c(all_of(ual_resolutions), starts_with("pred_")), sum),
             .by = c(case, band)) |>
   arrange(case, band)
-
-# 4. DOES THE SPREAD THE SIMULATION CARRIES COVER THE ERROR? ====================
-# In every simulation the resolution model varies in two ways (11): its estimates
-# are drawn from their sampling distribution, and the projection averages the
-# fitted windows' multipliers under weights drawn around the windows' lengths
-# (window_weight_draws(), 00_setup.R). The same two draws, made from each case's
-# fit, give the interval the simulation would have put around the held-out
-# window's resolutions. An observed count outside it is an error the
-# simulation's interval does not carry: the interval is for the average of many
-# future windows, and one window can sit far from it.
-set.seed(20260920)
-n_pred <- 2000
-predictive <- pmap_dfr(cases, function(case, keep, fit_windows, held_out) {
-  m <- models[[case]]
-  lens <- months_all[head(keep, -1)]
-  n_theta <- length(m$theta)
-  theta <- sweep(matrix(rnorm(n_pred * n_theta), n_pred) %*% chol(m$vcov + diag(1e-12, n_theta)),
-                 2, m$theta, "+")
-  w <- window_weight_draws(n_pred, lens)
-  cells <- cells_all |> filter(from_release == held_out)
-  at_risk <- rowSums(cells[, c("missing", ual_resolutions)])
-  pred <- vapply(seq_len(n_pred), function(i) {
-    hz <- ual_theta_hazards(theta[i, ], m$nb, m$k, windows = lens)
-    p <- ual_resolve(sweep(hz$h, 2, colSums(hz$mult * w[i, ]), "*"), cells$d0, cells$d1, m$breaks)
-    colSums(p[, ual_resolutions, drop = FALSE] * at_risk)
-  }, numeric(length(ual_resolutions)))
-  tibble(case = case, outcome = ual_resolutions,
-         pred_lo = apply(pred, 1, quantile, 0.025), pred_hi = apply(pred, 1, quantile, 0.975))
-})
-by_cause <-
-  by_cause |>
-  left_join(predictive, by = c("case", "outcome")) |>
-  mutate(covered = observed >= pred_lo & observed <= pred_hi)
 
 cat("\n=== THE PROJECTION'S RULE AGAINST A WINDOW IT WAS NOT FITTED TO ===\n")
 print(as.data.frame(by_cause |> mutate(across(where(is.double), \(x) round(x, 3)))))

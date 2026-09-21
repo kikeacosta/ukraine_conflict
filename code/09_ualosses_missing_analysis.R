@@ -5,12 +5,16 @@ source("code/00_setup.R")
 # data compiled by Olivier Hubert
 # in https://www.kaggle.com/datasets/ol4ubert/confirmed-ukrainian-military-personnel-losses
 #
-# How do the personnel recorded as "missing" resolve? Estimated by following
-# everyone listed as missing through the four register releases - v14 (16 Sep
-# 2025), v16 (4 Dec 2025), v18 (23 Apr 2026) and v19 (21 Jul 2026) - and
-# fitting, to the three windows between them, how fast the missing leave that
-# status by months since the event. Each event month's missing in v19 are then
-# carried forward from the duration they have reached.
+# How many of the personnel recorded as "missing" are dead? Everyone listed as
+# missing is followed through the six register releases (ual_releases,
+# 00_setup.R: v14 of 16 Sep 2025 to v19 of 21 Jul 2026) and the five windows
+# between them. The register settles the fate of few of them, so the missing
+# are not projected forward: every missing person is counted as dead unless
+# there is evidence of life - the prisoners of war among them, from official
+# counts, and a share alive outside captivity that the composition of the
+# register's own resolutions bounds (military_draws(), 00_setup.R). How fast
+# the missing leave that status by months since the event is fitted as well: a
+# description of the register, and two of the alternatives at the end.
 #
 # The releases are large individual-level files that are not tracked in git.
 # Only the anonymous count summaries below cross the cache boundary, so the
@@ -19,15 +23,19 @@ source("code/00_setup.R")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # KEY ASSUMPTION
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# How many of the missing are alive drives the combatant total. The model
-# projects who will leave the register beyond list maintenance (counted alive
-# by the rules below); the prisoners of war among the missing are set by the
-# official figures, compared with the prisoners the register records; and a
-# share of the rest may be alive for other reasons. alive_evidence() in
-# 00_setup.R sets out the evidence, its ranges and the sources. This script
-# imputes at the central values - the means of the evidence's inputs - and
-# records the ranges, 10 turns them into the combatant bounds, and 11 draws
-# them together with the sampling error of the model and of the
+# How many of the missing are alive drives the combatant total. The prisoners
+# of war among the missing are set by the official figures, compared with the
+# prisoners the register records. Of the rest, the share alive outside
+# captivity lies between none and a bound: among the first resolutions outside
+# captivity of an event year's missing, the share that leave the register
+# beyond list maintenance (by the rules below) and are not recorded dead. It
+# is a bound because the missing not yet resolved are taken to be no more often
+# alive than those resolved, while the living resurface sooner than bodies are
+# identified. alive_evidence() and composition_bound() in 00_setup.R set out
+# the evidence, its ranges and the sources. This script imputes at the central
+# values - the means of the evidence's inputs, half the bound - and records
+# the ranges, 10 turns them into the combatant bounds, and 11 draws them
+# together with the weights on the windows behind the bound and the
 # registration-lag factors (military_draws()).
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -35,7 +43,7 @@ source("code/00_setup.R")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # The rules live in 00_setup.R (ual_follow_missing, ual_windows):
 #   - a person enters at their first listing as missing, event in 2022-2025
-#     and Ukrainian, in v14, v16 or v18, and is looked up in every later
+#     and Ukrainian, in any release but the last, and is looked up in every later
 #     release searched in full, whatever the event year or nationality field;
 #   - by exact full name and date of birth; if absent, under a corrected key:
 #     a key new in that release with the same surname and first name and the
@@ -75,13 +83,13 @@ linkage <- cache_rds(
 
     # Where the people v19 records as returned from captivity were listed
     # before their return: as prisoners, as missing, as dead, or nowhere. By
-    # exact key in v14, v16 or v18, else by a corrected key among the records
+    # exact key in an earlier release, else by a corrected key among the records
     # v19 no longer holds.
     lu <- map(regs, ual_one_per_key)
     returned <- lu$v19 |>
       filter(status == "released_prisoner", year %in% 2022:2025, ukrainian) |>
       select(key, name, dob, date_evnt, year)
-    earlier <- bind_rows(lu[c("v14", "v16", "v18")])
+    earlier <- bind_rows(lu[head(names(lu), -1)])
     exact <- returned |> select(key) |> inner_join(earlier |> select(key, status), by = "key")
     gone <- earlier |> anti_join(lu$v19 |> select(key), by = "key")
     corrected <-
@@ -222,10 +230,10 @@ stocks <-
 print(stocks |> pivot_wider(names_from = status, values_from = n))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# resolution of the missing over twelve months, by cohort year
+# resolution of the missing between the first and the last release, by cohort year
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # every outcome kept apart, with the people at risk: those listed as missing
-# in v14, and those first listed in v16 or v18, who join the later windows
+# in v14, and those first listed in a later release, who join the later windows
 later_entrants <-
   production_windows |>
   filter(entry != "v14", from_release == entry) |>
@@ -286,8 +294,12 @@ print(captivity_by_window)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # the missing who are alive, and the imputation
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# impute_missing() (00_setup.R) holds the projection itself, so this call,
-# the draws in 11 and the sensitivity steps share one formula.
+# The imputation is an accounting identity (military_draws(), 00_setup.R): of
+# each event year's missing, the prisoners of war are alive, a share of the
+# rest no larger than the register's own resolutions allow may be alive, and
+# everyone else is counted dead. Nothing is projected. The duration model above
+# says how the missing resolve; it does not enter the total, because a person it
+# resolves to death and one it leaves unresolved are both counted dead.
 stock_missing_month <-
   stock_month |>
   filter(status == "missing") |>
@@ -296,22 +308,55 @@ stock_missing_2026 <-
   stock_missing_month |>
   summarise(missing_stock = sum(missing_stock), .by = year)
 
+# The composition of the first resolutions outside captivity, by event year and
+# window: recorded dead, or out of the register beyond list maintenance, the one
+# way the register has of recording a person found alive. February 2022 is left
+# out, as it is out of the model. The share of the second in the two is the
+# bound on the alive outside captivity among a cohort's missing (00_setup.R,
+# alive_evidence(): why it is an upper bound).
+composition <-
+  maintain(production_windows) |>
+  summarise(dead = sum(n[to == "dead"]), out = sum(n[to == "no_longer_listed"]), .by = c(year, from_release)) |>
+  arrange(year, match(from_release, ual_releases$release))
+bound <- composition_bound(composition)
+cat("\n=== FIRST RESOLUTIONS OUTSIDE CAPTIVITY BY EVENT YEAR, AND THE BOUND THEY GIVE ===\n")
+print(as.data.frame(
+  composition |> summarise(dead = round(sum(dead)), out = round(sum(out), 1), .by = year) |>
+    mutate(bound = round(bound[1, as.character(year)], 4))
+))
+
 # the evidence (00_setup.R sets out the sources). Prisoners are alive whether
 # still held or released, so both statuses count as the prisoners the
 # register knows of. Where v19's released prisoners had been listed before
 # their return gives the share of the unrecorded prisoners among the missing.
 register_alive <- sum(stocks$n[stocks$status %in% c("prisoner", "released_prisoner")])
 released_prior <- linkage |> filter(table == "released_prior") |> select(year, prior = to, n)
-evidence <- alive_evidence(model$resolved, register_alive, released_prior)
+evidence <- alive_evidence(composition, register_alive, released_prior)
 print(as.data.frame(evidence))
 write_rds(evidence, "data_inter/ukr_alive_missing.rds")
 
-impute <- function(captives = evidence$captives_central, other = evidence$other_central, m = model,
-                   stock = stock_missing_month, by = "year") {
-  impute_missing(m, stock, captives, other, by)
+# The prisoners among the missing are one number for all event years. They are
+# split over the years as the prisoners the register records as still held are:
+# a prisoner the register has not recorded is someone still in captivity, or
+# lately out of it, and the years of capture of those it does record are the
+# evidence there is on when such people were taken.
+captive_share <-
+  stocks |>
+  filter(status == "prisoner") |>
+  transmute(year, share = n / sum(n))
+print(captive_share)
+
+alive_central <- bound[1, ] / 2
+impute <- function(captives = evidence$captives_central, other = alive_central,
+                   stock = stock_missing_month, share = captive_share) {
+  impute_composition(stock, captives, other, share)
 }
-imputation_final <- impute()
+imputation_final <- impute() |> mutate(bound = bound[1, as.character(year)], .after = unresolved)
 print(imputation_final)
+
+# what the duration model would project to the horizon, for the description of
+# the register in the supplement and for the alternatives below: not the estimate
+projection_model <- impute_missing(model, stock_missing_month, evidence$captives_central, 0)
 
 # the dead, registered and completed for registration lag; downstream the
 # completed count is the "confirmed" military deaths, spread over the
@@ -346,9 +391,11 @@ military_inputs <- list(
   factor_point = completion$month$factor,
   factor_draws = completion$factor_draws,
   model = model,
-  evidence = evidence
+  evidence = evidence,
+  composition = composition,
+  captive_share = captive_share
 )
-check_point <- military_draws(military_inputs, evidence$captives_central, evidence$other_central)
+check_point <- military_draws(military_inputs, evidence$captives_central)
 stopifnot(isTRUE(all.equal(check_point$military, combined_losses$total_estimado)))
 write_rds(military_inputs, "data_inter/ukr_military_inputs.rds")
 
@@ -359,6 +406,7 @@ write_rds(
 )
 # the fitted model and the missing by event month, for 13b and 13d
 write_rds(model, "data_inter/ukr_ualosses_resolution_model.rds")
+write_rds(projection_model, "data_inter/ukr_ualosses_projection_table.rds")
 write_rds(stock_missing_month, "data_inter/ukr_ualosses_missing_by_month.rds")
 write_rds(hazards, "data_inter/ukr_ualosses_resolution_hazards.rds")
 # the twelve-month rates by event-year cohort, every outcome kept apart, for
@@ -367,51 +415,107 @@ write_rds(resolution_12m, "data_inter/ukr_ualosses_resolution_12m.rds")
 write_rds(tasas_long, "data_inter/ukr_ualosses_transition_rates.rds")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# how much the linkage rules, the model and the evidence matter
+# how much the rules and the evidence matter
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # The military total under alternatives, each at the central values of the
 # evidence (the means of its inputs), each differing from the rules used in
-# one respect:
-#   - every person no longer listed found alive, list maintenance included;
-#   - a person no longer listed held as still missing;
-#   - February 2022 events kept in the fit;
-#   - a return from captivity leaving the person out of the population at
-#     risk, as someone held rather than disappeared;
-#   - rates from the people listed as missing in v14 only, without those first
-#     listed later;
-#   - the projection run to the longest duration observed in the fit
-#     instead of 48;
-#   - each release window's multipliers alone instead of their average;
+# one respect. On the alive outside captivity:
+#   - none of them alive, and all the bound allows: the two ends the draws run
+#     between;
+#   - every person no longer listed counted in the bound, list maintenance
+#     included;
+#   - one bound for every event year, from all the resolutions pooled; and the
+#     bound of the events of 2023-2025 for every year, the events of 2022, whose
+#     records the register cleaned up at once, not trusted to speak for theirs;
+#   - February 2022 events kept in the composition;
+#   - a return from captivity leaving the person out of the population at risk;
+#   - the people listed as missing in the first release only.
+# On the prisoners among the missing:
 #   - every unrecorded prisoner among the missing;
 #   - the unrecorded prisoners among the missing in the proportion the
 #     returned prisoners of every event year had been;
 #   - the register's prisoners with no recorded event year left out, which
 #     step 08 spreads over the event years, 2014-2021 included;
-#   - captivity as the model projects it, instead of from the official
-#     figures;
-#   - the captives spread over event years in proportion to the prisoners the
-#     register records (held and released) rather than as the model spreads
-#     captivity: the same total, a different split by year;
-#   - the earlier chain, in which event-year cohorts stand in for duration.
+#   - the prisoners split over event years as the register's prisoners held and
+#     released are, and as the returned who had been listed as missing are: the
+#     same total, a different split by year.
+# And the duration model as an imputation, in the identity's place:
+# every event month carried to 48 months, those leaving the register beyond
+# list maintenance alive, the rest dead but a small share - with one set of
+# hazards for every cohort, and with the events of 2022 given their own
+# multiplier out of the register (09k); and the earlier chain, in which
+# event-year cohorts stand in for duration.
 # And how often records vanish: v14's missing and v14's dead with no trace in
 # v19 after both searches.
 design_total <- function(imp) {
   by_year <-
     confirmados_df |>
-    left_join(imp |> select(year, imputed_dead), by = "year") |>
+    left_join(imp |> summarise(imputed_dead = sum(imputed_dead), .by = year), by = "year") |>
     transmute(year, confirmed = confirmados_stock, total = confirmados_stock + imputed_dead)
   tibble(military = sum(by_year$total), by_year = list(by_year))
 }
-model_all_alive <- fit_model(production_windows)
-model_dropouts_missing <- fit_model(windows |> filter(rule == "dropouts_missing"))
-model_with_feb22 <- fit_model(maintain(production_windows, drop_feb22 = FALSE), drop_feb22 = FALSE)
-model_released_excluded <- fit_model(maintain(windows |> filter(rule == "released_excluded")))
-model_v14_only <- fit_model(maintain(production_windows |> filter(entry == "v14")))
-# each window's multipliers alone in place of their average over the year
-model_window <- function(w) {
-  modifyList(model, list(h = sweep(model$h_reference, 2, model$window_multipliers[w, ], "*")))
+composition_of <- function(w) {
+  w |> summarise(dead = sum(n[to == "dead"]), out = sum(n[to == "no_longer_listed"]), .by = c(year, from_release))
 }
-window_label <- paste0(ual_releases$release[-nrow(ual_releases)], "-", ual_releases$release[-1])
+half_bound <- function(comp) composition_bound(comp)[1, ] / 2
+pooled <- composition |> summarise(across(c(dead, out), sum), .by = from_release)
+later <- composition |> filter(year > 2022) |> summarise(across(c(dead, out), sum), .by = from_release)
+one_bound <- function(d) sum(d$out) / sum(d$out + d$dead) / 2
+share_by <- function(d) d |> transmute(year, share = n / sum(n))
+returned_missing <- released_prior |> filter(prior == "missing") |> summarise(n = sum(n), .by = year)
+held_and_released <- stocks |> filter(status %in% c("prisoner", "released_prisoner")) |> summarise(n = sum(n), .by = year)
+
+# The duration model as an imputation. Of those it leaves unresolved or puts in
+# captivity beyond the official counts, the share alive is a sixth of the share
+# of all first resolutions, captivity included, that leave the register beyond
+# list maintenance.
+other_former <- sum(composition$out) / (sum(composition$out + composition$dead) + model$resolved[["prisoner"]]) / 6
+# one more parameter: the events of 2022 leave the register at their own rate
+fit_model_22 <- function(w) {
+  cells <- ual_duration_cells(w |> filter(month != feb22))
+  base <- ual_fit_durations(cells, horizon = completion$L_ref)
+  nb <- base$nb
+  k <- base$k
+  nw <- length(ual_window_months)
+  n_base <- nb * k + (nw - 1) * k
+  window <- match(cells$from_release, ual_releases$release)
+  is22 <- year(cells$month) == 2022
+  y <- as.matrix(cells[, c("missing", ual_resolutions)])
+  nll <- function(theta) {
+    hz <- ual_theta_hazards(theta[seq_len(n_base)], nb, k)
+    p <- matrix(0, nrow(cells), k + 1)
+    for (w_i in seq_len(nw)) for (c22 in c(FALSE, TRUE)) {
+      i <- window == w_i & is22 == c22
+      g <- c(1, 1, if (c22) exp(theta[n_base + 1]) else 1)
+      if (any(i)) p[i, ] <- ual_resolve(sweep(hz$h, 2, hz$mult[w_i, ] * g, "*"), cells$d0[i], cells$d1[i], base$breaks)
+    }
+    -sum(y * log(pmax(p, 1e-300)))
+  }
+  fit <- optim(c(base$theta, 0), nll, method = "L-BFGS-B",
+               lower = c(rep(-20, nb * k), rep(-10, n_base - nb * k + 1)),
+               upper = c(rep(0, nb * k), rep(10, n_base - nb * k + 1)),
+               control = list(maxit = 10000, factr = 1e5))
+  stopifnot(fit$convergence == 0)
+  h_later <- ual_theta_hazards(fit$par[seq_len(n_base)], nb, k)$projection
+  h_2022 <- h_later
+  h_2022[, "no_longer_listed"] <- h_2022[, "no_longer_listed"] * exp(fit$par[n_base + 1])
+  list(later = modifyList(base, list(h = h_later)), of_2022 = modifyList(base, list(h = h_2022)),
+       multiplier_2022 = exp(fit$par[n_base + 1]), deviance = 2 * (nll(c(base$theta, 0)) - fit$value))
+}
+model_22 <- fit_model_22(maintain(production_windows))
+cat(sprintf("\nevents of 2022 leave the register at %.1f times the rate of later events (deviance %.0f on one parameter)\n",
+            model_22$multiplier_2022, model_22$deviance))
+project <- function(m = model, m22 = NULL) {
+  if (is.null(m22)) return(impute_missing(m, stock_missing_month, evidence$captives_central, other_former))
+  # the prisoners go to the two groups as the model spreads captivity, as they did
+  s22 <- stock_missing_month |> filter(year == 2022)
+  s23 <- stock_missing_month |> filter(year > 2022)
+  k22 <- sum(impute_missing(m22, s22, 0, 0)$projected_captivity)
+  k23 <- sum(impute_missing(m, s23, 0, 0)$projected_captivity)
+  c22 <- evidence$captives_central * k22 / (k22 + k23)
+  bind_rows(impute_missing(m22, s22, c22, other_former),
+            impute_missing(m, s23, evidence$captives_central - c22, other_former))
+}
 
 # the register's prisoners and released prisoners with a recorded event year
 # in 2022-2025, before 08 spreads the records without one
@@ -421,76 +525,46 @@ register_alive_known <-
   pull(dx) |>
   sum()
 captives_known_year <- evidence$s_central * (evidence$held_central + returned_military - register_alive_known)
-
-# the share listed as missing among the returned of every event year
 share_listed_missing <- evidence$s_min
 
-# captivity as the model projects it: the captives are the projected
-# captivity itself
-projected_captivity <- sum(imputation_final$projected_captivity)
-
-# the captives by event year in proportion to the register's prisoners, each
-# year capped at its projected captivity and never-resolved
-prisoners_by_year <-
-  stocks |>
-  filter(status %in% c("prisoner", "released_prisoner")) |>
-  summarise(prisoners = sum(n), .by = year)
-by_year_captives <-
-  imputation_final |>
-  left_join(prisoners_by_year, by = "year") |>
-  left_join(confirmados_df |> select(year, confirmados_stock), by = "year") |>
-  mutate(captives_year = pmin(projected_captivity + never_resolved,
-                              evidence$captives_central * prisoners / sum(prisoners)),
-         unresolved_year = projected_captivity + never_resolved - captives_year,
-         imputed_dead = projected_dead + (1 - evidence$other_central) * unresolved_year,
-         total = confirmados_stock + imputed_dead)
-
 # the earlier chain: its imputed alive are those who leave the register beyond
-# list maintenance and the central share of those still missing at its end,
-# and the captives are taken out of its dead
+# list maintenance and a small share of those still missing at its end, and the
+# captives are taken out of its dead
 cohort_chain <-
-  impute_missing_cohorts(evidence$other_central, tasas_long, stock_missing_2026) |>
+  impute_missing_cohorts(other_former, tasas_long, stock_missing_2026) |>
   mutate(imputed_dead = missing_stock - imputed_alive -
            evidence$captives_central * missing_stock / sum(missing_stock))
 
 cc <- evidence$captives_central
+alt <- function(imp, design, captives = cc) design_total(imp) |> mutate(design = design, captives = captives)
 linkage_designs <-
   bind_rows(
-    design_total(impute()) |>
-      mutate(design = "duration model, drop-outs beyond list maintenance found alive, captives from the official figures (production)",
-             captives = cc),
-    design_total(impute(m = model_all_alive)) |>
-      mutate(design = "every person no longer listed found alive", captives = cc),
-    design_total(impute(m = model_dropouts_missing)) |>
-      mutate(design = "no longer listed = still missing", captives = cc),
-    design_total(impute(m = model_with_feb22)) |>
-      mutate(design = "February 2022 events kept in the fit", captives = cc),
-    design_total(impute(m = model_released_excluded)) |>
-      mutate(design = "returns from captivity left out of the population at risk", captives = cc),
-    design_total(impute(m = model_v14_only)) |>
-      mutate(design = "people listed as missing in v14 only", captives = cc),
-    design_total(impute(m = modifyList(model, list(horizon = max(model$fitted$d1))))) |>
-      mutate(design = "duration model to the longest duration observed", captives = cc),
-    map_dfr(seq_along(window_label), \(w) {
-      design_total(impute(m = model_window(w))) |>
-        mutate(design = paste0("the ", window_label[w], " window's multipliers alone"), captives = cc)
-    }),
-    design_total(impute(captives = evidence$unrecorded_central)) |>
-      mutate(design = "every unrecorded prisoner among the missing", captives = evidence$unrecorded_central),
-    design_total(impute(captives = share_listed_missing * evidence$unrecorded_central)) |>
-      mutate(design = "unrecorded prisoners among the missing as the returned of every year had been",
-             captives = share_listed_missing * evidence$unrecorded_central),
-    design_total(impute(captives = captives_known_year)) |>
-      mutate(design = "the register's prisoners with no recorded event year left out",
-             captives = captives_known_year),
-    design_total(impute(captives = projected_captivity)) |>
-      mutate(design = "captivity as the model projects it", captives = projected_captivity),
-    tibble(military = sum(by_year_captives$total),
-           by_year = list(by_year_captives |> transmute(year, confirmed = confirmados_stock, total)),
-           design = "captives spread over event years by the register's prisoners",
-           captives = cc),
-    design_total(cohort_chain) |>
-      mutate(design = "event-year cohorts standing in for duration", captives = cc)
+    alt(impute(), "the missing counted dead but the prisoners and half the bound on the alive outside captivity (production)"),
+    alt(impute(other = 0), "none alive outside captivity"),
+    alt(impute(other = bound[1, ]), "alive outside captivity at the bound"),
+    alt(impute(other = half_bound(composition_of(production_windows |> filter(month != feb22)))),
+        "every person no longer listed counted in the bound"),
+    alt(impute(other = one_bound(pooled)), "one bound for every event year, all resolutions pooled"),
+    alt(impute(other = one_bound(later)), "the bound of the events of 2023-2025 for every event year"),
+    alt(impute(other = half_bound(composition_of(maintain(production_windows, drop_feb22 = FALSE)))),
+        "February 2022 events kept in the composition"),
+    alt(impute(other = half_bound(composition_of(maintain(windows |> filter(rule == "released_excluded"))))),
+        "returns from captivity left out of the population at risk"),
+    alt(impute(other = half_bound(composition_of(maintain(production_windows |> filter(entry == ual_releases$release[1]))))),
+        "people listed as missing in the first release only"),
+    alt(impute(captives = evidence$unrecorded_central), "every unrecorded prisoner among the missing",
+        evidence$unrecorded_central),
+    alt(impute(captives = share_listed_missing * evidence$unrecorded_central),
+        "unrecorded prisoners among the missing as the returned of every year had been",
+        share_listed_missing * evidence$unrecorded_central),
+    alt(impute(captives = captives_known_year), "the register's prisoners with no recorded event year left out",
+        captives_known_year),
+    alt(impute(share = share_by(held_and_released)), "prisoners split over event years as the register's held and released are"),
+    alt(impute(share = share_by(returned_missing)), "prisoners split over event years as the returned who had been listed as missing are"),
+    alt(project(), "the duration model projected to 48 months, one set of hazards for every cohort"),
+    alt(project(model_22$later, model_22$of_2022),
+        "the duration model projected to 48 months, the events of 2022 with their own rate out of the register"),
+    alt(cohort_chain, "event-year cohorts standing in for duration")
   ) |>
   relocate(design)
 stopifnot(isTRUE(all.equal(linkage_designs$military[1], sum(combined_losses$total_estimado))))
@@ -533,7 +607,8 @@ cat(sprintf("register prisoners and released, 2022-2025: %s with the unknown-yea
 write_rds(list(designs = linkage_designs, no_trace = no_trace, patterns = patterns,
                released_first = released_first, dead_dropout = dead_dropout,
                released_prior = released_prior, captivity_by_window = captivity_by_window,
-               by_year_captives = by_year_captives, register_alive_known = register_alive_known,
+               captive_share = captive_share, composition = composition, model_22 = model_22[c("multiplier_2022", "deviance")],
+               register_alive_known = register_alive_known,
                window_multipliers = model$window_multipliers),
           "data_inter/ukr_ualosses_linkage_checks.rds")
 
@@ -544,7 +619,10 @@ military_by_month <-
   stock_month |>
   filter(status == "dead") |>
   select(month, year, registered_dead = registered, completed_dead = completed) |>
-  full_join(impute(by = c("month", "year")) |> select(month, year, missing = missing_stock, imputed_dead),
+  # within an event year every month's missing are dead in the year's share
+  full_join(stock_missing_month |>
+              left_join(imputation_final |> transmute(year, dead_share = imputed_dead / missing_stock), by = "year") |>
+              transmute(month, year, missing = missing_stock, imputed_dead = missing_stock * dead_share),
             by = c("month", "year")) |>
   mutate(across(c(registered_dead, completed_dead, missing, imputed_dead), \(x) coalesce(x, 0)),
          military = completed_dead + imputed_dead) |>

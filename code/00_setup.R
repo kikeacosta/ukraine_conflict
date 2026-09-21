@@ -273,20 +273,28 @@ excel_date <- function(x) {
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # following the missing across register releases ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Four releases of the register, each a full individual-level list with
-# names and dates of birth (gitignored). 09 turns them into anonymous
-# transition counts, 09f into per-person histories without names, 13d into
-# counts by event month. Nothing these functions return may be written out
-# with the key, name or date-of-birth columns still in it.
+# Six releases of the register, every one between the first and the last the
+# project holds, each a full individual-level list with names and dates of
+# birth (gitignored). 09 turns them into anonymous transition counts, 09f into
+# per-person histories without names, 08b into counts by event month. Nothing
+# these functions return may be written out with the key, name or
+# date-of-birth columns still in it.
 # Each release is dated by its Kaggle version (Olivier Hubert, "Confirmed
-# Ukrainian military personnel losses"): versions 14, 16, 18 and 19. Its latest
-# events fall a few days before that date - for v19, the version of 21 July
-# 2026, on 18 June 2026. The v19 file name carries the date it was saved.
+# Ukrainian military personnel losses"): versions 14 to 19. Its latest events
+# fall a few days before that date - for v19, the version of 21 July 2026, on
+# 18 June 2026. The file names carry the date each file was saved.
+# Six releases give five windows. What they show that four could not: the
+# register's clean-ups come in some releases and not others - the dead and the
+# missing both leave it in v15, v17 and v19 and hardly at all in between - so a
+# rate measured over a window that spans two releases averages a clean-up with
+# a lull.
 ual_releases <- tibble(
-  release = c("v14", "v16", "v18", "v19"),
-  date = as.Date(c("2025-09-16", "2025-12-04", "2026-04-23", "2026-07-21")),
+  release = c("v14", "v15", "v16", "v17", "v18", "v19"),
+  date = as.Date(c("2025-09-16", "2025-11-02", "2025-12-04",
+                   "2026-02-06", "2026-04-23", "2026-07-21")),
   path = file.path("data_input/ualosses_hubert_datasets", c(
-    "250916_UKR_ualosses_Personnel_v14.xlsx", "251204_UKR_ualosses_Personnel_v16.xlsx",
+    "250916_UKR_ualosses_Personnel_v14.xlsx", "251102_UKR_ualosses_Personnel_v15.xlsx",
+    "251204_UKR_ualosses_Personnel_v16.xlsx", "260206_UKR_ualosses_Personnel_v17.xlsx",
     "260423_UKR_ualosses_Personnel_v18.xlsx", "260919_UKR_ualosses_Personnel_v19.xlsx"
   ))
 )
@@ -735,12 +743,20 @@ impute_missing_cohorts <- function(alive_other, tasas_long, stock_missing) {
 # batch projects more future prisoners among today's missing than the
 # official figures leave unrecorded at all.
 #
-# The rest of the projected captivity and those still missing at the horizon
-# are the unresolved. A share of them may be alive for some other reason, and
-# no source counts them: the floor and the mode are 0, the ceiling the share
-# of the register's own first resolutions that leave it in excess of list
-# maintenance (09) - the unresolved no more often alive, outside captivity,
-# than those resolved.
+# Everyone else among the missing is counted as dead unless the register's own
+# record of resolutions gives a reason not to. What it gives is a bound. Of the
+# missing of an event year whose fate a later release settles outside
+# captivity, some are recorded dead and some leave the register in excess of
+# list maintenance (09), the only way it has of recording a person found alive.
+# If the unresolved resembled the resolved of their own cohort, that share -
+# excess drop-outs over excess drop-outs plus deaths - would be alive. It is an
+# UPPER bound, twice over: the living resurface faster than bodies are recovered
+# and identified, so they are over-represented among the resolved; and a
+# drop-out need not be a person found alive. So in every simulation the share
+# of a cohort's missing, prisoners apart, that is alive is drawn uniformly
+# between none and that bound, one draw for all cohorts, and the bound itself
+# carries the error of resting on five windows (composition_bound()). No source
+# counts these people; the bound is what the register can say about them.
 #
 # SOURCES
 #   pow_held           "about 7,000 Ukrainian prisoners of war" held by
@@ -757,14 +773,15 @@ impute_missing_cohorts <- function(alive_other, tasas_long, stock_missing) {
 pow_held <- c(min = 6500, mode = 7000, max = 7500)
 returned_military <- 7291
 
-# resolved        the first resolutions the model rests on, as counts named
-#                 dead, prisoner and no_longer_listed
+# composition     the first resolutions outside captivity by event year and
+#                 window: year, from_release, dead, out (out: no longer listed
+#                 beyond list maintenance), from 09
 # register_alive  the register's prisoners plus released prisoners, events
 #                 2022-2025, from 08's redistributed counts
 # released_prior  where v19's released prisoners had been listed before their
 #                 return, by event year: year, prior (prisoner, missing, dead,
 #                 not listed), n
-alive_evidence <- function(resolved, register_alive, released_prior) {
+alive_evidence <- function(composition, register_alive, released_prior) {
   share_missing <- function(d) {
     d <- d |> summarise(n = sum(n), .by = prior)
     d$n[d$prior == "missing"] / sum(d$n[d$prior %in% c("missing", "not listed")])
@@ -785,18 +802,18 @@ alive_evidence <- function(resolved, register_alive, released_prior) {
     captives_min = s_min * unrecorded_min,
     captives_mode = s_mode * unrecorded_mode,
     captives_max = s_max * unrecorded_max,
+    # the bound on the alive outside captivity, all cohorts pooled: what the
+    # tables quote; the imputation uses each cohort's own (composition_bound())
     other_min = 0,
-    other_mode = 0,
-    other_max = resolved[["no_longer_listed"]] / sum(resolved)
+    other_max = sum(composition$out) / sum(composition$out + composition$dead)
   )
   # The central values every deterministic analysis uses: the MEAN of each
   # input's Beta-PERT (shape 4), (min + 4 mode + max) / 6, so the analyses sit
   # where the estimate does - the estimate is the mean of the draws (11), and the
-  # military total is linear in these inputs. The share alive for other reasons
-  # has its mode at its minimum, so it is a Beta(1, 5) on [0, other_max],
-  # positive in every draw, and its mean is a sixth of the ceiling. The two
-  # inputs behind the captives are drawn independently, so the captives at the
-  # centre are the means' product.
+  # military total is linear in these inputs. The share alive outside captivity
+  # is uniform between none and its bound, so its mean is half the bound. The
+  # two inputs behind the captives are drawn independently, so the captives at
+  # the centre are the means' product.
   pert_mean <- function(min, mode, max, shape = 4) (min + shape * mode + max) / (shape + 2)
   out <- out |>
     mutate(
@@ -804,7 +821,7 @@ alive_evidence <- function(resolved, register_alive, released_prior) {
       held_central = pert_mean(held_min, held_mode, held_max),
       unrecorded_central = held_central + returned_military - register_alive,
       captives_central = s_central * unrecorded_central,
-      other_central = pert_mean(other_min, other_mode, other_max)
+      other_central = (other_min + other_max) / 2
     )
   stopifnot(
     out$s_min <= out$s_mode, out$s_mode <= out$s_max,
@@ -821,105 +838,128 @@ captives_for <- function(ev, s, held) s * (held + ev$returned_military - ev$regi
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # the military total in every draw ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# impute_missing() for many draws at once, adding the registered dead with
-# their late registrations. Three things vary between draws:
-#   the missing alive     captives (from the share among the missing and the
-#                         prisoners held) and alive_other
-#   the resolution model  the log-hazards and window multipliers, drawn from
-#                         their sampling distribution (theta), and the weights
-#                         on the fitted windows under which the projection
-#                         averages those multipliers (window)
-#   registration lag      the completion factors, one of 08b's resampled
-#                         replicates per draw (lag)
+# The imputation is an accounting identity, by event year c:
+#
+#   dead among the missing  =  (M_c - C_c) x (1 - a_c)
+#
+# M_c the register's missing completed for registration lag, C_c the prisoners
+# of war among them (the official counts, alive_evidence()), and a_c the share
+# of the rest who are alive. Everyone with no evidence of life is counted dead;
+# the evidence is the prisoners and the bound on a_c that the composition of the
+# register's own resolutions gives (composition_bound()). Nothing is projected:
+# the duration model of ual_fit_durations() describes HOW the missing resolve and
+# is not part of the estimate, because a missing person it resolves to death and
+# one it leaves unresolved are both counted dead.
+#
+# composition_bound(): the share of a cohort's first resolutions outside
+# captivity that leave the register beyond list maintenance, r_c = out / (out +
+# dead), summed over the windows between releases. comp: year, from_release,
+# dead, out. weights: NULL for the estimate, or a matrix with one row per draw
+# and one column per window (in the order of ual_releases), under which the
+# windows are summed - resampling the windows, since the clean-ups that produce
+# the drop-outs come in some releases and not others. Returns a matrix, draws x
+# event years.
+composition_bound <- function(comp, weights = NULL) {
+  years <- sort(unique(comp$year))
+  wins <- ual_releases$release[-nrow(ual_releases)]
+  wide <- function(col) {
+    m <- matrix(0, length(wins), length(years), dimnames = list(wins, years))
+    m[cbind(match(comp$from_release, wins), match(comp$year, years))] <- comp[[col]]
+    m
+  }
+  if (is.null(weights)) weights <- matrix(1, 1, length(wins))
+  stopifnot(ncol(weights) == length(wins))
+  out <- weights %*% wide("out")
+  all <- out + weights %*% wide("dead")
+  r <- ifelse(all > 0, out / all, 0)
+  dimnames(r) <- list(NULL, years)
+  r
+}
+
+# The identity once, by event year, for 09's tables and the sensitivity steps
+# that change the stock of the missing (13d, 13l). stock_missing: month, year,
+# missing_stock. captives: the prisoners among the missing, split over event
+# years by captive_share (year, share). alive_other: the share of each year's
+# missing, prisoners apart, who are alive - one number for every year, or one
+# per year in the order of the years.
+impute_composition <- function(stock_missing, captives, alive_other, captive_share) {
+  stock_missing |>
+    summarise(missing_stock = sum(missing_stock), .by = year) |>
+    arrange(year) |>
+    mutate(captives = captives * captive_share$share[match(year, captive_share$year)],
+           unresolved = missing_stock - captives,
+           share_alive_other = unname(alive_other),
+           alive_other = unresolved * share_alive_other,
+           imputed_dead = unresolved - alive_other,
+           imputed_alive = captives + alive_other)
+}
+
+# impute by the identity, for many draws at once, adding the registered dead
+# with their late registrations. What varies between draws:
+#   the prisoners        captives: from the share among the missing and the
+#                        prisoners held (alive_evidence())
+#   the alive otherwise  alive_other: the share a_c of each cohort's missing,
+#                        prisoners apart, who are alive
+#   registration lag     the completion factors, one of 08b's resampled
+#                        replicates per draw (lag)
 # mil holds 09's inputs (data_inter/ukr_military_inputs.rds): the registered
 # dead and missing by event month (month, year, status, registered, row: the
-# row of 08b's factor tables), the point and resampled factors, the model and
-# the evidence. theta: a matrix of drawn theta, one row per draw, or NULL for
-# the estimate; lag: the replicate for each draw, or NULL for the point
-# factors; window: a matrix of weights on the fitted windows, one row per draw,
-# or NULL for the point rule. Returns one row per draw and year: confirmed (registered and late),
-# missing, captives, imputed_unlisted, alive_other, imputed_dead and military.
-military_draws <- function(mil, captives, alive_other, theta = NULL, lag = NULL,
-                           window = NULL) {
+# row of 08b's factor tables), the point and resampled factors, the evidence,
+# the composition by event year and window, and the split of the prisoners over
+# event years (captive_share). alive_other: NULL for the central values, half
+# of each cohort's bound; a vector, one share per draw for every cohort alike
+# (the sweeps); or a matrix, draws x event years. lag: the replicate for each
+# draw, or NULL for the point factors. Returns one row per draw and year:
+# confirmed (registered and late), missing, captives, alive_other, imputed_dead
+# and military.
+military_draws <- function(mil, captives, alive_other = NULL, lag = NULL) {
   n <- length(captives)
-  stopifnot(length(alive_other) == n, is.null(lag) || length(lag) == n,
-            is.null(theta) || nrow(theta) == n,
-            is.null(window) || (is.matrix(window) && nrow(window) == n &&
-                                  all(abs(rowSums(window) - 1) < 1e-9)))
+  years <- sort(unique(mil$month$year))
+  if (is.null(alive_other)) alive_other <- composition_bound(mil$composition)[rep(1, n), , drop = FALSE] / 2
+  if (!is.matrix(alive_other)) alive_other <- matrix(alive_other, n, length(years))
+  stopifnot(nrow(alive_other) == n, ncol(alive_other) == length(years),
+            all(alive_other >= 0 & alive_other <= 1), is.null(lag) || length(lag) == n)
   dead <- mil$month |> filter(status == "dead")
   miss <- mil$month |> filter(status == "missing")
   factors <- function(rows) {
     if (is.null(lag)) matrix(mil$factor_point[rows], length(rows), n)
     else mil$factor_draws[rows, lag, drop = FALSE]
   }
-  confirmed_m <- dead$registered * factors(dead$row)
-  missing_m <- miss$registered * factors(miss$row)
-
-  model <- mil$model
-  d0 <- pmin(ual_months_since(ual_releases$date[nrow(ual_releases)], miss$month), model$horizon)
-  resolve <- function(h) ual_resolve(h, d0, model$horizon, model$breaks)
-  outcome <- c("dead", "prisoner", "no_longer_listed", "missing")
-  if (is.null(theta)) {
-    p <- resolve(model$h)
-    part <- lapply(set_names(outcome), \(o) missing_m * p[, o])
-  } else {
-    # The projection to 48 months has to choose a multiplier for windows it has
-    # not seen. Its point rule is the length-weighted average of the fitted
-    # windows' multipliers. `window` gives each draw its own weights on the
-    # fitted windows, one row per draw (window_weight_draws() below), and the
-    # draw takes the average under them: the projection runs over many future
-    # windows, so what is uncertain is their average, not which one of the
-    # fitted windows the future will repeat.
-    proj <- function(i) {
-      hz <- ual_theta_hazards(theta[i, ], model$nb, model$k)
-      if (is.null(window)) hz$projection else sweep(hz$h, 2, colSums(hz$mult * window[i, ]), "*")
-    }
-    arr <- vapply(seq_len(n), \(i) resolve(proj(i))[, outcome],
-                  matrix(0, nrow(miss), length(outcome)))
-    part <- lapply(set_names(seq_along(outcome), outcome), \(j) missing_m * arr[, j, ])
-  }
-
-  years <- sort(unique(mil$month$year))
   by_year <- function(x, yr) (outer(years, yr, "==") * 1) %*% x
-  D <- by_year(part$dead, miss$year)
-  K <- by_year(part$prisoner, miss$year)
-  L <- by_year(part$no_longer_listed, miss$year)
-  N <- by_year(part$missing, miss$year)
-  scale <- captives / colSums(K)
-  captives_y <- sweep(K, 2, scale, "*")
-  unresolved <- K + N - captives_y
+  confirmed <- by_year(dead$registered * factors(dead$row), dead$year)
+  missing <- by_year(miss$registered * factors(miss$row), miss$year)
+  share <- mil$captive_share$share[match(years, mil$captive_share$year)]
+  captives_y <- outer(share, captives)
+  unresolved <- missing - captives_y
   stopifnot(all(unresolved >= 0))
-  other <- sweep(unresolved, 2, alive_other, "*")
-  imputed_dead <- D + unresolved - other
-  confirmed <- by_year(confirmed_m, dead$year)
+  other <- unresolved * t(alive_other)
+  imputed_dead <- unresolved - other
   long <- function(x) as.vector(x)
   tibble(
     sim_id = rep(seq_len(n), each = length(years)),
     year = rep(years, n),
     confirmed = long(confirmed),
-    missing = long(by_year(missing_m, miss$year)),
+    missing = long(missing),
     captives = long(captives_y),
-    imputed_unlisted = long(L),
     alive_other = long(other),
     imputed_dead = long(imputed_dead),
     military = long(confirmed + imputed_dead)
   )
 }
 
-# The weights a draw puts on the fitted windows' multipliers. The point rule of
-# the projection is their average weighted by the windows' lengths. Three
-# windows say little about that average, and how little is what the draws carry:
-# the weights come from a Dirichlet distribution whose mean is the lengths'
-# shares and whose concentration is the number of windows - the Bayesian
-# bootstrap (Rubin 1981) of a weighted mean. So the mean of the draws is the
-# point rule, a draw can sit close to any one window, and most sit between them.
-# Drawing ONE window per simulation instead treats a release's batch of
-# recordings as the regime of the next four years, and splits the draws of the
-# military total into one cluster per window. n draws, one row each.
-window_weight_draws <- function(n, windows = ual_window_months) {
+# The weights a draw puts on the windows between releases when it sums what
+# they record (composition_bound()). The estimate sums the windows as they
+# are. Five windows say little about what a sixth would record - the register's
+# clean-ups fall in some releases and not others - and how little is what the
+# draws carry: the weights come from a Dirichlet distribution centred on
+# `windows` and as concentrated as there are windows, the Bayesian bootstrap
+# (Rubin 1981) of a weighted sum. Counts already grow with a window's length,
+# so the default weighs the windows alike. n draws, one row each, summing to
+# the number of windows so that the counts keep their scale.
+window_weight_draws <- function(n, windows = rep(1, length(ual_window_months))) {
   nw <- length(windows)
   g <- matrix(rgamma(n * nw, shape = rep(nw * windows / sum(windows), each = n)), n, nw)
-  g / rowSums(g)
+  nw * g / rowSums(g)
 }
 
 # The late registrations' share of the confirmed military deaths in every
@@ -1237,33 +1277,40 @@ simulation_draws <- function(param_table, mil, lc_error, n, shape = 4, seed = 42
            draw = q(runif(n), cvs$min[i], cvs$mode[i], cvs$max[i]))
   })
 
+  # The missing alive. The prisoners among them follow from two drawn inputs,
+  # the share of the unrecorded prisoners who are among the missing and the
+  # prisoners held. The alive outside captivity are, in each cohort, a share of
+  # the rest between none and the cohort's bound: ONE uniform draw for all
+  # cohorts, since what is unknown - how much faster the living resurface than
+  # the dead are identified - is one thing and not four, and the bound itself
+  # from the windows between releases resampled (composition_bound()).
   alive_draws <-
     tibble(
       sim_id = seq_len(n),
       s = q(runif(n), ev$s_min, ev$s_mode, ev$s_max),
       held = q(runif(n), ev$held_min, ev$held_mode, ev$held_max),
-      alive_other = q(runif(n), ev$other_min, ev$other_mode, ev$other_max)
+      u_other = runif(n)
     ) |>
     mutate(captives = captives_for(ev, s, held))
-  model <- mil$model
-  n_theta <- length(model$theta)
-  theta <- sweep(matrix(rnorm(n * n_theta), n) %*% chol(model$vcov + diag(1e-12, n_theta)),
-                 2, model$theta, "+")
   lag <- sample.int(ncol(mil$factor_draws), n, replace = TRUE)
   alive_draws$lag <- lag
-  # the weights each draw puts on the fitted windows' multipliers
   window <- window_weight_draws(n)
-  alive_draws <- bind_cols(alive_draws, as_tibble(window, .name_repair = \(x) paste0("window_w", seq_along(x))))
+  bound <- composition_bound(mil$composition, window)
+  bound_point <- composition_bound(mil$composition)[rep(1, n), , drop = FALSE]
+  a_draw <- alive_draws$u_other * bound
 
-  mil_all <- military_draws(mil, alive_draws$captives, alive_draws$alive_other, theta, lag, window)
+  # every input drawn; then each group alone with the others at their centre,
+  # for the shares of the variance (15): the evidence on the missing alive (the
+  # prisoners and where between none and the bound the rest sit), the bound's
+  # own error, and the registration-lag factors
+  mil_all <- military_draws(mil, alive_draws$captives, a_draw, lag)
   captives_c <- rep(ev$captives_central, n)
-  other_c <- rep(ev$other_central, n)
-  mil_alive <- military_draws(mil, alive_draws$captives, alive_draws$alive_other)
-  mil_model <- military_draws(mil, captives_c, other_c, theta = theta, window = window)
-  mil_lag <- military_draws(mil, captives_c, other_c, lag = lag)
+  mil_alive <- military_draws(mil, alive_draws$captives, alive_draws$u_other * bound_point)
+  mil_model <- military_draws(mil, captives_c, bound / 2)
+  mil_lag <- military_draws(mil, captives_c, lag = lag)
   alive_draws <-
     alive_draws |>
-    left_join(mil_all |> summarise(across(c(missing, imputed_unlisted, alive_other, imputed_dead), sum),
+    left_join(mil_all |> summarise(across(c(missing, alive_other, imputed_dead), sum),
                                    .by = sim_id) |>
                 rename(alive_other_n = alive_other),
               by = "sim_id")

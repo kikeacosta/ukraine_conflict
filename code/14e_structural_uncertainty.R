@@ -26,10 +26,10 @@
 # additive, which holds to first order for shifts this size.
 #
 # What is left out, and why:
-#   - alternatives the simulation already draws over (each release window's
-#     multipliers alone, which the drawn weights on the windows reach; the share
-#     of the unrecorded prisoners at its bounds; the forecast one SD either way;
-#     each migration component across its range);
+#   - alternatives the simulation already draws over (none alive outside
+#     captivity and all the bound allows, the two ends the draws run between;
+#     the share of the unrecorded prisoners at its bounds; the forecast one SD
+#     either way; each migration component across its range);
 #   - the counterfactual fitted with the pandemic years, which is a different
 #     counterfactual and not an uncertainty about this one;
 #   - Donetsk and Luhansk a quarter lower, half lower and taken out, the upper
@@ -85,7 +85,7 @@ mig_spec <-
   )
 lag_tail <- r("ukr_registration_lag_tail.rds")
 linkage <- r("ukr_linkage_rules_e0.rds")
-drawn_already <- "window's multipliers alone|every unrecorded prisoner|as the returned of every year"
+drawn_already <- "none alive outside captivity|alive outside captivity at the bound|every unrecorded prisoner|as the returned of every year"
 dl <- r("ukr_denominator_donetsk_luhansk.rds")
 
 alternatives <- bind_rows(
@@ -95,7 +95,7 @@ alternatives <- bind_rows(
   linkage |>
     filter(!str_detect(design, drawn_already)) |>
     mutate(design = if_else(str_detect(design, "production"), "as used", design)) |>
-    shifts("Linkage rules, resolution model and prisoner-of-war evidence", "design", "military"),
+    shifts("Rules of the imputation and the evidence on the prisoners of war", "design", "military"),
   r("ukr_civilian_age_profile_e0.rds")$loss |>
     shifts("Age profile of the unverified civilian deaths", "scenario"),
   bind_rows(r("ukr_baseline_window_e0.rds"), r("ukr_coherent_forecast_e0.rds")$baseline) |>

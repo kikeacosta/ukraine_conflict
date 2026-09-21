@@ -3,4 +3,4 @@ Share of the unrecorded prisoners of war among the missing,0.237,0.476,0.523,1,"
 "Prisoners of war held, February 2026",6500,7000,7000,7500,"""About 7,000"" (President of Ukraine, 14 February 2026), rounded to the thousand"
 Prisoners of war the register does not record (held + returned − recorded),2466,2966,2966,3466,"Held plus 7,291 military personnel returned, less the 11,325 the register records as prisoners or released"
 Prisoners of war among the missing,584,1412,1552,3466,Share among the missing times the unrecorded prisoners
-Share of the unresolved missing alive for other reasons,0,0,0.009,0.054,None (min and mode); the share of the register's first resolutions that leave it beyond list maintenance (max)
+"Share of the missing, prisoners apart, alive outside captivity (all event years pooled)",0,NA,0.037,0.073,"Uniform between none (min) and the bound (max): of the first resolutions outside captivity, the share that leave the register beyond list maintenance; by event year in the imputation (table 3)"

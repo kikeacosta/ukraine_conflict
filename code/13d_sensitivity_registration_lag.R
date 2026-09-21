@@ -87,19 +87,22 @@ stocks_registered <-
   read_rds("data_inter/ukr_ualosses_conflict_deaths_sex_age_2022_2025.rds") |>
   summarise(n = sum(dx), .by = c(year, status)) |>
   mutate(status = as.character(status))
-model <- read_rds("data_inter/ukr_ualosses_resolution_model.rds")
+mil <- read_rds("data_inter/ukr_military_inputs.rds")
+bound <- composition_bound(mil$composition)[1, ]
+# the alive outside captivity along 13b's path: 0 none, 0.5 the centre, 1 the bound
+a_of <- function(other) if (other <= 1) other * bound else bound + (other - 1) * (1 - bound)
 evidence <- read_rds("data_inter/ukr_alive_missing.rds")
 
 # each year's registered count spread over its months as v19 lists them, as
 # in 09, and each month completed by its factor under the horizon
-military_at <- function(horizon, captives = evidence$captives_central, other = evidence$other_central) {
+military_at <- function(horizon, captives = evidence$captives_central, other = 0.5) {
   st <- factors_under(horizon) |>
     mutate(share = n_v19 / sum(n_v19), .by = c(year, status)) |>
     left_join(stocks_registered |> rename(n_year = n), by = c("year", "status")) |>
     mutate(completed = n_year * share * f)
   dead <- st |> filter(status == "dead") |> summarise(confirmed = sum(completed), .by = year)
   miss <- st |> filter(status == "missing") |> select(month = m, year, missing_stock = completed)
-  impute_missing(model, miss, captives, other) |>
+  impute_composition(miss, captives, a_of(other), mil$captive_share) |>
     left_join(dead, by = "year") |>
     transmute(year, confirmed, missing = missing_stock, imputed_dead, total = confirmed + imputed_dead)
 }

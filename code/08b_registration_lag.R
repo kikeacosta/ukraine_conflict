@@ -12,7 +12,7 @@
 # short of the completeness older events have reached; 09 scales the v19 dead
 # and missing up by that factor before the imputation.
 #
-# METHOD - a chain-ladder on the four releases
+# METHOD - a chain-ladder on the six releases
 # --------------------------------------------
 # For each event month m, each status s (dead, missing) and each consecutive
 # pair of releases r -> r+1, the growth of the register:
@@ -36,7 +36,7 @@
 # records breaks this: a re-keyed death is then dropped without being re-added
 # and nets to -1, which drives the growth rates negative and the completion
 # factors below one - a register that loses deaths as it ages. Measured, the
-# loose test removes 934, 345 and 494 records per release pair against 1, 0 and
+# loose test removes 934, 345 and 494 records between v14, v16, v18 and v19 against 1, 0 and
 # 0 for the strict one, so nearly all of it was matching namesakes. The guards
 # below stop the asymmetry recurring.
 # A key present in both releases is left out whatever its status, so a missing
@@ -61,7 +61,7 @@
 # factor is a lower bound on the lag; 13d shows how far a longer horizon would
 # move the results.
 #
-# INPUT   the four register releases (gitignored), through a cache of
+# INPUT   the six register releases (gitignored), through a cache of
 #         aggregate counts: data_inter/ualosses_registration_by_month.rds
 # OUTPUT  data_inter/ukr_registration_completion.rds: the growth rates by lag
 #         band, the horizon, and v19's dead and missing by event month with
@@ -97,7 +97,7 @@ reg_counts <- cache_rds("data_inter/ualosses_registration_by_month.rds", {
   # longer holds, as the linkage in 09 does.
   stock <- imap_dfr(d, \(x, r) count(losses(x), m, status, name = "n") |>
                       mutate(kind = "stock", from = r, to = NA_character_))
-  flows <- map_dfr(1:3, function(i) {
+  flows <- map_dfr(seq_len(length(d) - 1), function(i) {
     a <- d[[i]]; b <- d[[i + 1]]
     earlier <- bind_rows(regs[1:i]) |>
       transmute(key, np = str_squish(str_remove(key, "\\s+\\S+$")), name, dob, status,
@@ -121,7 +121,7 @@ reg_counts <- cache_rds("data_inter/ualosses_registration_by_month.rds", {
     # record. The dead use the patronymic as well and look only among departed
     # MISSING records, because in a register of this size a surname, first name
     # and event month coincide often: matched loosely against all departures
-    # the test removes 934, 345 and 494 of the new dead per release pair,
+    # the test removes 934, 345 and 494 of the new dead between v14, v16, v18 and v19,
     # against 1, 0 and 0 once the patronymic is required - so the loose version
     # is matching namesakes, not the same person.
     drop_keys <- function(x, g, k) {
@@ -143,13 +143,13 @@ reg_counts <- cache_rds("data_inter/ualosses_registration_by_month.rds", {
     # `a` and `b`, which hold the dated records of 2022-2025 alone. The register
     # lists thousands of deaths with no event date (4,199 in v14, 3,151 in v19)
     # and dates them as it goes: tested against `a`, a death undated in one
-    # release and dated in the next counts as newly registered (193, 652 and
-    # 1,161 of the additions in the three pairs), although 08 has already spread
+    # release and dated in the next counts as newly registered (110, 103, 527,
+    # 186 and 1,161 of the additions over the five pairs), although 08 has already spread
     # the undated deaths over the event years, so the base the factors multiply
     # holds it. What this leaves out is the death that ENTERS the register
-    # undated, which has no event month to be counted in: 659, 679 and 529 such
-    # records against 774, 338 and 112 undated ones dropped, a net 643 over the
-    # three pairs beside the 6,235 measured here, so the factors remain a
+    # undated, which has no event month to be counted in: 421, 266, 538, 228 and 529 such
+    # records against 725, 63, 247, 140 and 112 undated ones dropped, a net 695 over the
+    # same releases beside the 5,981 measured on them, so the factors remain a
     # slight lower bound on that account.
     in_a <- regs[[i]] |> distinct(key)
     in_b <- regs[[i + 1]] |> distinct(key)

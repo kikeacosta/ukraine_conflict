@@ -6,29 +6,31 @@
 # instead of being asserted to be small or large:
 #   1. how many of the missing are alive. 11 draws it inside the range the
 #      evidence allows (alive_evidence(), 00_setup.R); here it is swept from
-#      the fewest alive the evidence allows to all but the projected deaths,
+#      the fewest alive the evidence allows to all of the missing alive,
 #      so the reader can see how far the results move across and beyond that
 #      range;
-#   2. the linkage rules behind the resolution model, the model itself and
-#      the reading of the prisoner-of-war evidence (section 5).
+#   2. the rules of the imputation and of the linkage behind it, models of
+#      resolution projected in its place, and the reading of the
+#      prisoner-of-war evidence (section 5).
 # ==============================================================================
 #
 # WHY THIS MATTERS
 # -----------------
 # The military death total is dominated by how many of the missing are
 # alive, not by a measurement. The evidence fixes the prisoners of war among
-# the missing only within a range, and nothing counts those alive for other
-# reasons. So besides drawing both inside the range the evidence allows, the
-# pipeline shows what happens across the whole of it and beyond.
+# the missing only within a range, and what the register's resolutions say of
+# the rest is a bound. So besides drawing both inside the range the evidence
+# allows, the pipeline shows what happens across the whole of it and beyond.
 #
-# THE SWEEP. The missing alive are the prisoners of war among them (captives),
-# those the model projects to leave the register, and a share of the rest,
-# the unresolved, alive for other reasons (impute_missing(), 00_setup.R). The
-# sweep follows one path through the two free quantities, in straight
-# segments: from the floor of the evidence (captives at their floor, none of
-# the unresolved alive) to its central values (both at their means), on to
-# its ceiling (both at their ceilings), and then to all the unresolved alive
-# with the captives at their ceiling. Each point is labelled by the share of
+# THE SWEEP. The missing alive are the prisoners of war among them (captives)
+# and a share of the rest, alive outside captivity, between none and the bound
+# the composition of the register's resolutions gives (military_draws(),
+# composition_bound(), 00_setup.R). The sweep follows one path through the two
+# free quantities, in straight segments: from the floor of the evidence
+# (captives at their floor, none alive outside captivity) to its central values
+# (captives at their mean, the rest at half their bound), on to its ceiling
+# (captives at their ceiling, the rest at their bound), and then beyond the
+# evidence to all of the missing alive. Each point is labelled by the share of
 # all the missing alive. Each point is propagated through the same deterministic,
 # mode-only projection step 13 uses for its migration check: one scenario per
 # point, not a full Monte Carlo re-run at each one, because the question is
@@ -38,7 +40,6 @@
 # ------------------------------------
 #   - the registered dead and their late registrations (conf_cmb): observed
 #     and completed for registration lag, not imputed
-#   - the model's projection of deaths and of people leaving the register
 #   - the age-sex profiles (prop_cmb_dead, prop_cmb_miss), civilian deaths,
 #     and migration: all held at their mode
 #
@@ -71,24 +72,29 @@ draw_mig_by_year <- mi$draws |> select(year, draw_mig)
 # 2. THE MISSING ALIVE, SWEPT =================================================
 mil <- read_rds("data_inter/ukr_military_inputs.rds")
 ev <- mil$evidence
-at <- function(captives, other) military_draws(mil, captives, other)
+# The alive outside captivity move along one path, `other`: 0 none of them, 1 every
+# cohort at the bound its resolutions give (composition_bound(), 00_setup.R), 2
+# all of them alive; the centre, half the bound, is 0.5.
+bound <- composition_bound(mil$composition)
+a_of <- function(other) if (other <= 1) other * bound else bound + (other - 1) * (1 - bound)
+at <- function(captives, other) military_draws(mil, captives, a_of(other))
 
-# the four-year parts the path moves along, at the model's estimates and the
+# the four-year parts the path moves along, at the point bound and the
 # point lag factors
 parts <- function(captives, other) {
   d <- at(captives, other)
-  tibble(missing = sum(d$missing), unlisted = sum(d$imputed_unlisted),
+  tibble(missing = sum(d$missing),
          alive = sum(d$missing - d$imputed_dead))
 }
 alive_of <- function(captives, other) parts(captives, other)$alive
-missing_total <- parts(ev$captives_central, ev$other_central)$missing
+missing_total <- parts(ev$captives_central, 0.5)$missing
 
 # the path's corners: the floor, the centre and the ceiling of the evidence,
-# and all the unresolved alive with the captives at their ceiling
+# and all of the missing alive
 nodes <-
-  tibble(point = c("floor", "central", "cap", "all but the projected deaths"),
+  tibble(point = c("floor", "central", "cap", "all of the missing alive"),
          captives = c(ev$captives_min, ev$captives_central, ev$captives_max, ev$captives_max),
-         other = c(ev$other_min, ev$other_central, ev$other_max, 1)) |>
+         other = c(0, 0.5, 1, 2)) |>
   mutate(alive = map2_dbl(captives, other, alive_of))
 stopifnot(all(diff(nodes$alive) > 0))
 
@@ -106,10 +112,10 @@ path_at <- function(alive) {
 }
 
 # the points of the evidence, and the 95% interval of the draws: each draw's
-# missing alive at the model's estimates and the point factors
+# missing alive at the point bound and the point factors
 alive_draws <- read_rds("data_inter/ukr_sim_alive_draws.rds")
 alive_in_draws <-
-  military_draws(mil, alive_draws$captives, alive_draws$alive_other) |>
+  military_draws(mil, alive_draws$captives, outer(alive_draws$u_other, bound[1, ])) |>
   summarise(alive = sum(missing - imputed_dead), .by = sim_id) |>
   pull(alive)
 top_alive <- nodes$alive[nrow(nodes)]
@@ -128,14 +134,18 @@ sweep_points <-
   arrange(alive)
 # the path must pass through the evidence's own points
 stopifnot(
-  isTRUE(all.equal(path_at(nodes$alive[2]), c(captives = ev$captives_central, other = ev$other_central))),
-  isTRUE(all.equal(path_at(nodes$alive[3]), c(captives = ev$captives_max, other = ev$other_max)))
+  isTRUE(all.equal(path_at(nodes$alive[2]), c(captives = ev$captives_central, other = 0.5))),
+  isTRUE(all.equal(path_at(nodes$alive[3]), c(captives = ev$captives_max, other = 1)))
 )
 
 military_by_alive <-
   sweep_points |>
-  mutate(res = map2(captives, other, \(c, o) at(c, o) |> select(year, confirmed, imputed_dead, total_military = military))) |>
-  unnest(res)
+  mutate(res = map2(captives, other, \(c, o) at(c, o) |>
+                      transmute(year, confirmed, imputed_dead, total_military = military,
+                                alive_otherwise = alive_other, not_captive = missing - captives))) |>
+  unnest(res) |>
+  # the share of the missing, prisoners apart, that a point puts alive, all years together
+  mutate(share_otherwise = sum(alive_otherwise) / sum(not_captive), .by = c(point, alive, captives, other))
 
 # the points of the evidence must reproduce 10's combatant bounds
 cmb_bounds <- param_table |> filter(role == "combatants") |> arrange(year)
@@ -152,7 +162,7 @@ write_rds(military_by_alive, "data_inter/ukr_alive_sensitivity_military.rds")
 
 military_totals <-
   military_by_alive |>
-  summarise(total_military = sum(total_military), .by = c(point, alive, share_alive, captives, other)) |>
+  summarise(total_military = sum(total_military), .by = c(point, alive, share_alive, captives, other, share_otherwise)) |>
   arrange(alive)
 
 cat("\n=== TOTAL MILITARY DEATHS, 2022-2025, BY THE SHARE OF THE MISSING ALIVE ===\n")
@@ -175,7 +185,7 @@ loss_for <- function(mil_by_year) {
 
 e0_by_alive <-
   military_by_alive |>
-  nest(.by = c(point, alive, share_alive, captives, other)) |>
+  nest(.by = c(point, alive, share_alive, captives, other, share_otherwise)) |>
   mutate(res = map(data, \(d) loss_for(d |> select(year, draw_cmb = total_military, conf_cmb = confirmed)))) |>
   select(-data) |>
   unnest(res)
@@ -233,9 +243,10 @@ ggsave("figures/exploratory/alive_sensitivity_e0.png", p_e0, w = 9, h = 4.5)
 # ==============================================================================
 # 5. THE LINKAGE RULES
 # ==============================================================================
-# 09 recomputes the military total under alternatives to its linkage rules,
-# its resolution model and its reading of the prisoner-of-war evidence, each
-# at the central values of the evidence (09 sets them out). Each is projected
+# 09 recomputes the military total under alternatives to the rules of its
+# imputation and its linkage, with a model of resolution projected in the
+# identity's place, and under other readings of the prisoner-of-war evidence,
+# each at the central values of the evidence (09 sets them out). Each is projected
 # here as the sweep is, every other input at its mode. The rules used must
 # reproduce the central point of the sweep.
 linkage_e0 <-

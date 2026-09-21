@@ -37,14 +37,17 @@
 #
 # WHAT IT IS FOR
 # --------------
-# By the identity of the imputation a death the model misses is counted dead
-# among the unresolved anyway, so a cohort effect on the DEATH channel moves the
-# split between projected and unresolved deaths and not the total. The channel
-# that moves the total is the one OUT OF THE REGISTER, whose excess over list
-# maintenance is observed almost only on 2022 events at long durations and which
-# the projection carries onto every later cohort. The last section gives the
-# people that channel puts alive under the pooled hazards (production), under
-# each cohort's own multiplier, and with the channel kept to the events of 2022.
+# It is the reason the duration model is not the imputation. A model with one
+# pattern for every cohort, carried to 48 months, takes the rate at which the
+# missing leave the register beyond list maintenance - observed almost only on
+# the events of 2022, at long durations, in the releases that cleaned the
+# register up - and applies it to the missing of 2023-2025, who show no such
+# excess where they can be seen. The last section gives the people that channel
+# would put alive under the pooled hazards, under each cohort's own multiplier
+# (which cannot be carried beyond the durations a cohort has reached, as the
+# result shows), and with the channel kept to the events of 2022. The estimate
+# uses none of them: it counts the missing as dead but for the prisoners and a
+# share bounded by each cohort's own resolutions (military_draws(), 00_setup.R).
 #
 # INPUTS   data_inter/ualosses_window_transitions.rds (09's cached linkage),
 #          data_inter/ukr_registration_completion.rds (08b),
@@ -219,7 +222,7 @@ out_of_register <-
          events_2022_only = leaves(\(yr) if (yr == 2022) production$h else h_2022_only)) |>
   summarise(missing = sum(missing_stock), across(c(pooled, own_cohort, events_2022_only), sum), .by = year)
 stopifnot(abs(sum(out_of_register$pooled) -
-                sum(read_rds("data_inter/ukr_ualosses_imputation_table.rds")$imputed_unlisted)) < 1)
+                sum(read_rds("data_inter/ukr_ualosses_projection_table.rds")$imputed_unlisted)) < 1)
 
 cat("\n=== PEOPLE THE CHANNEL OUT OF THE REGISTER PUTS ALIVE, BY EVENT YEAR ===\n")
 print(as.data.frame(out_of_register |> mutate(across(-year, round)) |>
