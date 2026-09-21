@@ -218,5 +218,7 @@ anything sitting directly in `figures/` is a manuscript deliverable.
 | `tableA35_covid_carryover.csv` | The 2022 loss with a quarter and a half of 2021's excess mortality carried into the counterfactual |
 | `tableA36_held_out_window.csv` | The duration model against each release window held out of its fit, by outcome |
 | `tableA37_structural_intervals.csv` | Military deaths, all conflict deaths and the e0 loss with the interval of the drawn inputs, and with the structural choices folded in |
+| `tableA43_population_present.csv` | The population the rates are computed on, by draw: men aged 20-50, men, and both sexes, with 95% intervals (11, 15) |
+| `tableA44_register_status_by_year.csv` | The register's records of 2022-2025 events by event year and status in v19, the cross-section behind the linkage (15) |
 | `figA8_structural_tornado.png` | The range of each structural choice beside the 95% interval of the drawn inputs |
 | `_run_provenance.csv` | Draws, seed, draws file and commit the tables were built from |
