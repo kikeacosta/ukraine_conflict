@@ -1,9 +1,9 @@
 scenario,military_deaths,military_lo,military_hi,male_2022,male_2023,male_2024,female_2025,male_2025
-to 48 months (used),178316,177779,179146,4.69,4.13,5.63,0.128,6.47
-"exponential tail, to 72 months",181885,180092,184923,4.73,4.18,5.73,0.128,6.63
-"exponential tail, to 96 months",184059,180696,191200,4.75,4.21,5.8,0.129,6.73
-"exponential tail, to 120 months",185420,180844,197270,4.76,4.22,5.84,0.129,6.79
-"inverse power tail, to 72 months",183144,181505,185585,4.75,4.21,5.77,0.129,6.67
-"inverse power tail, to 96 months",187106,183671,192547,4.79,4.26,5.88,0.129,6.84
-"inverse power tail, to 120 months",190569,185257,199645,4.83,4.31,5.98,0.129,6.99
-"exponential tail, to its limit",187698,NA,NA,4.78,4.25,5.9,0.129,6.89
+to 48 months (used),178136,177601,178966,4.69,4.13,5.63,0.128,6.46
+"exponential tail, to 72 months",181700,179910,184733,4.73,4.18,5.73,0.128,6.62
+"exponential tail, to 96 months",183871,180514,191000,4.75,4.2,5.79,0.129,6.72
+"exponential tail, to 120 months",185231,180662,197059,4.76,4.22,5.83,0.129,6.78
+"inverse power tail, to 72 months",182959,181322,185395,4.75,4.2,5.77,0.129,6.66
+"inverse power tail, to 96 months",186914,183485,192346,4.79,4.26,5.88,0.129,6.83
+"inverse power tail, to 120 months",190372,185070,199433,4.83,4.31,5.98,0.129,6.98
+"exponential tail, to its limit",187504,NA,NA,4.78,4.25,5.9,0.129,6.88

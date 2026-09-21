@@ -2192,21 +2192,24 @@ save_tab(tA37, "tableA37_structural_intervals.csv")
 print(tA37, n = 40)
 
 # Figure A8: a tornado of the structural choices beside the drawn inputs, for
-# the military total and the 2025 male loss
+# the military total and the male loss in 2022 and 2025: some choices move 2022
+# alone (the civilian age profile, pandemic mortality, the timing within the year)
+tornado_panels <- c("Military deaths, 2022-2025", "Male loss of life expectancy, 2022 (years)",
+                    "Male loss of life expectancy, 2025 (years)")
 tornado_data <-
   structural$ranges |>
-  filter(what == "Military deaths, 2022-2025" | (year == 2025 & sex == "m")) |>
-  mutate(panel = if_else(what == "Military deaths, 2022-2025",
-                         "Military deaths, 2022-2025", "Male loss of life expectancy, 2025 (years)"),
+  filter(what == "Military deaths, 2022-2025" | (year %in% c(2022, 2025) & sex == "m")) |>
+  mutate(panel = if_else(what == "Military deaths, 2022-2025", tornado_panels[1],
+                         paste0("Male loss of life expectancy, ", year, " (years)")),
          kind = if_else(str_detect(dimension, "^Drawn inputs"), "Drawn inputs", "Structural choice")) |>
   filter(abs(hi - lo) > 0) |>
   mutate(dimension = str_wrap(dimension, 38))
-order_dim <- tornado_data |> filter(str_detect(panel, "^Male")) |> arrange(hi - lo) |> pull(dimension)
+order_dim <- tornado_data |> filter(panel == tornado_panels[3]) |> arrange(hi - lo) |> pull(dimension)
 order_dim <- c(setdiff(unique(tornado_data$dimension), order_dim), order_dim)
 figA8 <-
   tornado_data |>
   mutate(dimension = factor(dimension, levels = order_dim),
-         panel = factor(panel, levels = c("Military deaths, 2022-2025", "Male loss of life expectancy, 2025 (years)"))) |>
+         panel = factor(panel, levels = tornado_panels)) |>
   ggplot() +
   geom_vline(xintercept = 0, linewidth = 0.3) +
   geom_segment(aes(x = lo, xend = hi, y = dimension, yend = dimension, colour = kind), linewidth = 3.2) +
@@ -2218,7 +2221,7 @@ figA8 <-
                         "Blue: the 95% interval of the ", scales::comma(n_sim), " simulations, about its mean.")) +
   theme_paper() +
   theme(panel.grid.major.x = element_line(colour = "grey90"), panel.grid.major.y = element_blank())
-save_fig(figA8, "figA8_structural_tornado.png", 10, 5.2)
+save_fig(figA8, "figA8_structural_tornado.png", 13, 5.2)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # provenance stamp for the whole table set

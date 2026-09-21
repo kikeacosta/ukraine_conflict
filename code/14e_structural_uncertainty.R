@@ -26,9 +26,10 @@
 # additive, which holds to first order for shifts this size.
 #
 # What is left out, and why:
-#   - alternatives the simulation already draws (each release window's
-#     multipliers alone, the share of the unrecorded prisoners at its bounds, the
-#     forecast one SD either way, each migration component across its range);
+#   - alternatives the simulation already draws over (each release window's
+#     multipliers alone, which the drawn weights on the windows reach; the share
+#     of the unrecorded prisoners at its bounds; the forecast one SD either way;
+#     each migration component across its range);
 #   - the counterfactual fitted with the pandemic years, which is a different
 #     counterfactual and not an uncertainty about this one;
 #   - Donetsk and Luhansk a quarter lower, half lower and taken out, the upper
@@ -41,7 +42,7 @@
 # INPUTS   the draws (11, 14) and the sensitivity steps' outputs (13b-13n)
 # OUTPUTS  data_inter/ukr_structural_uncertainty.rds:
 #            dimensions   every alternative's shift, by dimension
-#            intervals    the median and 95% interval, drawn inputs alone and
+#            intervals    the mean and 95% interval, drawn inputs alone and
 #                         with the structural choices, for the military total,
 #                         all conflict deaths and the loss by year and sex
 #            ranges       each dimension's range of shifts, for the tornado figure
@@ -160,7 +161,7 @@ shift_loss <- map_dfr(dims, function(dm) {
 }) |>
   summarise(d_loss = sum(d_loss), .by = c(sim_id, year, sex))
 
-q <- function(x) tibble(median = median(x), lo = quantile(x, 0.025), hi = quantile(x, 0.975))
+q <- function(x) tibble(mean = mean(x), lo = quantile(x, 0.025), hi = quantile(x, 0.975))
 both <- function(x, shift, what, year = NA, sex = NA) {
   bind_rows(q(x) |> mutate(interval = "drawn inputs"),
             q(x + shift) |> mutate(interval = "drawn inputs and structural choices")) |>
@@ -189,7 +190,7 @@ ranges <- bind_rows(
   intervals |>
     filter(interval == "drawn inputs") |>
     transmute(dimension = "Drawn inputs: 95% interval of the simulation", year, sex, what,
-              lo = lo - median, hi = hi - median)
+              lo = lo - mean, hi = hi - mean)
 )
 
 write_rds(list(dimensions = alternatives, intervals = intervals, ranges = ranges, seed = 20260920),
@@ -198,6 +199,6 @@ write_rds(list(dimensions = alternatives, intervals = intervals, ranges = ranges
 cat("\n=== THE INTERVALS, DRAWN INPUTS ALONE AND WITH THE STRUCTURAL CHOICES ===\n")
 print(as.data.frame(
   intervals |> filter(is.na(sex) | sex == "m" | year == 2022) |>
-    mutate(across(c(median, lo, hi), \(x) if_else(what == "Loss of life expectancy", round(x, 2), round(x))))
+    mutate(across(c(mean, lo, hi), \(x) if_else(what == "Loss of life expectancy", round(x, 2), round(x))))
 ))
 message("Done. data_inter/ukr_structural_uncertainty.rds written.")

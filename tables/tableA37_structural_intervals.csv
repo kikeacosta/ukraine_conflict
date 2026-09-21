@@ -1,21 +1,21 @@
-what,year,sex,interval,median,lo,hi
-"Military deaths, 2022-2025",NA,NA,drawn inputs,177482,173488,182353
-"Military deaths, 2022-2025",NA,NA,drawn inputs and structural choices,184402,174455,193612
-"Conflict deaths, 2022-2025",NA,NA,drawn inputs,210562,201946,220752
-"Conflict deaths, 2022-2025",NA,NA,drawn inputs and structural choices,216695,204513,229274
-Loss of life expectancy,2022,f,drawn inputs,1.21,0.91,1.63
-Loss of life expectancy,2022,f,drawn inputs and structural choices,1.02,0.46,1.53
-Loss of life expectancy,2022,m,drawn inputs,4.76,4.32,5.32
-Loss of life expectancy,2022,m,drawn inputs and structural choices,4.61,3.87,5.32
+what,year,sex,interval,mean,lo,hi
+"Military deaths, 2022-2025",NA,NA,drawn inputs,178160,175080,181141
+"Military deaths, 2022-2025",NA,NA,drawn inputs and structural choices,184117,175622,192010
+"Conflict deaths, 2022-2025",NA,NA,drawn inputs,210651,203251,219485
+"Conflict deaths, 2022-2025",NA,NA,drawn inputs and structural choices,216608,205431,228248
+Loss of life expectancy,2022,f,drawn inputs,1.22,0.91,1.63
+Loss of life expectancy,2022,f,drawn inputs and structural choices,1,0.46,1.53
+Loss of life expectancy,2022,m,drawn inputs,4.78,4.32,5.32
+Loss of life expectancy,2022,m,drawn inputs and structural choices,4.6,3.87,5.31
 Loss of life expectancy,2023,f,drawn inputs,0.16,0.13,0.19
 Loss of life expectancy,2023,f,drawn inputs and structural choices,0.15,0.12,0.19
-Loss of life expectancy,2023,m,drawn inputs,4.14,3.86,4.4
-Loss of life expectancy,2023,m,drawn inputs and structural choices,4.34,4,4.67
+Loss of life expectancy,2023,m,drawn inputs,4.14,3.87,4.39
+Loss of life expectancy,2023,m,drawn inputs and structural choices,4.34,4.02,4.66
 Loss of life expectancy,2024,f,drawn inputs,0.13,0.11,0.16
-Loss of life expectancy,2024,f,drawn inputs and structural choices,0.13,0.11,0.16
-Loss of life expectancy,2024,m,drawn inputs,5.64,5.19,6.07
-Loss of life expectancy,2024,m,drawn inputs and structural choices,5.98,5.43,6.53
-Loss of life expectancy,2025,f,drawn inputs,0.13,0.12,0.16
+Loss of life expectancy,2024,f,drawn inputs and structural choices,0.14,0.11,0.16
+Loss of life expectancy,2024,m,drawn inputs,5.64,5.22,6.04
+Loss of life expectancy,2024,m,drawn inputs and structural choices,5.98,5.45,6.49
+Loss of life expectancy,2025,f,drawn inputs,0.14,0.12,0.16
 Loss of life expectancy,2025,f,drawn inputs and structural choices,0.14,0.12,0.17
-Loss of life expectancy,2025,m,drawn inputs,6.49,5.9,7.06
-Loss of life expectancy,2025,m,drawn inputs and structural choices,6.96,6.21,7.68
+Loss of life expectancy,2025,m,drawn inputs,6.49,5.96,6.99
+Loss of life expectancy,2025,m,drawn inputs and structural choices,6.95,6.26,7.62

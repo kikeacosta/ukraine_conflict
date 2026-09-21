@@ -1,10 +1,10 @@
 case,fitted_on,predicted_window,outcome,missing_at_start,observed,predicted,predicted_over_observed,predicted_lo,predicted_hi,observed_within
-A,v14 + v16,v18,dead,87587,2208,2096,0.95,1892,2247,TRUE
-A,v14 + v16,v18,prisoner,87587,2497,21,0.01,5,89,FALSE
-A,v14 + v16,v18,no_longer_listed,87587,335,123,0.37,0,4938,TRUE
-B,v16 + v18,v14,dead,77188,1513,1627,1.08,1542,1738,FALSE
-B,v16 + v18,v14,prisoner,77188,31,623,20.11,3,1721,TRUE
-B,v16 + v18,v14,no_longer_listed,77188,211,118,0.56,0,301,TRUE
-C,v14 + v18,v16,dead,85208,3259,3120,0.96,2821,3486,TRUE
-C,v14 + v18,v16,prisoner,85208,12,1691,140.9,31,3483,FALSE
-C,v14 + v18,v16,no_longer_listed,85208,0,479,Inf,378,672,FALSE
+A,v14 + v16,v18,dead,87587,2208,2096,0.95,1957,2223,TRUE
+A,v14 + v16,v18,prisoner,87587,2497,21,0.01,7,66,FALSE
+A,v14 + v16,v18,no_longer_listed,87587,335,123,0.37,4,4873,TRUE
+B,v16 + v18,v14,dead,77188,1513,1627,1.08,1557,1721,FALSE
+B,v16 + v18,v14,prisoner,77188,31,623,20.11,20,1506,TRUE
+B,v16 + v18,v14,no_longer_listed,77188,211,118,0.56,2,282,TRUE
+C,v14 + v18,v16,dead,85208,3259,3120,0.96,2895,3413,TRUE
+C,v14 + v18,v16,prisoner,85208,12,1691,140.9,158,3166,FALSE
+C,v14 + v18,v16,no_longer_listed,85208,0,479,Inf,399,635,FALSE
