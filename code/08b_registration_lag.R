@@ -36,7 +36,7 @@
 # records breaks this: a re-keyed death is then dropped without being re-added
 # and nets to -1, which drives the growth rates negative and the completion
 # factors below one - a register that loses deaths as it ages. Measured, the
-# loose test removes 934, 345 and 494 records between v14, v16, v18 and v19 against 1, 0 and
+# loose test removes 848, 105, 266, 92 and 494 records over the five release pairs, against
 # 0 for the strict one, so nearly all of it was matching namesakes. The guards
 # below stop the asymmetry recurring.
 # A key present in both releases is left out whatever its status, so a missing
@@ -121,8 +121,8 @@ reg_counts <- cache_rds("data_inter/ualosses_registration_by_month.rds", {
     # record. The dead use the patronymic as well and look only among departed
     # MISSING records, because in a register of this size a surname, first name
     # and event month coincide often: matched loosely against all departures
-    # the test removes 934, 345 and 494 of the new dead between v14, v16, v18 and v19,
-    # against 1, 0 and 0 once the patronymic is required - so the loose version
+    # the test removes 848, 105, 266, 92 and 494 of the new dead over the five
+    # pairs, against one in all once the patronymic is required - so the loose version
     # is matching namesakes, not the same person.
     drop_keys <- function(x, g, k) {
       x |>

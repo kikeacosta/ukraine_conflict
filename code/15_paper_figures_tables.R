@@ -1814,7 +1814,7 @@ alternatives <- bind_rows(
            table = "A33"),
   read_rds("data_inter/ukr_linkage_rules_e0.rds") |>
     filter(!str_detect(design, "production")) |>
-    mutate(analysis = paste0("Linkage rules, resolution model and prisoner-of-war evidence: ",
+    mutate(analysis = paste0("Rules of the imputation and the linkage, and the prisoner-of-war evidence: ",
                              c("one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
                                "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
                                "seventeen", "eighteen", "nineteen", "twenty")[n_distinct(design)], " alternatives"),
