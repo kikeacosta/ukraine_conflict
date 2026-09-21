@@ -78,6 +78,7 @@ size every table was built at.
 | `14d` | The loss with the population base of Donetsk and Luhansk drawn, PERT(0, 0.5, 1.0 million fewer), beside the base at the published estimates: the second tier of the structural uncertainty. The range is a judgement of the team, not a measurement, so it is reported beside the estimate and not inside it | `ukr_drawn_base_e0.rds` |
 | `14e` | The intervals with the structural choices folded in: one alternative per choice sampled in every draw with equal weights and its shift from the central projection added, reported beside the interval of the drawn inputs. The weights are a convention, not a measurement | `ukr_structural_uncertainty.rds` |
 | `15` | **All manuscript figures and tables** | `figures/fig*.png`, `tables/table*.csv` |
+| `16` | Figure A0: the pipeline from sources to estimates, each step's box drawn dashed if its output is drawn in the simulation and solid if it is held; the release list and the number of draws come from the run | `figures/figA0_pipeline.png` |
 | `a01` | UNICEF export (not part of the paper): every iteration, by cause | `data_inter/unicef/<yymmdd>_ukraine_mx_estimates_*.csv` |
 
 Steps 01→04 build the counterfactual. 05→09 assemble the conflict deaths and
@@ -173,6 +174,7 @@ anything sitting directly in `figures/` is a manuscript deliverable.
 | `fig4_decomposition_migration_mortality.png` | Mortality vs the migration denominator effect |
 | `fig5_decomposition_by_cause.png` | e0 loss by civilians / registered / imputed combatants |
 | `fig6_uncertainty_shares.png` | How much of the spread in the loss each input accounts for |
+| `figA0_pipeline.png` | The pipeline from sources to estimates: what each source contributes, in which order, and which steps' outputs are drawn |
 | `figA1_pert_draw_distributions.png` | Beta-PERT draw densities against their input bounds |
 | `figA2_pert_draw_distributions_migration.png` | Draws of the two migration components: the western blend of the two readings, and Russia and Belarus |
 | `figA3_cumulative_migration_draws.png` | Cumulative net migration across draws |

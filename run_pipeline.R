@@ -55,7 +55,9 @@ steps_to_run <- list(
   list(name = "14e", file = "code/14e_structural_uncertainty.R"),
   # 15 builds every manuscript figure and table. It was missing from this
   # list, so a full pipeline run produced none of the deliverables.
-  list(name = "15", file = "code/15_paper_figures_tables.R")
+  list(name = "15", file = "code/15_paper_figures_tables.R"),
+  # 16 draws figure A0, the pipeline itself, from the release list and n_sim
+  list(name = "16", file = "code/16_pipeline_figure.R")
 )
 
 for (step in steps_to_run) {
