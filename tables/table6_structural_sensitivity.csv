@@ -7,7 +7,7 @@ The missing alive: floor to cap,A6,"172,808 - 182,768",4.22 - 4.68,1.15,6.38 - 6
 "Rules of the imputation and the linkage, and the prisoner-of-war evidence: sixteen alternatives",A9,"173,032 - 181,799",4.26 - 4.69,1.15,6.31 - 6.69,0.128
 Population base of Donetsk and Luhansk: 0.5 million lower to taken out,A11,"178,059",4.50 - 5.16,1.17 - 1.35,6.64 - 7.66,0.130 - 0.155
 "Timing within 2022: mid-year convention, or net outflow by 1 April",A11,"178,059",4.39 - 4.48,1.10 - 1.17,6.56,0.128
-Population base outside Donetsk and Luhansk: 0.5 or 1.0 million fewer aged 20-64,A11,"178,059",4.53 - 4.61,1.17 - 1.18,6.68 - 6.82,0.131 - 0.133
+"Pre-war absentees in the base outside Donetsk and Luhansk: 0.5 or 1.0 million fewer aged 20-64, in proportion to the population there or two thirds of them men",A11,"178,059",4.53 - 4.67,1.16 - 1.18,6.68 - 6.92,0.130 - 0.133
 "The same, 0.5 to 2.0 million fewer, with the counterfactual refitted on exposures smaller by the same share",A34,"178,059",4.51 - 4.67,1.16 - 1.20,6.65 - 6.92,0.130 - 0.137
 "Residents of occupied Donbas killed in Russian-controlled forces: counted to September 2023, or continued to 2025",A27,"178,059",5.57 - 5.70,1.17,6.57 - 8.03,0.128 - 0.142
 "Civilian age profile: deaths beyond OHCHR's verified count with half over 60, or aged as pre-war deaths",A25,"178,059",3.88 - 4.29,0.68 - 1.03,6.55 - 6.56,0.126 - 0.128
@@ -15,4 +15,4 @@ Population base outside Donetsk and Luhansk: 0.5 or 1.0 million fewer aged 20-64
 Counterfactual: a quarter or a half of 2021's pandemic excess carried into 2022,A35,"178,059",4.29 - 4.37,1.11 - 1.13,6.56,0.128
 Net migration: each component across its range,A7,"178,059",4.43 - 4.49,1.13 - 1.18,6.51 - 6.62,0.124 - 0.133
 Specification of the net migration input,A8,"178,059",4.43 - 4.48,1.13 - 1.17,6.51 - 6.65,0.124 - 0.133
-No net migration,A7,"178,059",4.22,0.99,5.88,0.102
+De jure denominator: no net migration,A7,"178,059",4.22,0.99,5.88,0.102

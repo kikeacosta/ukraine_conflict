@@ -275,6 +275,19 @@ sim_long <-
   ) %>%
   mutate(mx = dx / pop)
 
+# 8b. THE POPULATION THE RATES ARE COMPUTED ON, BY DRAW ========================
+# The men the war falls on are a denominator as well as a numerator: the
+# projection carries them through four years of net migration and of the deaths
+# themselves. Their number is a draw like any other, so it is summarised here
+# with its interval, for the Results. Ages 20-50 are where the conflict deaths
+# concentrate (15's figure 2); the whole population is kept beside them.
+pop_present_draws <-
+  sim_output_raw |>
+  summarise(men_20_50 = sum(pop[sex == "m" & age >= 20 & age <= 50]),
+            men = sum(pop[sex == "m"]), all = sum(pop),
+            .by = c(sim_id, year))
+write_rds(pop_present_draws, "data_inter/ukr_pop_present_draws.rds")
+
 # 9. SUMMARY ACROSS DRAWS ======================================================
 # THE ESTIMATE IS THE MEAN OF THE DRAWS, here and in every step that summarises
 # them, with the 2.5th and 97.5th percentiles as its interval. The mean is what

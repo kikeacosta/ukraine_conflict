@@ -238,7 +238,7 @@ fig2 <-
   facet_grid(sex ~ year) +
   labs(
     x = "Age", y = "Death rate (log scale)",
-    colour = "Cause", fill = "Cause",
+    colour = "Rates", fill = "Rates",
     caption = paste0(
       "Median and 95% uncertainty interval across ", n_sim, " draws."
     )
@@ -379,7 +379,7 @@ fig5 <-
   labs(
     x = "Year",
     y = "Share of the life expectancy loss",
-    fill = "Cause of loss"
+    fill = "Component of the loss"
   ) +
   theme_paper()
 save_fig(fig5, "fig5_decomposition_by_cause.png", 8, 4.4)
@@ -1831,7 +1831,7 @@ alternatives <- bind_rows(
               analysis = "Timing within 2022: mid-year convention, or net outflow by 1 April", table = "A11"),
   read_rds("data_inter/ukr_denominator_donetsk_luhansk.rds")$migrants |>
     transmute(military = mode_military, year, sex, loss,
-              analysis = "Population base outside Donetsk and Luhansk: 0.5 or 1.0 million fewer aged 20-64",
+              analysis = "Pre-war absentees in the base outside Donetsk and Luhansk: 0.5 or 1.0 million fewer aged 20-64, in proportion to the population there or two thirds of them men",
               table = "A11"),
   read_rds("data_inter/ukr_base_coherent_e0.rds")$loss |>
     filter(million > 0, counterfactual != "as fitted") |>
@@ -1869,7 +1869,7 @@ alternatives <- bind_rows(
               analysis = "Specification of the net migration input", table = "A8"),
   mig |>
     transmute(military = mode_military, year, sex, loss = loss_nomig,
-              analysis = "No net migration", table = "A7")
+              analysis = "De jure denominator: no net migration", table = "A7")
 )
 fmt_range <- function(x, f) {
   lo <- f(min(x)); hi <- f(max(x))
@@ -1978,6 +1978,42 @@ save_tab(tA17, "tableA17_military_triangulation.csv")
 print(tA17)
 
 # ==============================================================================
+# ==============================================================================
+# TABLE A43 - The population the rates are computed on, by draw
+# ==============================================================================
+# The men the conflict deaths fall on are a denominator as well as a numerator.
+# The projection carries them through four years of net migration and of the
+# deaths themselves, so their number is a draw like any other (11).
+pop_draws <- read_rds("data_inter/ukr_pop_present_draws.rds")
+tA43 <-
+  pop_draws |>
+  pivot_longer(c(men_20_50, men, all), names_to = "group", values_to = "pop") |>
+  summarise(mean = mean(pop), lo = quantile(pop, 0.025), hi = quantile(pop, 0.975),
+            .by = c(year, group)) |>
+  mutate(group = factor(group, levels = c("men_20_50", "men", "all"),
+                        labels = c("Men aged 20-50", "Men, all ages", "Both sexes, all ages")),
+         across(c(mean, lo, hi), \(v) round(v / 1e6, 3))) |>
+  arrange(group, year)
+save_tab(tA43, "tableA43_population_present.csv")
+print(tA43)
+
+# ==============================================================================
+# TABLE A44 - The register's records by event year and status
+# ==============================================================================
+# The cross-section behind the linkage: what v19 records for the events of each
+# year. Resolutions before the first release followed are not observed, so this
+# is not any cohort's outcome over time - it is what the register says today.
+tA44 <-
+  read_rds("data_inter/ualosses_counts_2022_2025.rds") |>
+  filter(year %in% 2022:2025) |>
+  summarise(n = sum(dx), .by = c(year, status)) |>
+  pivot_wider(names_from = status, values_from = n, values_fill = 0) |>
+  arrange(year) |>
+  (\(d) mutate(d, total = rowSums(across(-year))))() |>
+  mutate(across(-c(year, total), list(pct = \(v) round(100 * v / total, 1)), .names = "{.col}_pct"))
+save_tab(tA44, "tableA44_register_status_by_year.csv")
+print(tA44)
+
 # TABLE A18 - Where the returned prisoners had been listed before their return
 # ==============================================================================
 linkage_checks <- read_rds("data_inter/ukr_ualosses_linkage_checks.rds")

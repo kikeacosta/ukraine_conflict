@@ -68,18 +68,36 @@ working_rest <-
   mi$pop22_ini |>
   left_join(pop_dl, by = c("sex", "age")) |>
   mutate(rest = pop - coalesce(pop_dl, 0), working = age >= 20 & age <= 64)
-base_without <- function(million) {
-  w <- working_rest |> mutate(cut = if_else(working, million * 1e6 * rest / sum(rest[working]), 0))
+# The absentees are cut from ages 20-64, either in proportion to the population
+# there (male_share NULL) or with a given share of the cut taken from men.
+# Pre-war labour migration from Ukraine was predominantly male, and the conflict
+# deaths fall on men, so the split matters for the male rates; no source here
+# measures it, and the two readings are shown as a range rather than an estimate.
+base_without <- function(million, male_share = NULL) {
+  w <- working_rest
+  if (is.null(male_share)) {
+    w <- w |> mutate(cut = if_else(working, million * 1e6 * rest / sum(rest[working]), 0))
+  } else {
+    by_sex <- c(m = male_share, f = 1 - male_share) * million * 1e6
+    w <- w |> mutate(cut = if_else(working, by_sex[sex] * rest / sum(rest[working]), 0), .by = sex)
+  }
   stopifnot(all(w$cut <= w$rest))
   w |> mutate(pop = pop - cut) |> select(all_of(names(mi$pop22_ini)))
 }
 migrants <-
-  tibble(scenario = c("Outside Donetsk and Luhansk, 0.5 million fewer aged 20-64",
-                      "Outside Donetsk and Luhansk, 1.0 million fewer aged 20-64"),
-         million = c(0.5, 1.0)) |>
-  mutate(res = map(million, \(m) loss_at_mode(mi$draws, mi$static_inputs, base_without(m)))) |>
+  bind_rows(
+    tibble(million = c(0.5, 1.0), male_share = NA_real_,
+           scenario = paste0("Outside Donetsk and Luhansk, ", format(c(0.5, 1.0), nsmall = 1),
+                             " million fewer aged 20-64")),
+    tibble(million = c(0.5, 1.0), male_share = 2 / 3,
+           scenario = paste0("Outside Donetsk and Luhansk, ", format(c(0.5, 1.0), nsmall = 1),
+                             " million fewer aged 20-64, two thirds of them men"))
+  ) |>
+  mutate(res = map2(million, male_share,
+                    function(m, s) loss_at_mode(mi$draws, mi$static_inputs,
+                                                base_without(m, if (is.na(s)) NULL else s)))) |>
   unnest(res) |>
-  select(-million)
+  select(-million, -male_share)
 
 # the base used must reproduce 13's loss at the mode
 stopifnot(isTRUE(all.equal(
