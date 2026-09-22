@@ -8,7 +8,7 @@
 # 2000-2019 rates (04). Its index for men moved erratically over those years -
 # the crisis of 2005-2008 and the recovery after it - and a random walk fitted
 # to twenty points carries that into a wide forecast band: from 2023 the
-# forecast holds most of the variance of the male loss (table A4). A coherent
+# forecast holds most of the variance of the male loss (table A39). A coherent
 # forecast borrows strength from populations with similar mortality histories
 # (Li and Lee 2005): a common age pattern of change, fitted to the pooled
 # rates of the group, carries the trend, and Ukraine's own departure from it

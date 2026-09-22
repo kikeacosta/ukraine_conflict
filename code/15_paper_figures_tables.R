@@ -19,53 +19,53 @@
 #   fig4_decomposition_migration_mortality.png       13
 #   fig5_decomposition_by_cause.png                  14   <- new
 #   fig6_uncertainty_shares.png                      11, 14 <- new
-#   figA1_pert_draw_distributions.png                10, 11
+#   figA4_pert_draw_distributions.png                10, 11
 #   figA2_pert_draw_distributions_migration.png      10, 11 <- new
 #   figA3_cumulative_migration_draws.png             11   <- new
-#   figA6_duration_lexis.png                         09
+#   figA1_duration_lexis.png                         09
 #
 # TABLES (written to tables/ as .csv)
 #   table1_source_totals.csv                         07_*, 08
 #   table3_missing_imputation.csv                    09
 #   table2_pert_input_bounds.csv                     10
-#   tableA26_missing_alive_inputs.csv                09
+#   tableA12_missing_alive_inputs.csv                09
 #   table4_conflict_deaths_by_cause.csv              14   <- new
 #   table5_life_expectancy_loss.csv                  14
 #   tableA1_source_reconciliation.csv                07_ucdp, 07_acled
-#   tableA2_status_transitions.csv                   09
-#   tableA31_totals_by_cause.csv                       14   <- new
-#   tableA32_totals_by_year.csv                        14   <- new
-#   tableA3_e0_loss_by_cause.csv                     14
-#   tableA4_uncertainty_shares.csv                   11, 14 <- new
-#   tableA5_military_reconciliation.csv              07_ucdp, 08, 10, 11
-#   tableA6_missing_alive_sensitivity.csv            09, 13b
-#   figA4_missing_alive_sensitivity.png              09, 13b
-#   tableA7_migration_sensitivity.csv                13, 13c
-#   figA5_migration_sensitivity.png                  13, 13c
-#   tableA8_migration_specification.csv              13c
-#   tableA9_linkage_and_chain.csv                    09, 13b
-#   tableA10_registration_lag.csv                    08b, 13d
-#   tableA11_population_base_and_timing.csv          13e, 13f
-#   tableA12_counterfactual_window.csv               13g, 13j
-#   tableA13_pert_shape.csv                          13g
-#   tableA14_years_of_life_lost.csv                  14b
-#   tableA15_adult_mortality_45q15.csv               14b
-#   tableA25_civilian_age_profile.csv                13h
-#   tableA27_donbas_fighters.csv                     13i
-#   tableA33_registration_lag_tail.csv               13l
-#   tableA34_base_coherent.csv                       13m
-#   tableA35_covid_carryover.csv                     13n
-#   tableA30_held_out_window.csv                     09j
-#   tableA37_structural_intervals.csv                14e
-#   figA8_structural_tornado.png                     14e
+#   tableA8_status_transitions.csv                   09
+#   tableA36_totals_by_cause.csv                       14   <- new
+#   tableA37_totals_by_year.csv                        14   <- new
+#   tableA38_e0_loss_by_cause.csv                     14
+#   tableA39_uncertainty_shares.csv                   11, 14 <- new
+#   tableA2_military_reconciliation.csv              07_ucdp, 08, 10, 11
+#   tableA18_missing_alive_sensitivity.csv            09, 13b
+#   figA6_missing_alive_sensitivity.png              09, 13b
+#   tableA26_migration_sensitivity.csv                13, 13c
+#   figA7_migration_sensitivity.png                  13, 13c
+#   tableA27_migration_specification.csv              13c
+#   tableA20_linkage_and_chain.csv                    09, 13b
+#   tableA22_registration_lag.csv                    08b, 13d
+#   tableA28_population_base_and_timing.csv          13e, 13f
+#   tableA32_counterfactual_window.csv               13g, 13j
+#   tableA34_pert_shape.csv                          13g
+#   tableA40_years_of_life_lost.csv                  14b
+#   tableA41_adult_mortality_45q15.csv               14b
+#   tableA30_civilian_age_profile.csv                13h
+#   tableA31_donbas_fighters.csv                     13i
+#   tableA24_registration_lag_tail.csv               13l
+#   tableA29_base_coherent.csv                       13m
+#   tableA33_covid_carryover.csv                     13n
+#   tableA46_held_out_window.csv                     09j
+#   tableA15_structural_intervals.csv                14e
+#   figA5_structural_tornado.png                     14e
 #   out_of_sample_releases.csv                       09i (where it has run)
 #   table6_structural_sensitivity.csv                13, 13b-13n
-#   tableA16_missing_alive_by_lag_horizon.csv        13d
-#   tableA17_military_triangulation.csv              09, data_input/official_figures.csv
-#   tableA18_returned_prisoners_prior_status.csv     09
-#   tableA19_register_dropout.csv                    09
-#   tableA20_resolution_hazards.csv                  09
-#   tableA21_civil_register_check.csv                11, data_input/official_figures.csv
+#   tableA23_missing_alive_by_lag_horizon.csv        13d
+#   tableA43_military_triangulation.csv              09, data_input/official_figures.csv
+#   tableA6_returned_prisoners_prior_status.csv     09
+#   tableA5_register_dropout.csv                    09
+#   tableA7_resolution_hazards.csv                  09
+#   tableA44_civil_register_check.csv                11, data_input/official_figures.csv
 #
 # INPUTS   the .rds products of steps 07-14
 # ==============================================================================
@@ -521,11 +521,11 @@ save_tab(
   unc_shares |>
     mutate(share = scales::percent(share, accuracy = 0.1)) |>
     pivot_wider(names_from = source, values_from = share),
-  "tableA4_uncertainty_shares.csv"
+  "tableA39_uncertainty_shares.csv"
 )
 
 # ==============================================================================
-# FIGURE A1 - Distributions of the simulated conflict death totals
+# FIGURE A4 - Distributions of the simulated conflict death totals
 # ==============================================================================
 # param_table also carries the two migration components now, and those belong
 # in A2, not here.
@@ -576,7 +576,7 @@ figA1 <-
   ) +
   theme_paper() +
   theme(panel.grid.major.x = element_line(colour = "grey92"))
-save_fig(figA1, "figA1_pert_draw_distributions.png", 10, 5)
+save_fig(figA1, "figA4_pert_draw_distributions.png", 10, 5)
 
 # ==============================================================================
 # FIGURE A2 - Distributions of the simulated net migration totals
@@ -922,7 +922,7 @@ tab_alive <-
     )
   ) |>
   mutate(across(c(min, mode, central, max), \(x) if_else(x < 1, round(x, 3), round(x))))
-save_tab(tab_alive, "tableA26_missing_alive_inputs.csv")
+save_tab(tab_alive, "tableA12_missing_alive_inputs.csv")
 print(tab_alive)
 
 # ==============================================================================
@@ -1065,7 +1065,7 @@ tab_by_cause <-
   bind_rows(bind_cols(tibble(role = "Total"), grand_row)) |>
   select(role, Females, Males, Total)
 
-save_tab(tab_by_cause, "tableA31_totals_by_cause.csv")
+save_tab(tab_by_cause, "tableA36_totals_by_cause.csv")
 print(tab_by_cause)
 
 tab_by_year <-
@@ -1075,7 +1075,7 @@ tab_by_year <-
   bind_rows(bind_cols(tibble(year = "Total"), grand_row)) |>
   select(year, Females, Males, Total)
 
-save_tab(tab_by_year, "tableA32_totals_by_year.csv")
+save_tab(tab_by_year, "tableA37_totals_by_year.csv")
 print(tab_by_year)
 
 # ==============================================================================
@@ -1113,7 +1113,7 @@ save_tab(tab_e0, "table5_life_expectancy_loss.csv")
 print(tab_e0)
 
 # ==============================================================================
-# TABLE A3 - Life expectancy loss attributed to each cause
+# TABLE A38 - Life expectancy loss attributed to each cause
 # ==============================================================================
 # Table 4 reports death COUNTS by cause; this keeps the corresponding years of
 # life expectancy lost, which the previous combined table carried and which is
@@ -1130,7 +1130,7 @@ tab_e0_cause <-
   pivot_wider(names_from = sex, values_from = loss) |>
   arrange(role, year)
 
-save_tab(tab_e0_cause, "tableA3_e0_loss_by_cause.csv")
+save_tab(tab_e0_cause, "tableA38_e0_loss_by_cause.csv")
 
 # ==============================================================================
 # TABLE A1 - Source reconciliation, UCDP vs ACLED
@@ -1151,7 +1151,7 @@ save_tab(tA1, "tableA1_source_reconciliation.csv")
 print(tA1)
 
 # ==============================================================================
-# TABLE A5 - Ukrainian military deaths: UCDP against the register and this study
+# TABLE A2 - Ukrainian military deaths: UCDP against the register and this study
 # ==============================================================================
 # UCDP is the only source in Table 1 with an independent military count and
 # bounds, and its best estimate for Ukraine sits BELOW the register's
@@ -1235,11 +1235,11 @@ tA5 <-
     of_which_imputed_missing = round(med - registered - late)
   )
 
-save_tab(tA5, "tableA5_military_reconciliation.csv")
+save_tab(tA5, "tableA2_military_reconciliation.csv")
 print(tA5)
 
 # ==============================================================================
-# TABLE A6 / FIGURE A4 - Sensitivity to the missing-combatant imputation
+# TABLE A18 / FIGURE A6 - Sensitivity to the missing-combatant imputation
 # ==============================================================================
 # The military death total is dominated by how many of the missing are
 # alive. The evidence (09, alive_evidence() in 00_setup.R) sets the prisoners
@@ -1275,7 +1275,7 @@ tA6 <-
     female_e0_loss_2025 = round(female_loss_2025, 3)
   )
 
-save_tab(tA6, "tableA6_missing_alive_sensitivity.csv")
+save_tab(tA6, "tableA18_missing_alive_sensitivity.csv")
 print(tA6)
 
 # "central (-down / +up)": the value at the central input and how far it moves
@@ -1417,10 +1417,10 @@ figA4 <- figA4a + figA4b +
       scales::percent(share_at("central"), 0.1), scales::comma(round(evidence$captives_mode))
     )
   )
-save_fig(figA4, "figA4_missing_alive_sensitivity.png", 14, 5)
+save_fig(figA4, "figA6_missing_alive_sensitivity.png", 14, 5)
 
 # ==============================================================================
-# TABLE A7 / FIGURE A5 - Sensitivity to net migration
+# TABLE A26 / FIGURE A7 - Sensitivity to net migration
 # ==============================================================================
 # The counterpart of A4 for migration. 13c sweeps each migration component
 # across its range, along the quantile 11 draws, with the other component
@@ -1457,7 +1457,7 @@ tA7 <-
     female_e0_loss_2025 = round(f, 3)
   )
 
-save_tab(tA7, "tableA7_migration_sensitivity.csv")
+save_tab(tA7, "tableA26_migration_sensitivity.csv")
 print(tA7)
 
 # one strip per panel, "Western · Males", rather than two stacked strips
@@ -1533,10 +1533,10 @@ figA5 <-
     )
   ) +
   theme_paper()
-save_fig(figA5, "figA5_migration_sensitivity.png", 12, 7)
+save_fig(figA5, "figA7_migration_sensitivity.png", 12, 7)
 
 # ==============================================================================
-# TABLE A8 - Migration specification checks
+# TABLE A27 - Migration specification checks
 # ==============================================================================
 # Four assumptions of the migration input changed one at a time (13c,
 # section 5): where the western mode sits in the bracket (A2), the age-sex
@@ -1560,11 +1560,11 @@ tA8 <-
   ) |>
   arrange(scenario)
 
-save_tab(tA8, "tableA8_migration_specification.csv")
+save_tab(tA8, "tableA27_migration_specification.csv")
 print(tA8)
 
 # ==============================================================================
-# TABLES A9-A15 - The remaining sensitivity analyses and summary measures
+# TABLES A20, A22, A28, A32, A34, A40 and A41 - The remaining sensitivity analyses and summary measures
 # ==============================================================================
 # One row per scenario, the loss in years at the central value of every other input:
 # men in each year and women in 2025, the cells that move. A13 is the PERT
@@ -1584,7 +1584,7 @@ tA9 <-
   read_rds("data_inter/ukr_linkage_rules_e0.rds") |>
   mutate(prisoners_of_war_among_missing = round(captives), military_deaths = round(military)) |>
   loss_wide(c("design", "prisoners_of_war_among_missing", "military_deaths"))
-save_tab(tA9, "tableA9_linkage_and_chain.csv")
+save_tab(tA9, "tableA20_linkage_and_chain.csv")
 print(tA9)
 
 # A10: the horizon of the registration-lag correction (08b, 13d)
@@ -1596,7 +1596,7 @@ tA10 <-
   mutate(scenario = factor(scenario, levels = unique(lag$military$scenario))) |>
   loss_wide(c("scenario", "military_deaths")) |>
   arrange(scenario)
-save_tab(tA10, "tableA10_registration_lag.csv")
+save_tab(tA10, "tableA22_registration_lag.csv")
 print(tA10)
 
 # A11: the population base of Donetsk and Luhansk (13e) and the timing of
@@ -1612,7 +1612,7 @@ tA11 <-
   mutate(scenario = factor(scenario, levels = unique(scenario))) |>
   loss_wide(c("check", "scenario")) |>
   arrange(check, scenario)
-save_tab(tA11, "tableA11_population_base_and_timing.csv")
+save_tab(tA11, "tableA28_population_base_and_timing.csv")
 print(tA11)
 
 # A12: the Lee-Carter window (13g), with the counterfactual e0 in 2025
@@ -1644,7 +1644,7 @@ tA12 <-
               mutate(window = factor(window, levels = levels(tA12$window))),
             by = "window")
 tA12 <- tA12 |> mutate(window = str_replace(as.character(window), "neighbours", "neighbors"))
-save_tab(tA12, "tableA12_counterfactual_window.csv")
+save_tab(tA12, "tableA32_counterfactual_window.csv")
 print(tA12)
 
 # A13: the PERT shape (13g): mean and 95% interval of the loss
@@ -1655,7 +1655,7 @@ tA13 <-
   select(year, sex, shape, loss) |>
   pivot_wider(names_from = shape, values_from = loss, names_prefix = "pert_shape_") |>
   arrange(sex, year)
-save_tab(tA13, "tableA13_pert_shape.csv")
+save_tab(tA13, "tableA34_pert_shape.csv")
 print(tA13)
 
 # A25: the age profile of civilian deaths (13h). The deaths beyond OHCHR's
@@ -1678,7 +1678,7 @@ tA25 <-
   mutate(scenario = factor(scenario, levels = unique(civ_age$loss$scenario))) |>
   arrange(scenario) |>
   select(scenario, civilian_60_plus_2022, civilian_mean_age_2022, female_2022, male_2022, female_2025, male_2025)
-save_tab(tA25, "tableA25_civilian_age_profile.csv")
+save_tab(tA25, "tableA30_civilian_age_profile.csv")
 print(tA25)
 
 # A27: residents of occupied Donbas killed in Russian-controlled forces (13i)
@@ -1695,7 +1695,7 @@ tA27 <-
          scenario = factor(scenario, levels = unique(donbas$loss$scenario))) |>
   arrange(scenario) |>
   select(scenario, deaths_added, male_2022, male_2023, male_2025, female_2025)
-save_tab(tA27, "tableA27_donbas_fighters.csv")
+save_tab(tA27, "tableA31_donbas_fighters.csv")
 print(tA27)
 
 # A28: the resolution model against the releases held out of the fit (09i).
@@ -1748,12 +1748,12 @@ tA14_q <-
   select(sex, measure, year, q) |>
   pivot_wider(names_from = year, values_from = q) |>
   arrange(sex, measure)
-save_tab(tA14_yll, "tableA14_years_of_life_lost.csv")
-save_tab(tA14_q, "tableA15_adult_mortality_45q15.csv")
+save_tab(tA14_yll, "tableA40_years_of_life_lost.csv")
+save_tab(tA14_q, "tableA41_adult_mortality_45q15.csv")
 print(tA14_yll)
 print(tA14_q)
 # ==============================================================================
-# TABLE A2 - Resolution of the missing between the first and the last release
+# TABLE A8 - Resolution of the missing between the first and the last release
 # ==============================================================================
 # From 09: everyone listed as missing in any release but the last, followed to
 # the last, the windows between the releases composed into the months from the
@@ -1777,7 +1777,7 @@ tA2 <-
   ) |>
   arrange(year)
 
-save_tab(tA2, "tableA2_status_transitions.csv")
+save_tab(tA2, "tableA8_status_transitions.csv")
 print(tA2)
 
 # ==============================================================================
@@ -1794,7 +1794,7 @@ print(tA2)
 # samples them in the second interval); biases of known direction, whose
 # alternatives all push one way (sized beside the estimate); biases no source
 # measures, stated for their size; and a different quantity. The registration
-# lag without any correction is in table A10 and not here: it is not an
+# lag without any correction is in table A22 and not here: it is not an
 # alternative to the correction but a measure of it.
 # Military totals are summed over rounded years, as tables 3 and A6 build theirs.
 mil_total <- function(d) d |> summarise(military = sum(round(total_military)), .by = c(point, alive))
@@ -1810,85 +1810,85 @@ spec_t8 <- read_rds("data_inter/ukr_migration_specification_e0.rds")
 lag_t8 <- read_rds("data_inter/ukr_registration_lag.rds")
 alternatives <- bind_rows(
   alive_rows(c("2.5th percentile of draws", "97.5th percentile of draws")) |>
-    mutate(analysis = "The missing alive: 95% interval of the draws", table = "A6"),
+    mutate(analysis = "The missing alive: 95% interval of the draws", table = "A18"),
   alive_rows(c("floor", "cap")) |>
-    mutate(analysis = "The missing alive: floor to cap", table = "A6"),
+    mutate(analysis = "The missing alive: floor to cap", table = "A18"),
   lag_t8$loss |>
     filter(!scenario %in% c("to 48 months (used)", "as registered")) |>
     left_join(lag_t8$military |> summarise(military = sum(round(total)), .by = scenario), by = "scenario") |>
     select(military, year, sex, loss) |>
-    mutate(analysis = "Registration lag: corrected to 60 or 72 months", table = "A10, A16"),
+    mutate(analysis = "Registration lag: corrected to 60 or 72 months", table = "A22, A23"),
   read_rds("data_inter/ukr_registration_lag_tail.rds") |>
     (\(lt) lt$loss |>
        filter(scenario != "to 48 months (used)") |>
        left_join(lt$military |> summarise(military = sum(round(total)), .by = scenario), by = "scenario"))() |>
     select(military, year, sex, loss) |>
     mutate(analysis = "Registration lag beyond four years: a fitted tail, exponential or inverse power, to 72-120 months",
-           table = "A33"),
+           table = "A24"),
   read_rds("data_inter/ukr_register_coverage_e0.rds") |>
     (\(rc) rc$loss |>
        filter(missed > 0) |>
        left_join(rc$military |> summarise(military = sum(round(military)), .by = missed), by = "missed"))() |>
     select(military, year, sex, loss) |>
-    mutate(analysis = "Register coverage: 10%, 25% or 40% of combatant deaths never listed", table = "A45"),
+    mutate(analysis = "Register coverage: 10%, 25% or 40% of combatant deaths never listed", table = "A25"),
   read_rds("data_inter/ukr_linkage_rules_e0.rds") |>
     filter(!str_detect(design, "production")) |>
     mutate(analysis = paste0("Rules of the imputation and the linkage, and the prisoner-of-war evidence: ",
                              c("one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
                                "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
                                "seventeen", "eighteen", "nineteen", "twenty")[n_distinct(design)], " alternatives"),
-           table = "A9") |>
+           table = "A20") |>
     select(military, year, sex, loss, analysis, table),
   read_rds("data_inter/ukr_denominator_donetsk_luhansk.rds")$loss |>
     filter(scenario != "SSSU (used)") |>
     transmute(military = mode_military, year, sex, loss,
               analysis = "Population base of Donetsk and Luhansk: 0.5 million lower to taken out",
-              table = "A11"),
+              table = "A28"),
   read_rds("data_inter/ukr_timing_2022.rds")$loss |>
     filter(scenario != "months of the events (used)") |>
     transmute(military = mode_military, year, sex, loss,
-              analysis = "Timing within 2022: mid-year convention, or net outflow by 1 April", table = "A11"),
+              analysis = "Timing within 2022: mid-year convention, or net outflow by 1 April", table = "A28"),
   read_rds("data_inter/ukr_denominator_donetsk_luhansk.rds")$migrants |>
     transmute(military = mode_military, year, sex, loss,
               analysis = "Pre-war absentees in the base outside Donetsk and Luhansk: 0.5 or 1.0 million fewer aged 20-64, in proportion to the population there or two thirds of them men",
-              table = "A11"),
+              table = "A28"),
   read_rds("data_inter/ukr_base_coherent_e0.rds")$loss |>
     filter(million > 0, counterfactual != "as fitted") |>
     transmute(military = mode_military, year, sex, loss,
               analysis = "The same, 0.5 to 2.0 million fewer, with the counterfactual refitted on exposures smaller by the same share",
-              table = "A34"),
+              table = "A29"),
   donbas$loss |>
     filter(scenario != "None (as estimated)") |>
     transmute(military = mode_military, year, sex, loss,
               analysis = "Residents of occupied Donbas killed in Russian-controlled forces: counted to September 2023, or continued to 2025",
-              table = "A27"),
+              table = "A31"),
   civ_age$loss |>
     filter(scenario != "OHCHR's profile (used)") |>
     transmute(military = mode_military, year, sex, loss,
               analysis = "Civilian age profile: deaths beyond OHCHR's verified count with half over 60, or aged as pre-war deaths",
-              table = "A25"),
+              table = "A30"),
   bind_rows(read_rds("data_inter/ukr_baseline_window_e0.rds"),
             read_rds("data_inter/ukr_coherent_forecast_e0.rds")$baseline) |>
     filter(window != "2000-2019 (used)") |>
     transmute(military = mode_military, year, sex, loss,
               analysis = "Counterfactual: Lee–Carter window, a coherent forecast with eight neighbors, and the forecast one SD lower or higher",
-              table = "A12"),
+              table = "A32"),
   read_rds("data_inter/ukr_covid_carryover_e0.rds")$loss |>
     filter(fraction > 0) |>
     transmute(military = mode_military, year, sex, loss,
               analysis = "Counterfactual: a quarter or a half of 2021's pandemic excess carried into 2022",
-              table = "A35"),
+              table = "A33"),
   mig_sens_t8 |>
     filter(point %in% c("min", "max")) |>
     transmute(military = mode_military, year, sex, loss,
-              analysis = "Net migration: each component across its range", table = "A7"),
+              analysis = "Net migration: each component across its range", table = "A26"),
   spec_t8 |>
     filter(scenario != "Mode") |>
     transmute(military = mode_military, year, sex, loss,
-              analysis = "Specification of the net migration input", table = "A8"),
+              analysis = "Specification of the net migration input", table = "A27"),
   mig |>
     transmute(military = mode_military, year, sex, loss = loss_nomig,
-              analysis = "De jure denominator: no net migration", table = "A7")
+              analysis = "De jure denominator: no net migration", table = "A26")
 )
 t6_groups <- c(
   "The missing alive: 95% interval of the draws" = "Drawn inputs taken beyond their bounds",
@@ -1949,7 +1949,7 @@ save_tab(tab8, "table6_structural_sensitivity.csv")
 print(tab8)
 
 # ==============================================================================
-# FIGURE A7 - The multistate model, evaluated and not used (09g, S6.12)
+# FIGURE A8 - The multistate model, evaluated and not used (09g, S6.12)
 # ==============================================================================
 # Cumulative incidence of each resolution of the missing by event-year cohort,
 # within each cohort's follow-up. 09g needs the person-level trajectories and
@@ -1964,10 +1964,10 @@ read_rds("data_inter/ukr_ualosses_traj_mstate_cifs.rds") |>
   scale_y_continuous(labels = scales::percent) +
   labs(x = "Months since disappearance", y = "Cumulative incidence", colour = "Event-year cohort") +
   theme_bw() + theme(legend.position = "top")
-ggsave("figures/figA7_multistate_cif_by_cohort.png", width = 12, height = 4.5, dpi = 300)
+ggsave("figures/figA8_multistate_cif_by_cohort.png", width = 12, height = 4.5, dpi = 300)
 
 # ==============================================================================
-# TABLE A16 - The missing alive and the registration-lag horizon together
+# TABLE A23 - The missing alive and the registration-lag horizon together
 # ==============================================================================
 tA16 <-
   lag_t8$grid |>
@@ -1979,11 +1979,11 @@ tA16 <-
   arrange(scenario) |>
   pivot_wider(names_from = scenario, values_from = cell) |>
   arrange(evidence)
-save_tab(tA16, "tableA16_missing_alive_by_lag_horizon.csv")
+save_tab(tA16, "tableA23_missing_alive_by_lag_horizon.csv")
 print(tA16)
 
 # ==============================================================================
-# TABLE A17 - The military estimate against official statements and other
+# TABLE A43 - The military estimate against official statements and other
 # estimates, at the dates they were made
 # ==============================================================================
 # Each statement counts the deaths known at its date. The register (v19, as
@@ -2037,12 +2037,12 @@ tA17 <-
   unnest(ui) |>
   arrange(date) |>
   select(date, kind, source, stated, register_named_dead, this_study, this_study_mean, this_study_lo, this_study_hi)
-save_tab(tA17, "tableA17_military_triangulation.csv")
+save_tab(tA17, "tableA43_military_triangulation.csv")
 print(tA17)
 
 # ==============================================================================
 # ==============================================================================
-# TABLE A43 - The population the rates are computed on, by draw
+# TABLE A42 - The population the rates are computed on, by draw
 # ==============================================================================
 # The men the conflict deaths fall on are a denominator as well as a numerator.
 # The projection carries them through four years of net migration and of the
@@ -2057,11 +2057,11 @@ tA43 <-
                         labels = c("Men aged 20-50", "Men, all ages", "Both sexes, all ages")),
          across(c(mean, lo, hi), \(v) round(v / 1e6, 3))) |>
   arrange(group, year)
-save_tab(tA43, "tableA43_population_present.csv")
+save_tab(tA43, "tableA42_population_present.csv")
 print(tA43)
 
 # ==============================================================================
-# TABLE A44 - The register's records by event year and status
+# TABLE A3 - The register's records by event year and status
 # ==============================================================================
 # The cross-section behind the linkage: what v19 records for the events of each
 # year. Resolutions before the first release followed are not observed, so this
@@ -2074,10 +2074,10 @@ tA44 <-
   arrange(year) |>
   (\(d) mutate(d, total = rowSums(across(-year))))() |>
   mutate(across(-c(year, total), list(pct = \(v) round(100 * v / total, 1)), .names = "{.col}_pct"))
-save_tab(tA44, "tableA44_register_status_by_year.csv")
+save_tab(tA44, "tableA3_register_status_by_year.csv")
 print(tA44)
 # ==============================================================================
-# TABLE A45 - Deaths the register never lists (13o)
+# TABLE A25 - Deaths the register never lists (13o)
 # ==============================================================================
 # Not an estimate of the register's coverage, which nothing available measures:
 # the combatant total and the loss if the register missed a given share.
@@ -2090,12 +2090,12 @@ tA45 <-
   left_join(coverage$military |> summarise(combatant_deaths = sum(round(military)), .by = missed), by = "missed") |>
   relocate(combatant_deaths, .after = missed) |>
   mutate(missed = scales::percent(missed, accuracy = 1))
-save_tab(tA45, "tableA45_register_coverage.csv")
+save_tab(tA45, "tableA25_register_coverage.csv")
 print(tA45)
 
 # ==============================================================================
 
-# TABLE A18 - Where the returned prisoners had been listed before their return
+# TABLE A6 - Where the returned prisoners had been listed before their return
 # ==============================================================================
 linkage_checks <- read_rds("data_inter/ukr_ualosses_linkage_checks.rds")
 tA18 <-
@@ -2110,11 +2110,11 @@ tA18 <-
   mutate(total = rowSums(across(-year)),
          listed_as_missing_of_those_not_recorded_as_prisoners =
            scales::percent(`as missing` / (`as missing` + `in no earlier release`), accuracy = 0.1))
-save_tab(tA18, "tableA18_returned_prisoners_prior_status.csv")
+save_tab(tA18, "tableA6_returned_prisoners_prior_status.csv")
 print(tA18)
 
 # ==============================================================================
-# TABLE A19 - How often the missing and the dead leave the register
+# TABLE A5 - How often the missing and the dead leave the register
 # ==============================================================================
 # Window by window, the share of those at risk at the window's start who are
 # in no later release: the missing no longer listed, and the dead, who cannot
@@ -2139,11 +2139,11 @@ tA19 <-
   select(cohort = year, window, missing_at_risk, missing_no_longer_listed, missing_pct,
          dead_at_risk, dead_dropped, dead_pct)
 stopifnot(nrow(tA19) > 0, !anyNA(tA19))
-save_tab(tA19, "tableA19_register_dropout.csv")
+save_tab(tA19, "tableA5_register_dropout.csv")
 print(tA19)
 
 # ==============================================================================
-# TABLE A20 - Hazards of resolution by months since disappearance
+# TABLE A7 - Hazards of resolution by months since disappearance
 # ==============================================================================
 # Monthly hazards (%) of leaving "missing" for each outcome, as projected: the
 # first window's hazards times each outcome's average multiplier over the
@@ -2160,11 +2160,11 @@ tA20 <-
       mutate(row = "multiplier against the first window",
              months_since_event = paste0(head(ual_releases$release, -1), "-", ual_releases$release[-1]), .before = 1)
   )
-save_tab(tA20, "tableA20_resolution_hazards.csv")
+save_tab(tA20, "tableA7_resolution_hazards.csv")
 print(tA20)
 
 # ==============================================================================
-# TABLE A21 - The projection against the civil register
+# TABLE A44 - The projection against the civil register
 # ==============================================================================
 # The Ministry of Justice counts the deaths and births registered on the
 # territory the government controls. The projection covers continental
@@ -2204,11 +2204,11 @@ tA21 <-
             registered_deaths, registered_births,
             population_implied_by_deaths_millions = round(population_implied_by_deaths / 1e6, 2),
             population_implied_by_births_millions = round(population_implied_by_births / 1e6, 2))
-save_tab(tA21, "tableA21_civil_register_check.csv")
+save_tab(tA21, "tableA44_civil_register_check.csv")
 print(tA21)
 
 # ==============================================================================
-# FIGURE A6 - The durations each event month is observed at
+# FIGURE A1 - The durations each event month is observed at
 # ==============================================================================
 # One vertical segment per event month and window between releases, from the
 # months since the event at the window's start to those at its end; the
@@ -2240,11 +2240,11 @@ figA6 <-
                         "the projection from each month's duration in v19 to ", model_09$horizon,
                         " months (line).")) +
   theme_paper()
-save_fig(figA6, "figA6_duration_lexis.png", 9, 4.6)
+save_fig(figA6, "figA1_duration_lexis.png", 9, 4.6)
 
 
 # ==============================================================================
-# TABLES A33-A37 AND FIGURE A8 - the tail of the registration lag, the base with
+# TABLES A15, A24, A29 and A33 AND FIGURE A5 - the tail of the registration lag, the base with
 # a coherent counterfactual, pandemic mortality in 2022, the held-out windows by
 # outcome, and the intervals with the structural choices folded in
 # ==============================================================================
@@ -2258,7 +2258,7 @@ tA33 <-
   mutate(scenario = factor(scenario, levels = lag_tail$scenarios$scenario)) |>
   loss_wide(c("scenario", "military_deaths", "military_lo", "military_hi")) |>
   arrange(scenario)
-save_tab(tA33, "tableA33_registration_lag_tail.csv")
+save_tab(tA33, "tableA24_registration_lag_tail.csv")
 print(tA33)
 
 # A34: a smaller base outside Donetsk and Luhansk, the counterfactual as fitted
@@ -2273,7 +2273,7 @@ tA34 <-
      left_join(d |> filter(sex == "m", year == 2025) |>
                  transmute(scenario, counterfactual_e0_2025_m = round(e0_bsn, 2)), by = "scenario"))() |>
   arrange(scenario)
-save_tab(tA34, "tableA34_base_coherent.csv")
+save_tab(tA34, "tableA29_base_coherent.csv")
 print(tA34)
 
 # A35: pandemic mortality carried into the 2022 counterfactual (13n)
@@ -2286,7 +2286,7 @@ tA35 <-
   pivot_wider(names_from = col, values_from = c(loss, e0)) |>
   rename(male_2022 = loss_male, female_2022 = loss_female,
          counterfactual_e0_2022_m = e0_male, counterfactual_e0_2022_f = e0_female)
-save_tab(tA35, "tableA35_covid_carryover.csv")
+save_tab(tA35, "tableA33_covid_carryover.csv")
 print(tA35)
 
 # A30: the duration model against each window it was not fitted to, by outcome:
@@ -2297,7 +2297,7 @@ tA30 <-
   transmute(case, fitted_on, predicted_window = from_release, outcome,
             missing_at_start = round(at_risk), observed = round(observed), predicted = round(predicted),
             predicted_over_observed = round(ratio, 2))
-save_tab(tA30, "tableA30_held_out_window.csv")
+save_tab(tA30, "tableA46_held_out_window.csv")
 print(tA30)
 
 # A37: the intervals, the drawn inputs alone and with the structural choices (14e)
@@ -2307,10 +2307,10 @@ tA37 <-
   mutate(digits = if_else(what == "Loss of life expectancy", 2, 0),
          across(c(mean, lo, hi), \(x) round(x, digits))) |>
   select(what, year, sex, interval, mean, lo, hi)
-save_tab(tA37, "tableA37_structural_intervals.csv")
+save_tab(tA37, "tableA15_structural_intervals.csv")
 print(tA37, n = 40)
 
-# Figure A8: a tornado of the structural choices beside the drawn inputs, for
+# Figure A5: a tornado of the structural choices beside the drawn inputs, for
 # the military total and the male loss in 2022 and 2025. The rival
 # specifications, which the second interval samples, are told apart from the
 # biases of known direction, which it does not (14e); and some choices move
@@ -2347,7 +2347,7 @@ figA8 <-
                         "Drawn inputs: the 95% interval of the ", scales::comma(n_sim), " simulations, about its mean.")) +
   theme_paper() +
   theme(panel.grid.major.x = element_line(colour = "grey90"), panel.grid.major.y = element_blank())
-save_fig(figA8, "figA8_structural_tornado.png", 13, 5.2)
+save_fig(figA8, "figA5_structural_tornado.png", 13, 5.2)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # provenance stamp for the whole table set

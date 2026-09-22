@@ -33,7 +33,7 @@
 # where the western mode sits in the bracket (A2), the age-sex profile of the
 # Russia and Belarus flow (A9), additive against proportional allocation (A5),
 # and the Canada and USA interpolation 30% lower and higher (A10). 15 reports
-# them as table A8.
+# them as table A27.
 #
 # INPUTS   the same as 13
 #          data_inter/ukr_migration_decomposition.rds (from 13)

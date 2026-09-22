@@ -8,7 +8,7 @@
 # Luhansk, which assume the two oblasts were fully registered in 2022. They are
 # 6.14 of the 41.0 million the projection starts from, and no source can check
 # them. Held at one value at a time, the base moves the loss further than any
-# input the simulation draws (table A11): the 2025 male loss runs from 6.63
+# input the simulation draws (table A28): the 2025 male loss runs from 6.63
 # years as used to 7.74 with the two oblasts taken out, against a drawn
 # interval of 6.10-7.15.
 #

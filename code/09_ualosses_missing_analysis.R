@@ -419,7 +419,7 @@ write_rds(projection_model, "data_inter/ukr_ualosses_projection_table.rds")
 write_rds(stock_missing_month, "data_inter/ukr_ualosses_missing_by_month.rds")
 write_rds(hazards, "data_inter/ukr_ualosses_resolution_hazards.rds")
 # the twelve-month rates by event-year cohort, every outcome kept apart, for
-# table A2, and in the earlier chain's states
+# table A8, and in the earlier chain's states
 write_rds(resolution_12m, "data_inter/ukr_ualosses_resolution_12m.rds")
 write_rds(tasas_long, "data_inter/ukr_ualosses_transition_rates.rds")
 

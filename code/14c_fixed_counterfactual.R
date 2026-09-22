@@ -7,7 +7,7 @@
 # The simulation's interval for the loss answers two questions at once: how
 # uncertain the war's toll is, and how uncertain the counterfactual it is
 # measured against is. From 2023 the forecast of the counterfactual carries
-# about nine-tenths of the variance of the male loss (table A4). This step
+# about nine-tenths of the variance of the male loss (table A39). This step
 # reruns the same draws with the counterfactual held at its point forecast,
 # so the loss can be reported in two tiers: given the counterfactual, with
 # every conflict and migration input drawn; and with the counterfactual drawn

@@ -135,7 +135,7 @@ expectancy gap.
 
 | Where | Assumption |
 |---|---|
-| `00_setup`, `09` | A missing person is counted as dead unless there is evidence of life. The prisoners of war among the missing come from the official figures - about 7,000 held and 7,291 military personnel returned by February 2026, less the 11,325 the register records as prisoners - times the share of the returned whom the register had listed as missing (47.6% for 2024-2025 events, the mode). Of the rest, the share alive outside captivity lies between none and the share of an event year's first resolutions outside captivity that leave the register beyond list maintenance - beyond the rate at which the dead of the same cohort leave it in the same window - and is drawn uniformly between the two, one draw for the four event years. The events of 2022 take the bound of the events of 2023-2025: their own drop-outs are one clean-up of their records (09l), and their own bound (48%) is an alternative in table A9. The bound assumes the missing not yet resolved are no more often alive than those resolved. |
+| `00_setup`, `09` | A missing person is counted as dead unless there is evidence of life. The prisoners of war among the missing come from the official figures - about 7,000 held and 7,291 military personnel returned by February 2026, less the 11,325 the register records as prisoners - times the share of the returned whom the register had listed as missing (47.6% for 2024-2025 events, the mode). Of the rest, the share alive outside captivity lies between none and the share of an event year's first resolutions outside captivity that leave the register beyond list maintenance - beyond the rate at which the dead of the same cohort leave it in the same window - and is drawn uniformly between the two, one draw for the four event years. The events of 2022 take the bound of the events of 2023-2025: their own drop-outs are one clean-up of their records (09l), and their own bound (48%) is an alternative in table A20. The bound assumes the missing not yet resolved are no more often alive than those resolved. |
 | `00_setup`, `09` | A person recorded as missing who is no longer listed — absent from a later release and from every release after it — is resolved alive. Before that, each release is searched under a corrected name or date of birth. A person whose first resolution is a return from captivity was a prisoner the register had not recorded, and is resolved alive, to captivity. |
 | `08b`, `09` | The register's dead and missing are brought to the completeness events reach at four years; the late registrations are reported apart. The missing are completed by the new persons listed only, since those who drop off the register are resolutions. How the missing resolve by months since the event is described, not projected: the estimate counts them by the identity above. |
 | `11` | Imputed combatant deaths take the age–sex profile of the missing; registered deaths that of the confirmed dead. |
@@ -178,52 +178,52 @@ anything sitting directly in `figures/` is a manuscript deliverable.
 | `fig5_decomposition_by_cause.png` | e0 loss by civilians / registered / imputed combatants |
 | `fig6_uncertainty_shares.png` | How much of the spread in the loss each input accounts for |
 | `figA0_pipeline.png` | The pipeline from sources to estimates: what each source contributes, in which order, and which steps' outputs are drawn |
-| `figA1_pert_draw_distributions.png` | Beta-PERT draw densities against their input bounds |
+| `figA4_pert_draw_distributions.png` | Beta-PERT draw densities against their input bounds |
 | `figA2_pert_draw_distributions_migration.png` | Draws of the two migration components: the western blend of the two readings, and Russia and Belarus |
 | `figA3_cumulative_migration_draws.png` | Cumulative net migration across draws |
-| `figA4_missing_alive_sensitivity.png` | Military deaths and e0 loss across the share of the missing who are alive, with the evidence range and the 95% interval of the draws |
-| `figA5_migration_sensitivity.png` | e0 loss across the range of each net migration component |
-| `figA6_duration_lexis.png` | The durations since disappearance each event month is observed at, window by window, and the projection to 48 months |
-| `figA7_multistate_cif_by_cohort.png` | The multistate model of `09g`, evaluated and not used: cumulative incidence of each resolution of the missing by event-year cohort, drawn from its tracked curves |
+| `figA6_missing_alive_sensitivity.png` | Military deaths and e0 loss across the share of the missing who are alive, with the evidence range and the 95% interval of the draws |
+| `figA7_migration_sensitivity.png` | e0 loss across the range of each net migration component |
+| `figA1_duration_lexis.png` | The durations since disappearance each event month is observed at, window by window, and the projection to 48 months |
+| `figA8_multistate_cif_by_cohort.png` | The multistate model of `09g`, evaluated and not used: cumulative incidence of each resolution of the missing by event-year cohort, drawn from its tracked curves |
 | `table1_source_totals.csv` | What each source reports, with bounds and age-sex availability |
 | `table2_missing_imputation.csv` | Missing combatants imputed to dead or alive |
 | `table3_pert_input_bounds.csv` | Year-specific PERT min / mode / max |
-| `tableA26_missing_alive_inputs.csv` | The inputs on the missing alive: the share of the unrecorded prisoners among the missing, the prisoners held, and the share of the unresolved alive for other reasons, with the means the deterministic analyses use |
+| `tableA12_missing_alive_inputs.csv` | The inputs on the missing alive: the share of the unrecorded prisoners among the missing, the prisoners held, and the share of the unresolved alive for other reasons, with the means the deterministic analyses use |
 | `table4_conflict_deaths_by_cause.csv` | Deaths by year, cause and sex, with intervals |
 | `table5_life_expectancy_loss.csv` | e0 expected, observed and lost, by year and sex |
 | `table6_totals_by_cause.csv` | Deaths by cause, summed over years |
 | `table7_totals_by_year.csv` | Deaths by year, summed over causes |
 | `table8_structural_sensitivity.csv` | How far the military total and the loss move with each structural choice the intervals do not cover |
 | `tableA1_source_reconciliation.csv` | UCDP vs ACLED, Ukraine and Russia |
-| `tableA2_status_transitions.csv` | Resolution of the missing between the first and the last release, composed from the six register releases |
-| `tableA3_e0_loss_by_cause.csv` | Years of life expectancy lost, by cause |
-| `tableA4_uncertainty_shares.csv` | How much of the spread in the loss each input accounts for |
-| `tableA5_military_reconciliation.csv` | Ukrainian military deaths: UCDP against the register and this study |
-| `tableA6_missing_alive_sensitivity.csv` | Military deaths and e0 loss across the share of the missing who are alive |
-| `tableA7_migration_sensitivity.csv` | 2025 e0 loss across the range of each net migration component, and with no migration |
-| `tableA8_migration_specification.csv` | e0 loss under alternative specifications of the migration input, and the Canada and USA series +/-30% |
-| `tableA9_linkage_and_chain.csv` | Military deaths and e0 loss under alternative rules of the imputation and the linkage, models of resolution projected in its place, and readings of the prisoner-of-war evidence |
-| `tableA10_registration_lag.csv` | The same across the horizon of the registration-lag correction |
-| `tableA11_population_base_and_timing.csv` | e0 loss with a smaller Donetsk-Luhansk base, and with other timings of 2022's deaths and net outflow |
-| `tableA12_counterfactual_window.csv` | e0 loss and counterfactual e0 by Lee-Carter window, with a coherent forecast with eight neighbours, and with the forecast one standard deviation either way; the 95% band of each forecast |
-| `tableA13_pert_shape.csv` | e0 loss and its interval by PERT shape |
-| `tableA14_years_of_life_lost.csv` | Years of life lost by year and cause |
-| `tableA15_adult_mortality_45q15.csv` | 45q15 without and with conflict deaths |
-| `tableA16_missing_alive_by_lag_horizon.csv` | Military deaths and the 2025 male loss over the missing alive and the registration-lag horizon together |
-| `tableA17_military_triangulation.csv` | Military deaths against official statements and other estimates at the dates they were made |
-| `tableA18_returned_prisoners_prior_status.csv` | Where the people the register records as returned from captivity were listed before |
-| `tableA19_register_dropout.csv` | How often the missing and the dead leave the register, window by window |
-| `tableA20_resolution_hazards.csv` | Monthly hazards of resolution by months since disappearance, and the release windows' multipliers |
-| `tableA21_civil_register_check.csv` | The projection's deaths and births against those the Ministry of Justice registered |
-| `tableA25_civilian_age_profile.csv` | e0 loss with an older age profile for the civilian deaths beyond OHCHR's verified count |
-| `tableA27_donbas_fighters.csv` | e0 loss with the residents of occupied Donbas killed in Russian-controlled forces added |
-| `tableA33_registration_lag_tail.csv` | Military deaths and e0 loss with the register's growth beyond four years modelled by a fitted curve |
-| `tableA34_base_coherent.csv` | e0 loss with a smaller base at working ages outside Donetsk and Luhansk, the counterfactual as fitted and refitted on exposures smaller by the same share |
-| `tableA35_covid_carryover.csv` | The 2022 loss with a quarter and a half of 2021's excess mortality carried into the counterfactual |
-| `tableA30_held_out_window.csv` | The duration model against each release window held out of its fit, by outcome |
-| `tableA37_structural_intervals.csv` | Military deaths, all conflict deaths and the e0 loss with the interval of the drawn inputs, and with the structural choices folded in |
-| `tableA43_population_present.csv` | The population the rates are computed on, by draw: men aged 20-50, men, and both sexes, with 95% intervals (11, 15) |
-| `tableA44_register_status_by_year.csv` | The register's records of 2022-2025 events by event year and status in v19, the cross-section behind the linkage (15) |
-| `tableA45_register_coverage.csv` | Combatant deaths and the loss if the register misses 10%, 25% or 40% of combatant deaths (13o) |
-| `figA8_structural_tornado.png` | The range of each structural choice beside the 95% interval of the drawn inputs |
+| `tableA8_status_transitions.csv` | Resolution of the missing between the first and the last release, composed from the six register releases |
+| `tableA38_e0_loss_by_cause.csv` | Years of life expectancy lost, by cause |
+| `tableA39_uncertainty_shares.csv` | How much of the spread in the loss each input accounts for |
+| `tableA2_military_reconciliation.csv` | Ukrainian military deaths: UCDP against the register and this study |
+| `tableA18_missing_alive_sensitivity.csv` | Military deaths and e0 loss across the share of the missing who are alive |
+| `tableA26_migration_sensitivity.csv` | 2025 e0 loss across the range of each net migration component, and with no migration |
+| `tableA27_migration_specification.csv` | e0 loss under alternative specifications of the migration input, and the Canada and USA series +/-30% |
+| `tableA20_linkage_and_chain.csv` | Military deaths and e0 loss under alternative rules of the imputation and the linkage, models of resolution projected in its place, and readings of the prisoner-of-war evidence |
+| `tableA22_registration_lag.csv` | The same across the horizon of the registration-lag correction |
+| `tableA28_population_base_and_timing.csv` | e0 loss with a smaller Donetsk-Luhansk base, and with other timings of 2022's deaths and net outflow |
+| `tableA32_counterfactual_window.csv` | e0 loss and counterfactual e0 by Lee-Carter window, with a coherent forecast with eight neighbours, and with the forecast one standard deviation either way; the 95% band of each forecast |
+| `tableA34_pert_shape.csv` | e0 loss and its interval by PERT shape |
+| `tableA40_years_of_life_lost.csv` | Years of life lost by year and cause |
+| `tableA41_adult_mortality_45q15.csv` | 45q15 without and with conflict deaths |
+| `tableA23_missing_alive_by_lag_horizon.csv` | Military deaths and the 2025 male loss over the missing alive and the registration-lag horizon together |
+| `tableA43_military_triangulation.csv` | Military deaths against official statements and other estimates at the dates they were made |
+| `tableA6_returned_prisoners_prior_status.csv` | Where the people the register records as returned from captivity were listed before |
+| `tableA5_register_dropout.csv` | How often the missing and the dead leave the register, window by window |
+| `tableA7_resolution_hazards.csv` | Monthly hazards of resolution by months since disappearance, and the release windows' multipliers |
+| `tableA44_civil_register_check.csv` | The projection's deaths and births against those the Ministry of Justice registered |
+| `tableA30_civilian_age_profile.csv` | e0 loss with an older age profile for the civilian deaths beyond OHCHR's verified count |
+| `tableA31_donbas_fighters.csv` | e0 loss with the residents of occupied Donbas killed in Russian-controlled forces added |
+| `tableA24_registration_lag_tail.csv` | Military deaths and e0 loss with the register's growth beyond four years modelled by a fitted curve |
+| `tableA29_base_coherent.csv` | e0 loss with a smaller base at working ages outside Donetsk and Luhansk, the counterfactual as fitted and refitted on exposures smaller by the same share |
+| `tableA33_covid_carryover.csv` | The 2022 loss with a quarter and a half of 2021's excess mortality carried into the counterfactual |
+| `tableA46_held_out_window.csv` | The duration model against each release window held out of its fit, by outcome |
+| `tableA15_structural_intervals.csv` | Military deaths, all conflict deaths and the e0 loss with the interval of the drawn inputs, and with the structural choices folded in |
+| `tableA42_population_present.csv` | The population the rates are computed on, by draw: men aged 20-50, men, and both sexes, with 95% intervals (11, 15) |
+| `tableA3_register_status_by_year.csv` | The register's records of 2022-2025 events by event year and status in v19, the cross-section behind the linkage (15) |
+| `tableA25_register_coverage.csv` | Combatant deaths and the loss if the register misses 10%, 25% or 40% of combatant deaths (13o) |
+| `figA5_structural_tornado.png` | The range of each structural choice beside the 95% interval of the drawn inputs |
 | `_run_provenance.csv` | Draws, seed, draws file and commit the tables were built from |

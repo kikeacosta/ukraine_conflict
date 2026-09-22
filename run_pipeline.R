@@ -9,7 +9,8 @@ cat("Ukraine Conflict Mortality Pipeline\n")
 cat("Running all steps in sequence\n")
 cat("========================================\n\n")
 
-start_time <- Sys.time()
+# kept as an option: several steps clear the workspace with rm(list = ls())
+options(pipeline_start = Sys.time())
 
 # Execute each step
 steps_to_run <- list(
@@ -30,7 +31,7 @@ steps_to_run <- list(
   list(name = "08", file = "code/08_ualosses.R"),
   list(name = "08b", file = "code/08b_registration_lag.R"),
   list(name = "09", file = "code/09_ualosses_missing_analysis.R"),
-  # 09j's table A30 is one of 15's deliverables, and 09k's tests are cited in the
+  # 09j's table A46 is one of 15's deliverables, and 09k's tests are cited in the
   # documentation; both read 09's cached linkage, so neither needs the register files
   list(name = "09j", file = "code/09j_held_out_window.R"),
   list(name = "09k", file = "code/09k_cohort_overlap_test.R"),
@@ -91,8 +92,7 @@ for (step in steps_to_run) {
   }
 }
 
-end_time <- Sys.time()
-elapsed <- difftime(end_time, start_time, units = "mins")
+elapsed <- difftime(Sys.time(), getOption("pipeline_start"), units = "mins")
 
 cat("\n========================================\n")
 cat("✓ Pipeline complete!\n")

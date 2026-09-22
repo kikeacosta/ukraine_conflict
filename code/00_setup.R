@@ -872,7 +872,7 @@ captives_for <- function(ev, s, held) s * (held + ev$returned_military - ev$regi
 # clean-up of one cohort's records, in the months when repatriated remains ran
 # ahead of the register's resolutions to death, and not a rate at which the
 # living resurface: a bound of 48% read from it would say more about the list
-# than about the people. Their own bound is an alternative in 09 (Table A9).
+# than about the people. Their own bound is an alternative in 09 (Table A20).
 bound_borrowers <- 2022
 composition_bound <- function(comp, weights = NULL, borrow = bound_borrowers) {
   years <- sort(unique(comp$year))
