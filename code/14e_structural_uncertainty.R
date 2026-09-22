@@ -1,28 +1,49 @@
 # ==============================================================================
-# STEP 14e - The intervals with the structural choices folded in
+# STEP 14e - The second interval: the rival specifications folded in, and the
+#            biases of known direction reported beside it
 # ==============================================================================
 #
 # WHY
 # ---
 # The simulation's intervals cover the inputs that have a distribution (11).
-# They do not cover the choices the model holds fixed - how far the register's
-# growth is carried, the linkage and resolution rules, the age profile of the
-# unverified civilian deaths, the counterfactual's window and model, the
-# population base, the timing within 2022, the specification of net migration -
-# which 13b-13n show one at a time and which move the results further than the
-# drawn inputs do. A reader given the first interval alone takes it for the
-# uncertainty of the estimate. This step reports a second one beside it.
+# They do not cover the choices the model holds fixed, which 13b-13o show one
+# at a time and which can move the results further than the drawn inputs do.
+# A reader given the first interval alone takes it for the uncertainty of the
+# estimate. This step reports what the fixed choices add, in two forms, because
+# they are of two kinds.
 #
-# METHOD - a mixture over the alternatives
-# ----------------------------------------
+# TWO KINDS OF STRUCTURAL CHOICE
+# ------------------------------
 # Each structural choice is a dimension with a handful of alternatives, the one
-# used among them. Every alternative has been projected with every other input
-# at its central value, so it has a shift from the central projection: in the
-# military total and in the loss by year and sex. In each of the simulation's
-# draws one alternative per dimension is sampled, independently across
-# dimensions and with equal weights, and the shifts are added to the draw. The
-# weights are a convention, not a measurement: equal weights say only that no
-# alternative shown is thought less defensible than another. Shifts are taken as
+# used among them, and every alternative has a shift from the central
+# projection: in the military total and in the loss by year and sex.
+#
+#   - Rival specifications. The alternatives fall on both sides of the one used:
+#     the counterfactual's window and model, the rules of the imputation, the
+#     specification of net migration, the timing within 2022. In each of the
+#     simulation's draws one alternative per dimension is sampled, independently
+#     across dimensions and with equal weights, and its shifts are added to the
+#     draw. With alternatives on both sides, equal weights widen the interval
+#     without moving it; they say only that no alternative shown is thought less
+#     defensible than another. This is the second interval.
+#
+#   - Biases of known direction. Every alternative moves the result the same
+#     way, because the choice used is a floor or a ceiling the evidence argues
+#     for and the alternatives say how far the truth may lie beyond it: the
+#     register's growth after four years, the population base of Donetsk and
+#     Luhansk and the pre-war absentees elsewhere (all raise the loss), the ages
+#     of the civilian deaths beyond OHCHR's count and pandemic mortality carried
+#     into 2022 (both lower it). Sampled with equal weights they would move the
+#     interval by an amount set by how many alternatives were coded, and nothing
+#     gives a distribution over their size. They are reported beside the
+#     estimate, each with its direction and its range, and not sampled - the
+#     rule S5.6 already applies to the base of Donetsk and Luhansk (14d). Deaths
+#     the register never lists (13o) are reported the same way.
+#
+# The class of each dimension is declared below and checked against the signs
+# of its shifts, so that a dimension cannot be sampled as rival while all its
+# alternatives push one way, or reported as a bias while they point both ways.
+# Shifts are taken as
 # additive, which holds to first order for shifts this size.
 #
 # What is left out, and why:
@@ -43,7 +64,7 @@
 # OUTPUTS  data_inter/ukr_structural_uncertainty.rds:
 #            dimensions   every alternative's shift, by dimension
 #            intervals    the mean and 95% interval, drawn inputs alone and
-#                         with the structural choices, for the military total,
+#                         with the rival specifications, for the military total,
 #                         all conflict deaths and the loss by year and sex
 #            ranges       each dimension's range of shifts, for the tornado figure
 # ==============================================================================
@@ -127,6 +148,26 @@ used <- alternatives |>
   filter(loss < 1e-4, military < 1)
 stopifnot(setequal(used$dimension, unique(alternatives$dimension)))
 
+# the biases of known direction; every other dimension is a rival specification
+directional <- c(
+  "Registration lag beyond four years" = "raises",
+  "Population base of Donetsk and Luhansk" = "raises",
+  "Population base outside Donetsk and Luhansk" = "raises",
+  "Age profile of the unverified civilian deaths" = "lowers",
+  "Pandemic mortality carried into 2022" = "lowers")
+stopifnot(all(names(directional) %in% alternatives$dimension))
+alternatives <- alternatives |>
+  mutate(class = if_else(dimension %in% names(directional), unname(directional[dimension]), "rival"))
+# every shift of a dimension, military total and loss by year and sex alike
+signs <- bind_rows(
+  alternatives |> distinct(dimension, class, alternative, s = d_military / 1000),
+  alternatives |> transmute(dimension, class, alternative, s = d_loss / 0.01)) |>
+  summarise(up = any(s > 1), down = any(s < -1), .by = c(dimension, class))
+# 1,000 deaths and 0.01 years are the smallest shifts that count as a direction
+bad <- signs |> filter((class == "raises" & (down | !up)) | (class == "lowers" & (up | !down)) |
+                      (class == "rival" & !(up & down)))
+if (nrow(bad)) { print(as.data.frame(bad)); stop("a dimension's class does not match the signs of its shifts") }
+
 cat("\n=== ALTERNATIVES BY DIMENSION: SHIFT IN THE MILITARY TOTAL AND THE 2025 MALE LOSS ===\n")
 print(as.data.frame(
   alternatives |> filter(year == 2025, sex == "m") |>
@@ -134,7 +175,7 @@ print(as.data.frame(
               d_military = round(d_military), d_loss = round(d_loss, 3))
 ))
 
-# 2. ONE ALTERNATIVE PER DIMENSION IN EVERY DRAW ==============================
+# 2. ONE RIVAL SPECIFICATION PER DIMENSION IN EVERY DRAW ======================
 draws <- r("ukr_e0_loss_by_cause_draws_2022_2025.rds") |> as_tibble()
 stopifnot(n_distinct(draws$sim_id) == n_sim)
 military_draw <-
@@ -145,7 +186,7 @@ military_draw <-
 civilians_draw <- draws |> summarise(civilians = sum(dx_civilian), .by = sim_id) |> arrange(sim_id)
 
 set.seed(20260920)
-dims <- unique(alternatives$dimension)
+dims <- unique(alternatives$dimension[alternatives$class == "rival"])
 picked <- map(set_names(dims), function(dm) {
   alts <- unique(alternatives$alternative[alternatives$dimension == dm])
   sample(alts, n_sim, replace = TRUE)
@@ -164,7 +205,7 @@ shift_loss <- map_dfr(dims, function(dm) {
 q <- function(x) tibble(mean = mean(x), lo = quantile(x, 0.025), hi = quantile(x, 0.975))
 both <- function(x, shift, what, year = NA, sex = NA) {
   bind_rows(q(x) |> mutate(interval = "drawn inputs"),
-            q(x + shift) |> mutate(interval = "drawn inputs and structural choices")) |>
+            q(x + shift) |> mutate(interval = "drawn inputs and rival specifications")) |>
     mutate(what = what, year = year, sex = sex, .before = 1)
 }
 loss_draws <- draws |> select(sim_id, year, sex, loss = loss_total) |>
@@ -181,24 +222,29 @@ intervals <- bind_rows(
 # 3. EACH DIMENSION'S RANGE, FOR THE TORNADO ==================================
 ranges <- bind_rows(
   alternatives |>
-    summarise(lo = min(d_loss), hi = max(d_loss), .by = c(dimension, year, sex)) |>
+    summarise(lo = min(d_loss), hi = max(d_loss), .by = c(dimension, class, year, sex)) |>
     mutate(what = "Loss of life expectancy"),
   alternatives |>
-    distinct(dimension, alternative, d_military) |>
-    summarise(lo = min(d_military), hi = max(d_military), .by = dimension) |>
+    distinct(dimension, class, alternative, d_military) |>
+    summarise(lo = min(d_military), hi = max(d_military), .by = c(dimension, class)) |>
     mutate(what = "Military deaths, 2022-2025"),
   intervals |>
     filter(interval == "drawn inputs") |>
-    transmute(dimension = "Drawn inputs: 95% interval of the simulation", year, sex, what,
+    transmute(dimension = "Drawn inputs: 95% interval of the simulation", class = "drawn", year, sex, what,
               lo = lo - mean, hi = hi - mean)
 )
 
 write_rds(list(dimensions = alternatives, intervals = intervals, ranges = ranges, seed = 20260920),
           "data_inter/ukr_structural_uncertainty.rds")
 
-cat("\n=== THE INTERVALS, DRAWN INPUTS ALONE AND WITH THE STRUCTURAL CHOICES ===\n")
+cat("\n=== THE INTERVALS, DRAWN INPUTS ALONE AND WITH THE RIVAL SPECIFICATIONS ===\n")
 print(as.data.frame(
   intervals |> filter(is.na(sex) | sex == "m" | year == 2022) |>
     mutate(across(c(mean, lo, hi), \(x) if_else(what == "Loss of life expectancy", round(x, 2), round(x))))
+))
+cat("\n=== THE BIASES OF KNOWN DIRECTION, BESIDE THE ESTIMATE ===\n")
+print(as.data.frame(
+  ranges |> filter(class %in% c("raises", "lowers"), is.na(sex) | (sex == "m" & year %in% c(2022, 2025))) |>
+    mutate(across(c(lo, hi), \(v) if_else(what == "Loss of life expectancy", round(v, 2), round(v))))
 ))
 message("Done. data_inter/ukr_structural_uncertainty.rds written.")

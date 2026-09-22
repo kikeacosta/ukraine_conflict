@@ -896,24 +896,29 @@ print(tab_pert)
 # per simulation (alive_evidence(), 00_setup.R) - the first two from a Beta-PERT, the
 # last uniformly up to its bound - with the two counts they give: the prisoners
 # of war the register does not record as such, and those among its missing.
+# The share alive outside captivity has a bound by event year (table 3); here
+# the four years together: the alive the bound allows, and half of it, over the
+# missing it applies to.
+other_all <- c(central = sum(imput$alive_other) / sum(imput$unresolved),
+               max = sum(imput$bound * imput$unresolved) / sum(imput$unresolved))
 tab_alive <-
   tibble(
     input = c("Share of the unrecorded prisoners of war among the missing",
               "Prisoners of war held, February 2026",
               "Prisoners of war the register does not record (held + returned − recorded)",
               "Prisoners of war among the missing",
-              "Share of the missing, prisoners apart, alive outside captivity (all event years pooled)"),
+              "Share of the missing, prisoners apart, alive outside captivity (the four event years together)"),
     min = with(evidence, c(s_min, held_min, unrecorded_min, captives_min, other_min)),
     mode = with(evidence, c(s_mode, held_mode, unrecorded_mode, captives_mode, NA)),
-    central = with(evidence, c(s_central, held_central, unrecorded_central, captives_central, other_central)),
-    max = with(evidence, c(s_max, held_max, unrecorded_max, captives_max, other_max)),
+    central = with(evidence, c(s_central, held_central, unrecorded_central, captives_central, other_all[["central"]])),
+    max = with(evidence, c(s_max, held_max, unrecorded_max, captives_max, other_all[["max"]])),
     basis = c(
       "Returned prisoners listed as missing before their return: every event year (min), 2024–2025 events (mode), all (max)",
       "\"About 7,000\" (President of Ukraine, 14 February 2026), rounded to the thousand",
       sprintf("Held plus %s military personnel returned, less the %s the register records as prisoners or released",
               scales::comma(evidence$returned_military), scales::comma(round(evidence$register_alive))),
       "Share among the missing times the unrecorded prisoners",
-      "Uniform between none (min) and the bound (max): of the first resolutions outside captivity, the share that leave the register beyond list maintenance; by event year in the imputation (table 3)"
+      "Uniform between none (min) and the bound (max), by event year (table 3): of the first resolutions outside captivity, the share that leave the register beyond list maintenance; the events of 2022 take the bound of the events of 2023–2025"
     )
   ) |>
   mutate(across(c(min, mode, central, max), \(x) if_else(x < 1, round(x, 3), round(x))))
@@ -2254,8 +2259,10 @@ save_tab(tA37, "tableA37_structural_intervals.csv")
 print(tA37, n = 40)
 
 # Figure A8: a tornado of the structural choices beside the drawn inputs, for
-# the military total and the male loss in 2022 and 2025: some choices move 2022
-# alone (the civilian age profile, pandemic mortality, the timing within the year)
+# the military total and the male loss in 2022 and 2025. The rival
+# specifications, which the second interval samples, are told apart from the
+# biases of known direction, which it does not (14e); and some choices move
+# 2022 alone (the civilian age profile, pandemic mortality, the timing).
 tornado_panels <- c("Military deaths, 2022-2025", "Male loss of life expectancy, 2022 (years)",
                     "Male loss of life expectancy, 2025 (years)")
 tornado_data <-
@@ -2263,7 +2270,9 @@ tornado_data <-
   filter(what == "Military deaths, 2022-2025" | (year %in% c(2022, 2025) & sex == "m")) |>
   mutate(panel = if_else(what == "Military deaths, 2022-2025", tornado_panels[1],
                          paste0("Male loss of life expectancy, ", year, " (years)")),
-         kind = if_else(str_detect(dimension, "^Drawn inputs"), "Drawn inputs", "Structural choice")) |>
+         kind = case_when(class == "drawn" ~ "Drawn inputs: 95% interval",
+                          class == "rival" ~ "Rival specification: sampled in the second interval",
+                          .default = "Bias of known direction: reported beside the estimate")) |>
   filter(abs(hi - lo) > 0) |>
   mutate(dimension = str_wrap(dimension, 38))
 order_dim <- tornado_data |> filter(panel == tornado_panels[3]) |> arrange(hi - lo) |> pull(dimension)
@@ -2276,11 +2285,14 @@ figA8 <-
   geom_vline(xintercept = 0, linewidth = 0.3) +
   geom_segment(aes(x = lo, xend = hi, y = dimension, yend = dimension, colour = kind), linewidth = 3.2) +
   facet_wrap(~panel, scales = "free_x") +
-  scale_colour_manual(values = c("Drawn inputs" = "#457b9d", "Structural choice" = "#e63946")) +
+  scale_colour_manual(breaks = c("Drawn inputs: 95% interval", "Rival specification: sampled in the second interval", "Bias of known direction: reported beside the estimate"), values = c("Drawn inputs: 95% interval" = "#457b9d",
+                                 "Rival specification: sampled in the second interval" = "#e9a03b",
+                                 "Bias of known direction: reported beside the estimate" = "#c1121f")) +
+  guides(colour = guide_legend(nrow = 1, override.aes = list(linewidth = 4))) +
   scale_x_continuous(labels = scales::comma) +
   labs(x = "Shift from the estimate", y = NULL, colour = NULL,
-       caption = paste0("Red: the range of each structural choice's alternatives, every other input at its central value. ",
-                        "Blue: the 95% interval of the ", scales::comma(n_sim), " simulations, about its mean.")) +
+       caption = paste0("The range of each structural choice's alternatives, every other input at its central value. ",
+                        "Drawn inputs: the 95% interval of the ", scales::comma(n_sim), " simulations, about its mean.")) +
   theme_paper() +
   theme(panel.grid.major.x = element_line(colour = "grey90"), panel.grid.major.y = element_blank())
 save_fig(figA8, "figA8_structural_tornado.png", 13, 5.2)

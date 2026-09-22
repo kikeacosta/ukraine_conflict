@@ -31,7 +31,9 @@ source("code/00_setup.R")
 # beyond list maintenance (by the rules below) and are not recorded dead. It
 # is a bound because the missing not yet resolved are taken to be no more often
 # alive than those resolved, while the living resurface sooner than bodies are
-# identified. alive_evidence() and composition_bound() in 00_setup.R set out
+# identified. The events of 2022 take the bound of the later cohorts, because
+# their drop-outs are one clean-up of their records (composition_bound(); 09l
+# measures it). alive_evidence() and composition_bound() in 00_setup.R set out
 # the evidence, its ranges and the sources. This script imputes at the central
 # values - the means of the evidence's inputs, half the bound - and records
 # the ranges, 10 turns them into the combatant bounds, and 11 draws them
@@ -163,10 +165,17 @@ dead_rates <- function(drop_feb22 = TRUE) {
 }
 dead_dropout <- dead_rates()
 maintain <- function(w, drop_feb22 = TRUE) {
+  rates <- dead_rates(drop_feb22)
+  # A cohort with none of its dead at risk in a window has no maintenance rate
+  # of its own there, and takes the window's rate over every cohort. No such
+  # cell arises in these six releases; a later release could produce one.
+  window_rates <- rates |> summarise(window_rate = sum(dropped) / sum(at_risk), .by = from_release)
   w <-
     w |>
     filter(!drop_feb22 | month != feb22) |>
-    left_join(dead_rates(drop_feb22) |> select(year, from_release, rate), by = c("year", "from_release")) |>
+    left_join(rates |> filter(at_risk > 0) |> select(year, from_release, rate), by = c("year", "from_release")) |>
+    left_join(window_rates, by = "from_release") |>
+    mutate(rate = coalesce(rate, window_rate)) |>
     mutate(maint_share = pmin(1, rate * sum(n) / sum(n[to == "no_longer_listed"])), .by = c(year, from_release)) |>
     mutate(n_maint = if_else(to == "no_longer_listed", n * maint_share, 0))
   bind_rows(w |> mutate(n = n - n_maint),
@@ -424,10 +433,11 @@ write_rds(tasas_long, "data_inter/ukr_ualosses_transition_rates.rds")
 #     between;
 #   - every person no longer listed counted in the bound, list maintenance
 #     included;
+#   - the events of 2022 on their own bound, their drop-outs read as people
+#     found alive rather than as one clean-up of their records;
 #   - one bound for every event year, from all the resolutions pooled; and the
-#     bound of the events of 2023-2025 for every year, the events of 2022, whose
-#     records the register cleaned up at once, not trusted to speak for theirs;
-#   - February 2022 events kept in the composition;
+#     bound of the events of 2023-2025 for every year, each later cohort's own
+#     resolutions not trusted to speak for it alone;
 #   - a return from captivity leaving the person out of the population at risk;
 #   - the people listed as missing in the first release only.
 # On the prisoners among the missing:
@@ -546,8 +556,8 @@ linkage_designs <-
         "every person no longer listed counted in the bound"),
     alt(impute(other = one_bound(pooled)), "one bound for every event year, all resolutions pooled"),
     alt(impute(other = one_bound(later)), "the bound of the events of 2023-2025 for every event year"),
-    alt(impute(other = half_bound(composition_of(maintain(production_windows, drop_feb22 = FALSE)))),
-        "February 2022 events kept in the composition"),
+    alt(impute(other = composition_bound(composition, borrow = NULL)[1, ] / 2),
+        "the events of 2022 on their own bound"),
     alt(impute(other = half_bound(composition_of(maintain(windows |> filter(rule == "released_excluded"))))),
         "returns from captivity left out of the population at risk"),
     alt(impute(other = half_bound(composition_of(maintain(production_windows |> filter(entry == ual_releases$release[1]))))),

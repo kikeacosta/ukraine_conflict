@@ -30,6 +30,8 @@ steps_to_run <- list(
   # documentation; both read 09's cached linkage, so neither needs the register files
   list(name = "09j", file = "code/09j_held_out_window.R"),
   list(name = "09k", file = "code/09k_cohort_overlap_test.R"),
+  # 09l reports how the bound on the missing alive moves with the windows behind it
+  list(name = "09l", file = "code/09l_bound_stability.R"),
   list(name = "10", file = "code/10_dists_tables.R"),
   list(name = "11", file = "code/11_estimation_conflict_allcause_mortality.R"),
   list(name = "12", file = "code/12_plotting_estimates.R"),

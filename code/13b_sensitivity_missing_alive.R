@@ -73,8 +73,8 @@ draw_mig_by_year <- mi$draws |> select(year, draw_mig)
 mil <- read_rds("data_inter/ukr_military_inputs.rds")
 ev <- mil$evidence
 # The alive outside captivity move along one path, `other`: 0 none of them, 1 every
-# cohort at the bound its resolutions give (composition_bound(), 00_setup.R), 2
-# all of them alive; the centre, half the bound, is 0.5.
+# cohort at its bound (composition_bound(), 00_setup.R: the events of 2022 take the
+# later cohorts'), 2 all of them alive; the centre, half the bound, is 0.5.
 bound <- composition_bound(mil$composition)
 a_of <- function(other) if (other <= 1) other * bound else bound + (other - 1) * (1 - bound)
 at <- function(captives, other) military_draws(mil, captives, a_of(other))

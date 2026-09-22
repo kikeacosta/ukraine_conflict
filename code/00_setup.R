@@ -752,7 +752,9 @@ impute_missing_cohorts <- function(alive_other, tasas_long, stock_missing) {
 # excess drop-outs over excess drop-outs plus deaths - would be alive. It is an
 # UPPER bound, twice over: the living resurface faster than bodies are recovered
 # and identified, so they are over-represented among the resolved; and a
-# drop-out need not be a person found alive. So in every simulation the share
+# drop-out need not be a person found alive. The events of 2022, whose drop-outs
+# are one clean-up of their records, take the bound of the later cohorts
+# (composition_bound()). So in every simulation the share
 # of a cohort's missing, prisoners apart, that is alive is drawn uniformly
 # between none and that bound, one draw for all cohorts, and the bound itself
 # carries the error of resting on five windows (composition_bound()). No source
@@ -802,8 +804,9 @@ alive_evidence <- function(composition, register_alive, released_prior) {
     captives_min = s_min * unrecorded_min,
     captives_mode = s_mode * unrecorded_mode,
     captives_max = s_max * unrecorded_max,
-    # the bound on the alive outside captivity, all cohorts pooled: what the
-    # tables quote; the imputation uses each cohort's own (composition_bound())
+    # the bound on the alive outside captivity, all cohorts' resolutions pooled:
+    # an alternative in 09; the imputation uses a bound by cohort
+    # (composition_bound())
     other_min = 0,
     other_max = sum(composition$out) / sum(composition$out + composition$dead)
   )
@@ -857,9 +860,21 @@ captives_for <- function(ev, s, held) s * (held + ev$returned_military - ev$regi
 # dead, out. weights: NULL for the estimate, or a matrix with one row per draw
 # and one column per window (in the order of ual_releases), under which the
 # windows are summed - resampling the windows, since the clean-ups that produce
-# the drop-outs come in some releases and not others. Returns a matrix, draws x
-# event years.
-composition_bound <- function(comp, weights = NULL) {
+# the drop-outs come in some releases and not others. borrow: the event years
+# that take the bound of the other cohorts, pooled under the same weights,
+# instead of their own. Returns a matrix, draws x event years.
+#
+# The events of 2022 borrow. Of their 279 drop-outs beyond list maintenance, 194
+# fall in one window, v14 to v15, at 15 per 1,000 person-months of the missing at
+# risk, where no other cohort exceeds 1.1; over the five windows they leave at
+# 3.4 per 1,000 person-months against 0.3-0.4 for the later cohorts, while their
+# resolutions to death run at half the later cohorts' rate (09l). That is a
+# clean-up of one cohort's records, in the months when repatriated remains ran
+# ahead of the register's resolutions to death, and not a rate at which the
+# living resurface: a bound of 48% read from it would say more about the list
+# than about the people. Their own bound is an alternative in 09 (Table A9).
+bound_borrowers <- 2022
+composition_bound <- function(comp, weights = NULL, borrow = bound_borrowers) {
   years <- sort(unique(comp$year))
   wins <- ual_releases$release[-nrow(ual_releases)]
   wide <- function(col) {
@@ -868,9 +883,12 @@ composition_bound <- function(comp, weights = NULL) {
     m
   }
   if (is.null(weights)) weights <- matrix(1, 1, length(wins))
-  stopifnot(ncol(weights) == length(wins))
+  stopifnot(ncol(weights) == length(wins), all(borrow %in% years), !all(years %in% borrow))
   out <- weights %*% wide("out")
   all <- out + weights %*% wide("dead")
+  lend <- !years %in% borrow
+  out[, !lend] <- rowSums(out[, lend, drop = FALSE])
+  all[, !lend] <- rowSums(all[, lend, drop = FALSE])
   r <- ifelse(all > 0, out / all, 0)
   dimnames(r) <- list(NULL, years)
   r
@@ -1135,6 +1153,11 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
 
   has_dk <- all(c("dk_f", "dk_m") %in% names(draws_this_sim)) &&
     all(c("bx", "vk") %in% names(static_inputs))
+
+  # the confirmed deaths are part of the drawn combatant total in every draw and
+  # every sensitivity analysis (the imputed dead are never negative), so the
+  # clamp on their ratio below never binds; this makes sure of it
+  stopifnot(all(draws_this_sim$draw_cmb >= draws_this_sim$conf_cmb * (1 - 1e-9)))
 
   df_sim <- static_inputs %>%
     left_join(draws_this_sim, by = "year") %>%
