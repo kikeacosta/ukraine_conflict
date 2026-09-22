@@ -1,0 +1,21 @@
+what,year,sex,interval,mean,lo,hi
+"Military deaths, 2022-2025",NA,NA,drawn inputs,179915,175330,182368
+"Military deaths, 2022-2025",NA,NA,drawn inputs and rival specifications,179157,173516,182538
+"Conflict deaths, 2022-2025",NA,NA,drawn inputs,212405,204427,221360
+"Conflict deaths, 2022-2025",NA,NA,drawn inputs and rival specifications,211647,202997,220960
+Loss of life expectancy,2022,f,drawn inputs,1.22,0.91,1.62
+Loss of life expectancy,2022,f,drawn inputs and rival specifications,1.2,0.88,1.61
+Loss of life expectancy,2022,m,drawn inputs,4.72,4.26,5.25
+Loss of life expectancy,2022,m,drawn inputs and rival specifications,4.7,4.21,5.26
+Loss of life expectancy,2023,f,drawn inputs,0.16,0.13,0.19
+Loss of life expectancy,2023,f,drawn inputs and rival specifications,0.16,0.13,0.19
+Loss of life expectancy,2023,m,drawn inputs,4.16,3.89,4.42
+Loss of life expectancy,2023,m,drawn inputs and rival specifications,4.17,3.88,4.45
+Loss of life expectancy,2024,f,drawn inputs,0.13,0.11,0.16
+Loss of life expectancy,2024,f,drawn inputs and rival specifications,0.13,0.11,0.16
+Loss of life expectancy,2024,m,drawn inputs,5.73,5.3,6.13
+Loss of life expectancy,2024,m,drawn inputs and rival specifications,5.73,5.27,6.17
+Loss of life expectancy,2025,f,drawn inputs,0.14,0.12,0.16
+Loss of life expectancy,2025,f,drawn inputs and rival specifications,0.14,0.12,0.16
+Loss of life expectancy,2025,m,drawn inputs,6.59,6.01,7.13
+Loss of life expectancy,2025,m,drawn inputs and rival specifications,6.61,5.99,7.2
