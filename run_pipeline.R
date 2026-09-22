@@ -47,6 +47,7 @@ steps_to_run <- list(
   list(name = "13l", file = "code/13l_sensitivity_lag_tail.R"),
   list(name = "13m", file = "code/13m_sensitivity_base_coherent.R"),
   list(name = "13n", file = "code/13n_sensitivity_covid_carryover.R"),
+  list(name = "13o", file = "code/13o_sensitivity_register_coverage.R"),
   list(name = "14", file = "code/14_e0_loss_decomposition_by_cause.R"),
   list(name = "14b", file = "code/14b_yll_45q15.R"),
   list(name = "14c", file = "code/14c_fixed_counterfactual.R"),

@@ -71,6 +71,7 @@ size every table was built at.
 | `13l` | Sensitivity: the registration lag beyond four years as a fitted curve, exponential and inverse power, in place of a truncation or a constant rate, with its error from resampled event months | `ukr_registration_lag_tail.rds` |
 | `13m` | Sensitivity: a smaller base at ages 20-64 outside Donetsk and Luhansk, with the Lee-Carter model refitted on exposures smaller by the same share, so that base and counterfactual stay coherent | `ukr_base_coherent_e0.rds` |
 | `13n` | Sensitivity: a quarter and a half of 2021's excess mortality carried into the 2022 counterfactual | `ukr_covid_carryover_e0.rds` |
+| `13o` | Sensitivity: the combatant total and the loss if the register never lists 10%, 25% or 40% of combatant deaths; a stated size for a bias nothing available measures, kept out of the second interval | `ukr_register_coverage_e0.rds` |
 | `13k` | Not part of the estimates: fetches Belarus and Russia from the Human Mortality Database for `13j`'s pool, reading an account from `HMD_USER` and `HMD_PASS` in `~/.Renviron`. Neither series reaches 2019, so `13j` leaves out any country that does not cover its whole fit window; using them means ending that window earlier. The cache is gitignored: the HMD agreement governs redistribution | `data_input/hmd_neighbours/` (local) |
 | `14` | **Life expectancy loss decomposed by cause** | `ukr_e0_loss_by_cause_*.rds` |
 | `14b` | Years of life lost and adult mortality (45q15) | `ukr_yll_45q15_summary.rds` |
@@ -220,5 +221,6 @@ anything sitting directly in `figures/` is a manuscript deliverable.
 | `tableA37_structural_intervals.csv` | Military deaths, all conflict deaths and the e0 loss with the interval of the drawn inputs, and with the structural choices folded in |
 | `tableA43_population_present.csv` | The population the rates are computed on, by draw: men aged 20-50, men, and both sexes, with 95% intervals (11, 15) |
 | `tableA44_register_status_by_year.csv` | The register's records of 2022-2025 events by event year and status in v19, the cross-section behind the linkage (15) |
+| `tableA45_register_coverage.csv` | Combatant deaths and the loss if the register misses 10%, 25% or 40% of combatant deaths (13o) |
 | `figA8_structural_tornado.png` | The range of each structural choice beside the 95% interval of the drawn inputs |
 | `_run_provenance.csv` | Draws, seed, draws file and commit the tables were built from |

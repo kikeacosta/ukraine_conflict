@@ -1812,6 +1812,12 @@ alternatives <- bind_rows(
     select(military, year, sex, loss) |>
     mutate(analysis = "Registration lag beyond four years: a fitted tail, exponential or inverse power, to 72-120 months",
            table = "A33"),
+  read_rds("data_inter/ukr_register_coverage_e0.rds") |>
+    (\(rc) rc$loss |>
+       filter(missed > 0) |>
+       left_join(rc$military |> summarise(military = sum(round(military)), .by = missed), by = "missed"))() |>
+    select(military, year, sex, loss) |>
+    mutate(analysis = "Register coverage: 10%, 25% or 40% of combatant deaths never listed", table = "A45"),
   read_rds("data_inter/ukr_linkage_rules_e0.rds") |>
     filter(!str_detect(design, "production")) |>
     mutate(analysis = paste0("Rules of the imputation and the linkage, and the prisoner-of-war evidence: ",
@@ -2013,6 +2019,24 @@ tA44 <-
   mutate(across(-c(year, total), list(pct = \(v) round(100 * v / total, 1)), .names = "{.col}_pct"))
 save_tab(tA44, "tableA44_register_status_by_year.csv")
 print(tA44)
+# ==============================================================================
+# TABLE A45 - Deaths the register never lists (13o)
+# ==============================================================================
+# Not an estimate of the register's coverage, which nothing available measures:
+# the combatant total and the loss if the register missed a given share.
+coverage <- read_rds("data_inter/ukr_register_coverage_e0.rds")
+tA45 <-
+  coverage$loss |>
+  mutate(col = paste0(if_else(sex == "m", "male", "female"), "_", year), loss = round(loss, 3)) |>
+  select(missed, col, loss) |>
+  pivot_wider(names_from = col, values_from = loss) |>
+  left_join(coverage$military |> summarise(combatant_deaths = sum(round(military)), .by = missed), by = "missed") |>
+  relocate(combatant_deaths, .after = missed) |>
+  mutate(missed = scales::percent(missed, accuracy = 1))
+save_tab(tA45, "tableA45_register_coverage.csv")
+print(tA45)
+
+# ==============================================================================
 
 # TABLE A18 - Where the returned prisoners had been listed before their return
 # ==============================================================================
