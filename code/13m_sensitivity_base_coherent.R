@@ -107,7 +107,8 @@ loss <-
   unnest(res)
 
 # with nothing cut the loss is 13's at the mode; with the counterfactual as
-# fitted, 13e's
+# fitted, 13e's cut in proportion to the population (13e also cuts one with two
+# thirds of the absentees men, which this step does not reproduce)
 stopifnot(isTRUE(all.equal(
   loss |> filter(million == 0) |> arrange(year, sex) |> pull(loss),
   read_rds("data_inter/ukr_migration_decomposition.rds") |> arrange(year, sex) |> pull(loss),
@@ -116,7 +117,7 @@ stopifnot(isTRUE(all.equal(
 stopifnot(isTRUE(all.equal(
   loss |> filter(million == 1, counterfactual == "as fitted") |> arrange(year, sex) |> pull(loss),
   read_rds("data_inter/ukr_denominator_donetsk_luhansk.rds")$migrants |>
-    filter(str_detect(scenario, "1.0 million")) |> arrange(year, sex) |> pull(loss),
+    filter(str_detect(scenario, "1.0 million"), !str_detect(scenario, "men")) |> arrange(year, sex) |> pull(loss),
   tolerance = 1e-8
 )))
 

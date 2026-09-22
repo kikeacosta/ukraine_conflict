@@ -55,7 +55,7 @@
 #   tableA33_registration_lag_tail.csv               13l
 #   tableA34_base_coherent.csv                       13m
 #   tableA35_covid_carryover.csv                     13n
-#   tableA36_held_out_window.csv                     09j
+#   tableA30_held_out_window.csv                     09j
 #   tableA37_structural_intervals.csv                14e
 #   figA8_structural_tornado.png                     14e
 #   out_of_sample_releases.csv                       09i (where it has run)
@@ -1643,6 +1643,7 @@ tA12 <-
                         .by = window) |>
               mutate(window = factor(window, levels = levels(tA12$window))),
             by = "window")
+tA12 <- tA12 |> mutate(window = str_replace(as.character(window), "neighbours", "neighbors"))
 save_tab(tA12, "tableA12_counterfactual_window.csv")
 print(tA12)
 
@@ -1780,14 +1781,21 @@ save_tab(tA2, "tableA2_status_transitions.csv")
 print(tA2)
 
 # ==============================================================================
-# TABLE 8 - How far the results move with each structural choice
+# TABLE 6 - How far the results move with each structural choice, by group
 # ==============================================================================
 # The simulation's intervals cover the drawn inputs only. Each row here is a
 # set of deterministic projections, every input not under study at its central
 # value (the mode, or the mean for the inputs on the missing alive),
 # and gives the range its alternatives span: the military total, and the male
 # and female loss in 2022 and 2025. The rows behind each range are
-# in the supplementary table named.
+# in the supplementary table named. The rows come in groups, by how the choice
+# bears on the estimate: drawn inputs taken beyond their bounds; rival
+# specifications, whose alternatives fall on both sides of the one used (14e
+# samples them in the second interval); biases of known direction, whose
+# alternatives all push one way (sized beside the estimate); biases no source
+# measures, stated for their size; and a different quantity. The registration
+# lag without any correction is in table A10 and not here: it is not an
+# alternative to the correction but a measure of it.
 # Military totals are summed over rounded years, as tables 3 and A6 build theirs.
 mil_total <- function(d) d |> summarise(military = sum(round(total_military)), .by = c(point, alive))
 mode_military <- alive_mil |> filter(point %in% "central") |> summarise(m = sum(round(total_military))) |> pull(m)
@@ -1806,10 +1814,10 @@ alternatives <- bind_rows(
   alive_rows(c("floor", "cap")) |>
     mutate(analysis = "The missing alive: floor to cap", table = "A6"),
   lag_t8$loss |>
-    filter(scenario != "to 48 months (used)") |>
+    filter(!scenario %in% c("to 48 months (used)", "as registered")) |>
     left_join(lag_t8$military |> summarise(military = sum(round(total)), .by = scenario), by = "scenario") |>
     select(military, year, sex, loss) |>
-    mutate(analysis = "Registration lag: no correction, or corrected to 60 or 72 months", table = "A10, A16"),
+    mutate(analysis = "Registration lag: corrected to 60 or 72 months", table = "A10, A16"),
   read_rds("data_inter/ukr_registration_lag_tail.rds") |>
     (\(lt) lt$loss |>
        filter(scenario != "to 48 months (used)") |>
@@ -1863,7 +1871,7 @@ alternatives <- bind_rows(
             read_rds("data_inter/ukr_coherent_forecast_e0.rds")$baseline) |>
     filter(window != "2000-2019 (used)") |>
     transmute(military = mode_military, year, sex, loss,
-              analysis = "Counterfactual: Lee–Carter window, a coherent forecast with eight neighbours, and the forecast one SD lower or higher",
+              analysis = "Counterfactual: Lee–Carter window, a coherent forecast with eight neighbors, and the forecast one SD lower or higher",
               table = "A12"),
   read_rds("data_inter/ukr_covid_carryover_e0.rds")$loss |>
     filter(fraction > 0) |>
@@ -1882,6 +1890,30 @@ alternatives <- bind_rows(
     transmute(military = mode_military, year, sex, loss = loss_nomig,
               analysis = "De jure denominator: no net migration", table = "A7")
 )
+t6_groups <- c(
+  "The missing alive: 95% interval of the draws" = "Drawn inputs taken beyond their bounds",
+  "The missing alive: floor to cap" = "Drawn inputs taken beyond their bounds",
+  "Net migration: each component across its range" = "Drawn inputs taken beyond their bounds",
+  "Rules of the imputation" = "Rival specifications: sampled in the second interval",
+  "Timing within 2022" = "Rival specifications: sampled in the second interval",
+  "Counterfactual: Lee–Carter window" = "Rival specifications: sampled in the second interval",
+  "Specification of the net migration input" = "Rival specifications: sampled in the second interval",
+  "Registration lag: corrected to 60 or 72 months" = "Biases of known direction: sized beside the estimate",
+  "Registration lag beyond four years" = "Biases of known direction: sized beside the estimate",
+  "Population base of Donetsk and Luhansk" = "Biases of known direction: sized beside the estimate",
+  "Pre-war absentees in the base" = "Biases of known direction: sized beside the estimate",
+  "The same, 0.5 to 2.0 million fewer" = "Biases of known direction: sized beside the estimate",
+  "Civilian age profile" = "Biases of known direction: sized beside the estimate",
+  "Counterfactual: a quarter or a half" = "Biases of known direction: sized beside the estimate",
+  "Register coverage" = "Biases no source measures: stated for their size",
+  "Residents of occupied Donbas" = "Biases no source measures: stated for their size",
+  "De jure denominator" = "A different quantity")
+group_of <- function(a) {
+  g <- map_chr(a, function(s) { k <- names(t6_groups)[startsWith(s, names(t6_groups))]; if (length(k) == 1) t6_groups[[k]] else NA_character_ })
+  stopifnot(!anyNA(g))
+  g
+}
+group_order <- unique(unname(t6_groups))
 fmt_range <- function(x, f) {
   lo <- f(min(x)); hi <- f(max(x))
   if (lo == hi) lo else paste0(lo, " - ", hi)
@@ -1901,18 +1933,38 @@ cells_t8 <- function(d) {
 mode_rows <- alive_e0 |> filter(point %in% "central") |> mutate(military = mode_military)
 tab8 <-
   bind_rows(
-    cells_t8(mode_rows) |> mutate(analysis = "Every input at its central value", table = "", .before = 1),
+    cells_t8(mode_rows) |> mutate(analysis = "Every input at its central value", table = "", group = "", .before = 1),
     alternatives |>
       mutate(analysis = factor(analysis, levels = unique(analysis))) |>
       nest(.by = c(analysis, table)) |>
       mutate(cells = map(data, cells_t8)) |>
       select(-data) |>
       unnest(cells) |>
-      mutate(analysis = as.character(analysis))
+      mutate(analysis = as.character(analysis), group = group_of(analysis)) |>
+      arrange(match(group, group_order))
   ) |>
-  rename(supplementary_table = table)
+  rename(supplementary_table = table) |>
+  relocate(group, .after = analysis)
 save_tab(tab8, "table6_structural_sensitivity.csv")
 print(tab8)
+
+# ==============================================================================
+# FIGURE A7 - The multistate model, evaluated and not used (09g, S6.12)
+# ==============================================================================
+# Cumulative incidence of each resolution of the missing by event-year cohort,
+# within each cohort's follow-up. 09g needs the person-level trajectories and
+# stays out of the pipeline; its curves are tracked, so the figure is drawn here.
+read_rds("data_inter/ukr_ualosses_traj_mstate_cifs.rds") |>
+  pivot_longer(c(p_dead, p_prisoner, p_unlisted), names_to = "outcome", values_to = "p") |>
+  mutate(outcome = factor(outcome, levels = c("p_dead", "p_prisoner", "p_unlisted"),
+                          labels = c("Dead", "Prisoner", "No longer listed"))) |>
+  ggplot(aes(time_days / 30.44, p, colour = cohort)) +
+  geom_line(linewidth = 1) +
+  facet_wrap(~outcome, nrow = 1) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = "Months since disappearance", y = "Cumulative incidence", colour = "Event-year cohort") +
+  theme_bw() + theme(legend.position = "top")
+ggsave("figures/figA7_multistate_cif_by_cohort.png", width = 12, height = 4.5, dpi = 300)
 
 # ==============================================================================
 # TABLE A16 - The missing alive and the registration-lag horizon together
@@ -2237,16 +2289,16 @@ tA35 <-
 save_tab(tA35, "tableA35_covid_carryover.csv")
 print(tA35)
 
-# A36: the duration model against each window it was not fitted to, by outcome:
+# A30: the duration model against each window it was not fitted to, by outcome:
 # fitted on the other windows, predicting with the average of their multipliers (09j)
 held_out <- read_rds("data_inter/ukr_ualosses_held_out_window.rds")
-tA36 <-
+tA30 <-
   held_out$by_cause |>
   transmute(case, fitted_on, predicted_window = from_release, outcome,
             missing_at_start = round(at_risk), observed = round(observed), predicted = round(predicted),
             predicted_over_observed = round(ratio, 2))
-save_tab(tA36, "tableA36_held_out_window.csv")
-print(tA36)
+save_tab(tA30, "tableA30_held_out_window.csv")
+print(tA30)
 
 # A37: the intervals, the drawn inputs alone and with the structural choices (14e)
 structural <- read_rds("data_inter/ukr_structural_uncertainty.rds")

@@ -66,7 +66,9 @@ ukr_vital <-
     .population = "pop"
   )
 
-# Forecast using Lee-Carter model (Lee-Miller variant based on life expectancy) for 2022-2025
+# Forecast for 2022-2025 with the Lee-Carter model adjusted on life expectancy and
+# jumping off the fitted rates - not the Lee-Miller variant, which jumps off the
+# observed ones (13g shows that variant as an alternative)
 fc_rates <-
   ukr_vital %>%
   model(lc = LC(log(mx), adjust = "e0", jump_choice = "fit")) %>%

@@ -241,8 +241,24 @@ write_rds(param_draws, "data_inter/ukr_sim_param_draws.rds")
 # costs nothing, because each keeps its own cache.
 #
 # Large, and NOT tracked in git - see .gitignore.
+#
+# THE CACHE IS VALID ONLY FOR THE INPUTS IT WAS BUILT FROM. A fingerprint of the
+# draws and the static inputs is kept beside it, and any change in them - a new
+# bound on the missing alive, a new input - rebuilds the projections instead of
+# handing back those of other draws. Sums weighted by position, so a change of
+# order counts too.
+fingerprint <- function(...) {
+  vapply(list(...), function(d) {
+    sum(vapply(Filter(is.numeric, d), function(v) sum(v * seq_along(v), na.rm = TRUE), 0))
+  }, 0)
+}
 sim_draws_file <- sprintf("data_inter/ukr_sim_draws_2022_2025_n%d.rds", n_sim)
-sim_output_raw <- cache_rds(sim_draws_file, {
+sim_inputs_file <- sub("[.]rds$", "_inputs.rds", sim_draws_file)
+inputs_now <- fingerprint(draws_df, static_inputs, pop22_ini)
+cache_fresh <- file.exists(sim_draws_file) && file.exists(sim_inputs_file) &&
+  isTRUE(all.equal(read_rds(sim_inputs_file), inputs_now, tolerance = 1e-12))
+if (file.exists(sim_draws_file) && !cache_fresh) message("  the draws or inputs have changed: rebuilding ", sim_draws_file)
+sim_output_raw <- cache_rds(sim_draws_file, refresh = !cache_fresh, {
   draws_list <- draws_df %>% group_split(sim_id)
 
   message("  running ", n_sim, " simulations ...")
@@ -255,6 +271,7 @@ sim_output_raw <- cache_rds(sim_draws_file, {
     )
   })
 })
+write_rds(inputs_now, sim_inputs_file)
 
 # 8. DERIVED CAUSES AND RATES ==================================================
 # Stored wide (components only) and expanded here, so the cached file is six

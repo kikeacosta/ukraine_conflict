@@ -42,6 +42,7 @@ size every table was built at.
 | `02` | Kannisto extrapolation of old-age mortality | `ukr_mx_1989_2021_adj.rds` |
 | `03` | Period life tables 1989–2021 | `ukr_life_tables_1989_2021.rds` |
 | `04` | Lee-Carter forecast → counterfactual "no war" mortality, and the forecast's error for the simulation to draw | `ukr_mxs_obs_plus_frcst_1989_2025.rds`, `ukr_lc_forecast_error.rds` |
+| `04b` | Not part of the estimates: the territory of the 1989-2021 deaths and exposures (one territory in every year: Ukraine without Crimea, Sevastopol, Donetsk and Luhansk), and a test of the Lee-Carter index for a level shift at 2014-15 | `ukr_lc_level_shift.rds` |
 | `05` | WPP2024 age-specific fertility | `ukr_asfr_wpp_2022_2025.rds` |
 | `06` | Net migration by age and sex: a register stock differenced along cohorts, lightly smoothed across age within each Eurostat band | `ukr_migrants_...rds` |
 | `07_ucdp_ukr_conflict_deaths` | Conflict death **totals** with low/high bounds | `ukr_ucdp_invals.rds` |
@@ -183,6 +184,7 @@ anything sitting directly in `figures/` is a manuscript deliverable.
 | `figA4_missing_alive_sensitivity.png` | Military deaths and e0 loss across the share of the missing who are alive, with the evidence range and the 95% interval of the draws |
 | `figA5_migration_sensitivity.png` | e0 loss across the range of each net migration component |
 | `figA6_duration_lexis.png` | The durations since disappearance each event month is observed at, window by window, and the projection to 48 months |
+| `figA7_multistate_cif_by_cohort.png` | The multistate model of `09g`, evaluated and not used: cumulative incidence of each resolution of the missing by event-year cohort, drawn from its tracked curves |
 | `table1_source_totals.csv` | What each source reports, with bounds and age-sex availability |
 | `table2_missing_imputation.csv` | Missing combatants imputed to dead or alive |
 | `table3_pert_input_bounds.csv` | Year-specific PERT min / mode / max |
@@ -218,7 +220,7 @@ anything sitting directly in `figures/` is a manuscript deliverable.
 | `tableA33_registration_lag_tail.csv` | Military deaths and e0 loss with the register's growth beyond four years modelled by a fitted curve |
 | `tableA34_base_coherent.csv` | e0 loss with a smaller base at working ages outside Donetsk and Luhansk, the counterfactual as fitted and refitted on exposures smaller by the same share |
 | `tableA35_covid_carryover.csv` | The 2022 loss with a quarter and a half of 2021's excess mortality carried into the counterfactual |
-| `tableA36_held_out_window.csv` | The duration model against each release window held out of its fit, by outcome |
+| `tableA30_held_out_window.csv` | The duration model against each release window held out of its fit, by outcome |
 | `tableA37_structural_intervals.csv` | Military deaths, all conflict deaths and the e0 loss with the interval of the drawn inputs, and with the structural choices folded in |
 | `tableA43_population_present.csv` | The population the rates are computed on, by draw: men aged 20-50, men, and both sexes, with 95% intervals (11, 15) |
 | `tableA44_register_status_by_year.csv` | The register's records of 2022-2025 events by event year and status in v19, the cross-section behind the linkage (15) |

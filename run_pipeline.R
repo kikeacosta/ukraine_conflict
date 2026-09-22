@@ -1,4 +1,6 @@
-# Run full pipeline steps 01-15
+# Run the pipeline, steps 00-16:
+#   Rscript run_pipeline.R        every step
+#   Rscript run_pipeline.R 10     from step 10 on (the setup, 00, always runs)
 # Configure CRAN mirror
 options(repos = c(CRAN = "https://cloud.r-project.org"))
 
@@ -16,6 +18,8 @@ steps_to_run <- list(
   list(name = "02", file = "code/02_prewar_mortality_adjustments.R"),
   list(name = "03", file = "code/03_life_tables_calculation.R"),
   list(name = "04", file = "code/04_mort_forecast_lee_carter_miller.R"),
+  # 04b reports the territory of the pre-war series and tests k for a step at 2014-15
+  list(name = "04b", file = "code/04b_level_shift_test.R"),
   list(name = "05", file = "code/05_asfr_wpp.R"),
   list(name = "06", file = "code/06_net_migration.R"),
   list(name = "07a", file = "code/07_ucdp_ukr_conflict_deaths.R"),
@@ -26,7 +30,7 @@ steps_to_run <- list(
   list(name = "08", file = "code/08_ualosses.R"),
   list(name = "08b", file = "code/08b_registration_lag.R"),
   list(name = "09", file = "code/09_ualosses_missing_analysis.R"),
-  # 09j's table A36 is one of 15's deliverables, and 09k's tests are cited in the
+  # 09j's table A30 is one of 15's deliverables, and 09k's tests are cited in the
   # documentation; both read 09's cached linkage, so neither needs the register files
   list(name = "09j", file = "code/09j_held_out_window.R"),
   list(name = "09k", file = "code/09k_cohort_overlap_test.R"),
@@ -62,6 +66,15 @@ steps_to_run <- list(
   # 16 draws figure A0, the pipeline itself, from the release list and n_sim
   list(name = "16", file = "code/16_pipeline_figure.R")
 )
+
+# from a named step on, when one is given
+from <- commandArgs(trailingOnly = TRUE)[1]
+if (!is.na(from)) {
+  k <- match(from, vapply(steps_to_run, `[[`, "", "name"))
+  if (is.na(k)) stop("no step named ", from)
+  steps_to_run <- unique(c(steps_to_run[1], steps_to_run[k:length(steps_to_run)]))
+  cat("Running from step", from, "\n")
+}
 
 for (step in steps_to_run) {
   if (file.exists(step$file)) {

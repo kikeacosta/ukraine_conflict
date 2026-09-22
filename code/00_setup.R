@@ -1274,8 +1274,8 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
 #   alive            the prisoners held and the share of the unresolved alive
 #                    for other reasons, once per simulation each: they are
 #                    properties of the missing, not of a year
-#   resolution       the model's log-hazards and window multipliers, from the
-#   model            normal approximation to their sampling distribution
+#   the bound on     the weights on the release windows behind it, once per
+#   the alive        simulation from a Dirichlet (window_weight_draws())
 #   registration     one of 08b's resampled sets of completion factors
 #   lag
 #   counterfactual   the Lee-Carter index of each sex, a random walk with
