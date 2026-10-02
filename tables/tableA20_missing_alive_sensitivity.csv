@@ -1,8 +1,8 @@
 share_of_missing_alive,evidence,missing_alive,prisoners_of_war_among_missing,share_alive_outside_captivity,total_military_deaths,male_e0_loss_2025,female_e0_loss_2025
 0.007,floor,590,590,0,181695,6.68,0.138
-0.015,2.5th percentile of draws,1390,841,0.006,180895,6.64,0.138
+0.016,2.5th percentile of draws,1422,851,0.006,180863,6.63,0.138
 0.041,central,3680,1565,0.024,178605,6.52,0.138
-0.066,97.5th percentile of draws,5930,2647,0.037,176355,6.42,0.138
+0.066,97.5th percentile of draws,5954,2659,0.038,176331,6.42,0.138
 0.084,cap,7614,3466,0.048,174671,6.35,0.138
 0.1,NA,9039,3466,0.064,173246,6.28,0.138
 0.15,NA,13558,3466,0.116,168728,6.08,0.138

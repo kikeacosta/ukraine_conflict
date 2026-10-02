@@ -31,7 +31,7 @@
 # one at a time at the mode (documents/migration_methodology.md, section 10):
 # where the western mode sits in the bracket (A2), the age-sex profile of the
 # Russian flow (A9), and additive against proportional allocation (A5). 15
-# reports them as table A27. The choice of register stock is checked in 13r.
+# reports them as table A29. The choice of register stock is checked in 13r.
 #
 # INPUTS   the same as 13
 #          data_inter/ukr_migration_decomposition.rds (from 13)

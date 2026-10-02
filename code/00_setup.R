@@ -298,7 +298,7 @@ excel_date <- function(x) {
 # day on which all six can have been copied if the register lists events as
 # promptly in each. Dating the releases by their Kaggle versions instead runs
 # the clock of v19 a month long; 08b measures what that does to the lag
-# correction (13d, Table A22). 08b also checks the latest events against the
+# correction (13d, Table A24). 08b also checks the latest events against the
 # files.
 # Six releases give five windows. What they show that four could not: the
 # register's clean-ups come in some releases and not others - the dead and the
@@ -921,7 +921,7 @@ captives_for <- function(ev, s, held) s * (held + ev$returned_military - ev$regi
 # remains ran ahead of the register's resolutions to death, and not a rate at
 # which the living resurface: a bound of 51% read from it would say more about
 # the list than about the people. Their own bound is an alternative in 09
-# (Table A20).
+# (Table A22).
 bound_borrowers <- 2022
 composition_bound <- function(comp, weights = NULL, borrow = bound_borrowers) {
   years <- sort(unique(comp$year))
