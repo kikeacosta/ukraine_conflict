@@ -41,7 +41,7 @@ bx <- tribble(
   "acled",   "src",  40, "ACLED",                      "Comparison only",                            "check",  "check",
   "sssu",    "src",  33, "SSSU",                       "Base 2022; deaths 1989–2021",           "source", "none",
   "wpp",     "src",  24, "UN WPP 2024",                "Fertility by age",                           "source", "none",
-  "stock",   "src",  16, "Stocks abroad",              "Eurostat, UNHCR, Canada, US",                "source", "none",
+  "stock",   "src",  16, "Stocks abroad",              "UNHCR totals; Eurostat ages",                "source", "none",
   "cross",   "src",   9, "Net crossings",              "CES survey, border data",                    "source", "none",
   "p08",     "prep", 77, "08 Register counts",         "Combatants by age, sex, status",             "combat", "fixed",
   "p08b",    "prep", 70, "08b Listing delay",          "Chain ladder to 48 months",                  "combat", "drawn",

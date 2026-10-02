@@ -2,5 +2,5 @@ field,value
 n_draws,1000
 seed,42
 draws_file,ukr_sim_draws_2022_2025_n1000.rds
-run_finished,2026-10-02 07:03:35
-git_commit,3815514
+run_finished,2026-10-02 16:42:12
+git_commit,110608a

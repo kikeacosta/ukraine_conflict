@@ -18,7 +18,7 @@
 # Every disputed input - civilian deaths, the three inputs on the missing
 # alive (the share of the unrecorded prisoners among the missing, the
 # prisoners held, the share of the unresolved alive for other reasons), the
-# western blend weight, Russia and Belarus - is a Beta-PERT with shape 4, the
+# western blend weight, Russia - is a Beta-PERT with shape 4, the
 # standard choice. A flatter shape (2) puts more weight towards the bounds, a
 # sharper one (8) less. The simulation is re-run at each shape with the same
 # random numbers (simulation_draws(), 00_setup.R), so the differences in the

@@ -1095,8 +1095,231 @@ srb <- 1.06
 prop_male_birth <- srb / (1 + srb)
 prop_female_birth <- 1 / (1 + srb)
 
-# Net emigration inputs and PERT bounds are built from data in 06 and written
+# Net migration inputs and PERT bounds are built from data in 06 and written
 # to data_inter/ (ukr_migration_bounds.rds); see documents/migration_methodology.md.
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# net migration: the register reading and the allocation at the mode ====
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Shared by 06, which builds the input from UNHCR's year-end totals, and 13r,
+# which builds it from the bottom-up stock, so that both go from a stock to
+# the flows by age and sex the same way. Functions only: each reads its file
+# when it is called.
+mig_years <- 2022:2025
+
+# Eurostat temporary protection stock at 31 December, EU-27 countries plus
+# Iceland, Liechtenstein, Norway and Switzerland, as published. The EU-27
+# aggregate row is kept in the table and dropped by the two functions below,
+# so nothing is counted twice.
+mig_eu_row <- "European Union - 27 countries (from 2020)"
+mig_eurostat_extract <- function(yrs = mig_years) {
+  cts_rmv <- c("Special value", ":", "Observation flags:", "dp", "d")
+  cols_names <-
+    expand_grid(date = yrs, sex = c("t", "m", "f", "u"), dat = c("data", "flag")) |>
+    mutate(nms = paste(date, sex, dat, sep = "_")) |>
+    pull(nms)
+  read_xlsx(
+    "data_input/refugees_eurostat/migr_asytpsm__custom_21093689_page_spreadsheet.xlsx",
+    skip = 10
+  ) |>
+    set_names(c("ctr", "age", cols_names)) |>
+    filter(!ctr %in% cts_rmv) |>
+    drop_na(ctr) |>
+    select(-ends_with("flag")) |>
+    pivot_longer(-c(ctr, age), names_to = "vars", values_to = "mix") |>
+    mutate(
+      year = as.integer(str_sub(vars, 1, 4)),
+      sex = str_sub(vars, 6, 6),
+      mix = suppressWarnings(as.double(mix))
+    ) |>
+    replace_na(list(mix = 0)) |>
+    select(ctr, year, sex, age, mix)
+}
+
+# year-end totals over the countries
+mig_eurostat_total <- function(d) {
+  d |>
+    filter(ctr != mig_eu_row, sex == "t", age == "Total") |>
+    summarise(eurostat = sum(mix), .by = year)
+}
+
+# the age-sex structure; unknown sex and age are allocated with the
+# distribution of the known cases
+mig_eurostat_structure <- function(d) {
+  d |>
+    filter(ctr != mig_eu_row, sex %in% c("m", "f"), !age %in% c("Total", "Unknown")) |>
+    summarise(mix = sum(mix), .by = c(year, sex, age)) |>
+    mutate(cx = mix / sum(mix), .by = year) |>
+    mutate(age = case_when(
+      age == "Less than 14 years" ~ 0,
+      age == "From 14 to 17 years" ~ 14,
+      age == "From 18 to 34 years" ~ 18,
+      age == "From 35 to 64 years" ~ 35,
+      age == "65 years or over" ~ 65
+    )) |>
+    select(year, sex, age, cx)
+}
+
+# the forecast death rates, for the deaths abroad
+mig_mx_exp <- function(yrs = mig_years) {
+  read_rds("data_inter/ukr_mxs_obs_plus_frcst_1989_2025.rds") |>
+    filter(source == "frcst", year %in% yrs) |>
+    select(year, sex, age, mx)
+}
+
+# Ungrouping is done on the stocks, which are positive, and only then
+# differenced. The stocks are counts of persons and enter pclm() as they are:
+# it chooses its penalty by the BIC of a Poisson likelihood, so the size of the
+# counts is what says how far the single ages may depart from a smooth curve
+# within a band. Inflating them first (they were once multiplied by 1e5) leaves
+# the fit almost unsmoothed and moves men within the band of ages 35 to 64
+# towards its end.
+mig_ung_stock <- function(d) {
+  y <- base::pmax(d$mix, 1)
+  fit <- suppressWarnings(pclm(x = d$age, y = y, nlast = 36)$fitted)
+  tibble(age = 0:100, S = fit)
+}
+
+# Rows are indexed by age at the END of year t, the cohort born in t - x, which
+# is how 11 carries its population. The open interval 100+ collects the
+# previous year's 99 and 100+.
+mig_cohort_diff <- function(d, yrs = mig_years) {
+  map_dfr(yrs, function(t) {
+    now <- d |> filter(year == t) |> arrange(age) |> pull(S)
+    if (t == min(yrs)) {
+      return(tibble(year = t, age = 0:100, S_prev = 0, S = now))
+    }
+    b <- d |> filter(year == t - 1) |> arrange(age) |> pull(S)
+    tibble(year = t, age = 0:100, S_prev = c(NA, b[1:99], b[100] + b[101]), S = now)
+  })
+}
+
+# From a year-end age-sex structure (bands) and a register stock (stock: year,
+# register_stock) to the flows by single age: the structure scaled to the
+# stock, ungrouped by year and sex, and differenced by cohort,
+#   D_t(x) = S_t(x) - S_{t-1}(x-1) + deaths abroad
+# Deaths abroad are added back, otherwise a cohort that merely died abroad
+# would read as having returned. Age 0 is set to zero: it is mostly children
+# born abroad, who were never in Ukraine's population. D is negative where a
+# cohort shrank abroad, i.e. net return.
+mig_register_flows <- function(bands, stock, mx_exp, yrs = mig_years) {
+  bands |>
+    left_join(stock |> select(year, register_stock), by = "year") |>
+    mutate(mix = cx * register_stock) |>
+    group_by(year, sex) |>
+    group_modify(~ mig_ung_stock(.x)) |>
+    ungroup() |>
+    group_by(sex) |>
+    group_modify(~ mig_cohort_diff(.x, yrs)) |>
+    ungroup() |>
+    left_join(mx_exp, by = c("year", "sex", "age")) |>
+    mutate(
+      deaths_abroad = if_else(year == min(yrs), 0, coalesce(S_prev * mx, 0)),
+      D = if_else(age == 0, 0, S - coalesce(S_prev, 0) + deaths_abroad)
+    )
+}
+
+# Each year's stock is ungrouped on its own, so where a cohort crosses a
+# Eurostat band edge between two year ends, a change in the within-band shape
+# shows up as a flow. The flows are smoothed lightly across age by penalised
+# least squares on second differences, with each year's total by sex and
+# Eurostat band (ages 1-13, 14-17, 18-34, 35-64, 65+) held fixed, so every
+# migration total and both readings stay as they are. Age 0 stays at zero.
+# At this strength no single age moves by more than 300 people (291 with
+# UNHCR's totals, 269 with the bottom-up stock of 13r), and few by more than a
+# hundred: the flows are already smooth from year to year of age. What remains - the step from zero at age 0 to the return of young
+# children at age 1, and the broad waves around 35 and 65, where the older
+# women's returns in the 65+ band are spread by the ungrouping into the ages
+# around it - is set by the band totals themselves, which no smoothing that
+# keeps them can remove.
+mig_lambda_D <- 5
+mig_smooth_flows <- function(D, age, lambda = mig_lambda_D) {
+  keep <- age >= 1
+  x <- D[keep]
+  n <- length(x)
+  band <- cut(age[keep], c(1, 14, 18, 35, 65, Inf), right = FALSE)
+  C <- t(model.matrix(~ band - 1))
+  P <- diff(diag(n), differences = 2)
+  A <- rbind(cbind(diag(n) + lambda * crossprod(P), t(C)),
+             cbind(C, matrix(0, nrow(C), nrow(C))))
+  out <- D
+  out[keep] <- solve(A, c(x, C %*% x))[seq_len(n)]
+  out
+}
+
+# the smoothing applied to a table of flows by year and sex, with the flows
+# before smoothing kept as D_raw
+mig_smoothed <- function(flows) {
+  out <-
+    flows |>
+    arrange(year, sex, age) |>
+    mutate(D_raw = D, D = mig_smooth_flows(D, age), .by = c(year, sex))
+  stopifnot(isTRUE(all.equal(
+    out |> summarise(d = sum(D), .by = c(year, sex)) |> pull(d),
+    out |> summarise(d = sum(D_raw), .by = c(year, sex)) |> pull(d)
+  )))
+  out
+}
+
+# each year's register reading and its parts
+mig_flow_totals <- function(flows) {
+  flows |>
+    summarise(
+      register = sum(D),
+      departures = sum(base::pmax(D, 0)),
+      returns = sum(base::pmin(D, 0)),
+      deaths_abroad = sum(deaths_abroad),
+      births_abroad_dropped = sum(S[age == 0]),
+      .by = year
+    )
+}
+
+# The crossings reading: CES (2026) table 1 net crossings of citizens, plus the
+# 277k who left through Russia or Belarus and are now elsewhere (they are in
+# the registers but crossed no western border).
+mig_crossings <- function() {
+  ces <- read_csv("data_input/migration/ces_2026_figures.csv", show_col_types = FALSE)
+  ces |>
+    filter(key == "net_outflow_citizens") |>
+    select(year, ces_net = value) |>
+    left_join(
+      ces |>
+        filter(key == "left_via_russia_belarus_now_elsewhere") |>
+        select(year, via_ru_by = value),
+      by = "year"
+    ) |>
+    mutate(year = as.integer(year), via_ru_by = coalesce(via_ru_by, 0),
+           crossings = ces_net + via_ru_by)
+}
+
+# The allocation at the mode. The mode total (mode_tot: year, mode_tot)
+# differs from the register reading, and the difference is spread over the
+# DEPARTURES profile (positive part of D), leaving the return cells as the
+# register has them:  ems(x) = D(x) + (mode - sum D) * w(x).  11 applies the
+# same additive rule to every draw. Returns year, sex, age, mix (negative =
+# leaving, the convention 11 and 13 read) and w.
+mig_allocate <- function(flows, mode_tot) {
+  out <-
+    flows |>
+    mutate(w = base::pmax(D, 0) / sum(base::pmax(D, 0)), .by = year) |>
+    left_join(flows |> summarise(register = sum(D), .by = year), by = "year") |>
+    left_join(mode_tot, by = "year") |>
+    mutate(
+      ems = D + (mode_tot - register) * w,
+      mix = -ems
+    ) |>
+    select(year, sex, age, mix, w) |>
+    arrange(year, sex, age)
+  stopifnot(
+    isTRUE(all.equal(
+      out |> summarise(v = -sum(mix), .by = year) |> arrange(year) |> pull(v),
+      mode_tot |> arrange(year) |> pull(mode_tot),
+      tolerance = 1e-8
+    )),
+    all(abs(out |> summarise(s = sum(w), .by = year) |> pull(s) - 1) < 1e-9)
+  )
+  out
+}
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # simulation size ====
@@ -1373,7 +1596,7 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
 #                    drift: the drift's error and each year's innovation,
 #                    correlated between the sexes as 04 measured
 #   migration        the western blend weight once per simulation, applied to
-#                    every year's two readings; Russia and Belarus once
+#                    every year's two readings; Russia once
 # The military total follows from the three inputs on the missing alive and
 # the window weights (military_draws()). The two groups are also run alone, the
 # other at its central values or point estimates, so that 15 can attribute the
@@ -1464,11 +1687,11 @@ simulation_draws <- function(param_table, mil, lc_error, n, shape = 4, seed = 42
     expand_grid(sim_id = seq_len(n), west |> select(year, crossings, register)) |>
     mutate(role = "mig_west", draw = crossings + w[sim_id] * (register - crossings)) |>
     select(role, year, sim_id, draw)
-  ru <- param_table |> filter(role == "mig_ru_by")
+  ru <- param_table |> filter(role == "mig_ru")
   u_ru <- runif(n)
   draws_ru_long <-
     expand_grid(sim_id = seq_len(n), ru |> select(year, min, mode, max)) |>
-    mutate(role = "mig_ru_by", draw = q(u_ru[sim_id], min, mode, max)) |>
+    mutate(role = "mig_ru", draw = q(u_ru[sim_id], min, mode, max)) |>
     select(role, year, sim_id, draw)
 
   as_role <- function(d, col, role) d |> transmute(role = role, year, sim_id, draw = .data[[col]])
@@ -1486,7 +1709,7 @@ simulation_draws <- function(param_table, mil, lc_error, n, shape = 4, seed = 42
   )
   draws_df <-
     param_draws |>
-    filter(role %in% c("civilians", "combatants", "confirmed", "mig_west", "mig_ru_by", "lc_f", "lc_m")) |>
+    filter(role %in% c("civilians", "combatants", "confirmed", "mig_west", "mig_ru", "lc_f", "lc_m")) |>
     mutate(role = case_when(role == "civilians" ~ "draw_cvs", role == "combatants" ~ "draw_cmb",
                             role == "confirmed" ~ "conf_cmb", role == "lc_f" ~ "dk_f",
                             role == "lc_m" ~ "dk_m", .default = "draw_mig")) |>
@@ -1508,17 +1731,16 @@ simulation_draws <- function(param_table, mil, lc_error, n, shape = 4, seed = 42
 # that the central projection stands where the mean of the draws does (11) -
 # the three inputs on how many of the missing are alive (alive_evidence()),
 # which set the military total (the "mode" column of the parameter table's
-# combatant rows, 10), and the civilians and Russia and Belarus
-# (central_values()).
+# combatant rows, 10), and the civilians and Russia (central_values()).
 #
 # central_values(): a parameter table, or the migration bounds, with the "mode"
-# of the two inputs drawn from a Beta-PERT of its own - civilians, Russia and
-# Belarus - replaced by that distribution's mean, (min + 4 mode + max) / 6.
+# of the two inputs drawn from a Beta-PERT of its own - civilians and Russia -
+# replaced by that distribution's mean, (min + 4 mode + max) / 6.
 # The civilian range is longer above its mode than below, so the mode sits
 # below the mean of the draws. The western net outflow is a blend of two
 # readings whose mode is their midpoint and its mean already.
 central_values <- function(p) {
-  p |> mutate(mode = if_else(role %in% c("civilians", "mig_ru_by"), (min + 4 * mode + max) / 6, mode))
+  p |> mutate(mode = if_else(role %in% c("civilians", "mig_ru"), (min + 4 * mode + max) / 6, mode))
 }
 mode_projection_inputs <- function() {
   # returned as it is: 14c and 14d draw the simulation's inputs from it again,

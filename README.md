@@ -44,7 +44,7 @@ size every table was built at.
 | `04` | Lee-Carter forecast → counterfactual "no war" mortality, and the forecast's error for the simulation to draw | `ukr_mxs_obs_plus_frcst_1989_2025.rds`, `ukr_lc_forecast_error.rds` |
 | `04b` | Not part of the estimates: the territory of the 1989-2021 deaths and exposures (one territory in every year: Ukraine without Crimea, Sevastopol, Donetsk and Luhansk), and a test of the Lee-Carter index for a level shift at 2014-15 | `ukr_lc_level_shift.rds` |
 | `05` | WPP2024 age-specific fertility | `ukr_asfr_wpp_2022_2025.rds` |
-| `06` | Net migration by age and sex: a register stock differenced along cohorts, lightly smoothed across age within each Eurostat band | `ukr_migrants_...rds` |
+| `06` | Net migration by age and sex: UNHCR's year-end totals of refugees from Ukraine recorded outside Russia, given Eurostat's age-sex structure, differenced along cohorts and lightly smoothed across age within each Eurostat band, bracketed with net border crossings; Russia as one 2022 component | `ukr_migrants_...rds`, `ukr_migration_bounds.rds` |
 | `07_ucdp_ukr_conflict_deaths` | Conflict death **totals** with low/high bounds | `ukr_ucdp_invals.rds` |
 | `07_ohchr` | Age-sex **profile** of civilian deaths | `ukr_ohchr_civilian_casualties.rds` |
 | `07_acled` | ACLED totals, comparison only | `ukr_acled.rds` |
@@ -76,6 +76,7 @@ size every table was built at.
 | `13o` | Sensitivity: the combatant total and the loss if the register never lists 10%, 25% or 40% of combatant deaths; a stated size for a bias nothing available measures, kept out of the second interval | `ukr_register_coverage_e0.rds` |
 | `13p` | Sensitivity: the 2022 civilian total and the loss by the rule that splits one UCDP event, the siege of Mariupol, whose 15,996 deaths of unknown status are 94% of the year's - none, the dyad-year share (used), Mariupol's own share or all of them civilian; a row of Table 6, not drawn and kept out of the second interval | `ukr_mariupol_split_e0.rds` |
 | `13q` | Three figures reported beside the headline, each in the central projection: the loss without the imputed missing, the change per 10 points of the missing alive (from `13b`'s sweep), and a territory-consistent second estimate for Ukraine without Crimea, Donetsk and Luhansk, with the combatants split by the register's place of origin (counted in `08`) and the civilians by UCDP's location | `ukr_headline_companions.rds` |
+| `13r` | Sensitivity: the register stock built bottom-up - Eurostat temporary protection with the clean-ups of invalid statuses back-cast, the Data Finder for other countries, Canada and the USA from programme counts - with Russia and Belarus as the separate component, and the loss under each stock; also writes the clean-ups for the docs | `ukr_bottom_up_stock.rds`, `ukr_bottom_up_stock_e0.rds`, `ukr_migration_breaks.rds` |
 | `13k` | Not part of the estimates: fetches Belarus and Russia from the Human Mortality Database for `13j`'s pool, reading an account from `HMD_USER` and `HMD_PASS` in `~/.Renviron`. Neither series reaches 2019, so `13j` leaves out any country that does not cover its whole fit window; using them means ending that window earlier. The cache is gitignored: the HMD agreement governs redistribution | `data_input/hmd_neighbours/` (local) |
 | `14` | **Life expectancy loss decomposed by cause** | `ukr_e0_loss_by_cause_*.rds` |
 | `14b` | Years of life lost and adult mortality (45q15) | `ukr_yll_45q15_summary.rds` |
@@ -115,7 +116,7 @@ captivity sits - with a draw of the weights on the release windows, under which
 that bound and the registration-lag factors are both rebuilt.
 The western
 net outflow follows from one weight blending the two sources' four-year paths,
-and Russia and Belarus from one draw. Each of these is held across the four
+and Russia from one draw. Each of these is held across the four
 years, because its uncertainty is one systematic quantity rather than four
 separate ones. The counterfactual follows each draw's own path of the
 Lee-Carter index. The estimate is the mean of the draws, with their 2.5th and
@@ -181,7 +182,7 @@ anything sitting directly in `figures/` is a manuscript deliverable.
 | `fig6_uncertainty_shares.png` | How much of the spread in the loss each input accounts for |
 | `figA0_pipeline.png` | The pipeline from sources to estimates: what each source contributes, in which order, and which steps' outputs are drawn |
 | `figA4_pert_draw_distributions.png` | Beta-PERT draw densities against their input bounds |
-| `figA2_pert_draw_distributions_migration.png` | Draws of the two migration components: the western blend of the two readings, and Russia and Belarus |
+| `figA2_pert_draw_distributions_migration.png` | Draws of the two migration components: the western blend of the two readings, and Russia |
 | `figA3_cumulative_migration_draws.png` | Cumulative net migration across draws |
 | `figA6_missing_alive_sensitivity.png` | Combatant deaths and e0 loss across the share of the missing who are alive, with the evidence range and the 95% interval of the draws |
 | `figA7_migration_sensitivity.png` | e0 loss across the range of each net migration component |
@@ -203,7 +204,7 @@ anything sitting directly in `figures/` is a manuscript deliverable.
 | `tableA2_military_reconciliation.csv` | Ukrainian combatant deaths: UCDP against the register and this study |
 | `tableA18_missing_alive_sensitivity.csv` | Combatant deaths and e0 loss across the share of the missing who are alive |
 | `tableA26_migration_sensitivity.csv` | 2025 e0 loss across the range of each net migration component, and with no migration |
-| `tableA27_migration_specification.csv` | e0 loss under alternative specifications of the migration input, and the Canada and USA series +/-30% |
+| `tableA27_migration_specification.csv` | e0 loss under alternative specifications of the migration input |
 | `tableA20_linkage_and_chain.csv` | Combatant deaths and e0 loss under alternative rules of the imputation and the linkage, models of resolution projected in its place, and readings of the prisoner-of-war evidence |
 | `tableA22_registration_lag.csv` | The same across the horizon of the registration-lag correction, and with the register's growth measured per person listed or the releases dated by Kaggle version |
 | `tableA28_population_base_and_timing.csv` | e0 loss with a smaller Donetsk-Luhansk base, and with other timings of 2022's deaths and net outflow |
@@ -227,6 +228,8 @@ anything sitting directly in `figures/` is a manuscript deliverable.
 | `tableA42_population_present.csv` | The population the rates are computed on, by draw: men aged 20-50, men, and both sexes, with 95% intervals (11, 15) |
 | `tableA3_register_status_by_year.csv` | The register's records of 2022-2025 events by event year and status in v19, the cross-section behind the linkage (15) |
 | `tableA25_register_coverage.csv` | Combatant deaths and the loss if the register misses 10%, 25% or 40% of combatant deaths (13o) |
+| `tableA47_register_stock_reconciliation.csv` | The register stock at 31 December: UNHCR's totals against the stock built bottom-up and its parts, with the reading of the western flow from each (06, 13r) |
+| `tableA48_register_stock_e0.csv` | e0 loss with UNHCR's totals and with the bottom-up stock, at the mode and the register end, and with the bottom-up stock as published (13r) |
 | `mariupol_split.csv` | The 2022 civilian total and loss under each rule for the Mariupol event's deaths of unknown status (13p); not yet numbered in the supplement |
 | `headline_companions.csv` | The loss without the imputed missing, the change per 10 points of the missing alive, and the estimate for Ukraine without Crimea, Donetsk and Luhansk, beside the central projection (13q); not yet numbered in the supplement |
 | `figA5_structural_tornado.png` | The range of each structural choice beside the 95% interval of the drawn inputs |

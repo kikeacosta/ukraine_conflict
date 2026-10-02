@@ -1,7 +1,8 @@
 # Migration inputs
 
-Everything step 06 needs to build net emigration and its PERT bounds, saved
-locally so the pipeline does not depend on web pages that can change. The full
+Everything step 06 needs to build net migration and its PERT bounds, and step
+13r to build the register stock bottom-up, saved locally so the pipeline does
+not depend on web pages that can change. The full
 reasoning is in `documents/migration_methodology.md`; every file in the project
 is catalogued in `documents/data_sources.md`.
 
@@ -9,22 +10,23 @@ is catalogued in `documents/data_sources.md`.
 
 | File | What it is |
 |---|---|
-| `unhcr/unhcr_population_coo_UKR_2021_2025.csv` | UNHCR Refugee Data Finder: refugees, asylum seekers and other populations originating from Ukraine, by country of asylum and year. Flattened from the raw API response next to it |
+| `unhcr/unhcr_population_coo_UKR_2021_2025.csv` | UNHCR Refugee Data Finder: refugees, asylum seekers and other populations originating from Ukraine, by country of asylum and year. Flattened from the raw API response next to it. Step 06 takes the Russian component from its Russian Federation rows; step 13r the countries outside EU + EFTA, Russia, Belarus, Canada and the USA, and Russia and Belarus together |
 | `unhcr/unhcr_population_coo_UKR_2021_2025_page1.json` | Raw API response, retrieved 2026-09-16 |
 | `unhcr/unhcr_border_crossings_2022.csv` | UNHCR Operational Data Portal, Ukraine refugee situation: border crossings out of Ukraine and into it, cumulative since 24 February 2022 (population groups 5460 and 5472), at 1 March and each month end of 2022, read on 2026-09-19. Step 10 takes the timing of 2022's net outflow from it |
+| `unhcr/unhcr_factsheet3_refugees_recorded_globally.csv` | UNHCR Regional Bureau for Europe, *Ukraine Refugee Situation, Population Movements, Factsheet #3* (May 2026), page 4: refugees from Ukraine recorded globally at the end of each June and December, 2022 to 2025, as the chart prints them, rounded to 0.1 million. The source note of the chart says the estimates exclude the persons in a refugee-like situation in the Russian Federation, so the totals count every country but Russia. UNHCR's Data Explanatory Note (revised November 2025) defines who is counted: people who have fled Ukraine since 24 February 2022, hold international protection, temporary protection or another form of stay, and are present in the host country. Step 06 takes the register reading of the western flow from the December values |
 | `ces_2026_figures.csv` | Figures transcribed from the CES fifth-wave report, with printed page and quote. `used_by_code = yes` marks the ones step 06 reads |
-| `national_programme_counts.csv` | Dated counts for Canada (CUAET) and the USA (Uniting for Ukraine), each with its source: programme arrivals in the first years, when few had yet left, and people present later. Step 06 interpolates between them to year ends |
+| `national_programme_counts.csv` | Dated counts for Canada (CUAET) and the USA (Uniting for Ukraine), each with its source: programme arrivals in the first years, when few had yet left, and people present later. Step 13r interpolates between them to year ends for the bottom-up stock |
 
-The Eurostat temporary-protection stock that step 06 also reads lives in
-`../refugees_eurostat/`.
+The Eurostat temporary-protection stock lives in `../refugees_eurostat/`: step
+06 reads its end-of-year extract for the age-sex structure, and step 13r the
+extract and the monthly series for the bottom-up stock.
 
 ## Canada and USA: what would improve the series
 
 Neither country publishes a year-end count of Ukrainians present, so
 `national_programme_counts.csv` holds the dated counts that are published, and
-step 06 interpolates between them; step 13c moves the two series 30% up and down
-(table A8). A better series would need, for **each of 31 Dec 2022, 2023, 2024 and
-2025**:
+step 13r interpolates between them for the bottom-up stock. A better series
+would need, for **each of 31 Dec 2022, 2023, 2024 and 2025**:
 
 - **Canada:** cumulative CUAET holders who *arrived* in Canada since 17 March
   2022 (not applications or approvals). Source: archived versions of IRCC's
@@ -36,13 +38,15 @@ step 06 interpolates between them; step 13c moves the two series 30% up and down
   request.
 
 Add them as rows to the CSV; no code changes are needed (see the note at the top
-of `code/06_net_migration.R`).
+of `code/13r_sensitivity_bottom_up_stock.R`).
 
 ## Reference copies (not read by code)
 
 | Folder / file | What it is |
 |---|---|
 | `references/ces_2026_ukrainian_refugees_fifth_wave.pdf` | CES, *Ukrainian Refugees. Fifth Wave of Research*, 26 Feb 2026 |
+| `references/unhcr_2026_population_movements_factsheet_3.pdf` | UNHCR Regional Bureau for Europe, *Ukraine Refugee Situation, Population Movements, Factsheet #3*, May 2026 |
+| `references/unhcr_2025_data_explanatory_note.pdf` | UNHCR, *Operational Data Portal for the Ukraine Refugee Situation, Data Explanatory Note*, revised November 2025, read on 2026-10-02 |
 | `references/pozniak_2023_ceemr_forced_migrants_ukraine.pdf` | Pozniak (2023), CEEMR 12(1), CC BY 4.0 |
 | `references/ueffing_et_al_2023_jrc_ukraine_population_future.pdf` | Ueffing et al. (2023), JRC, CC BY 4.0 |
 | `references/sbgsu_border_crossings_2022_2026.docx` | SBGSU border crossings table with coverage notes (same data as `../Pozniak_migration.csv`) |

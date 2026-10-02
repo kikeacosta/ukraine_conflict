@@ -1,8 +1,8 @@
 scenario,male_2022,male_2023,male_2024,female_2025,male_2025,counterfactual_e0_2025_m
-SSSU (used),4.72,4.15,5.7,0.137,6.48,68.07
-"0.5 million fewer aged 20-64, counterfactual as fitted",4.79,4.23,5.81,0.139,6.61,68.07
-"0.5 million fewer aged 20-64, counterfactual refitted on the smaller exposures",4.77,4.2,5.77,0.139,6.57,67.87
-"1.0 million fewer aged 20-64, counterfactual as fitted",4.88,4.31,5.92,0.142,6.74,68.07
-"1.0 million fewer aged 20-64, counterfactual refitted on the smaller exposures",4.82,4.26,5.85,0.141,6.66,67.66
-"2.0 million fewer aged 20-64, counterfactual as fitted",5.05,4.49,6.16,0.147,7.01,68.07
-"2.0 million fewer aged 20-64, counterfactual refitted on the smaller exposures",4.94,4.38,6.01,0.146,6.84,67.22
+SSSU (used),4.73,4.16,5.72,0.138,6.52,68.07
+"0.5 million fewer aged 20-64, counterfactual as fitted",4.81,4.24,5.82,0.141,6.65,68.07
+"0.5 million fewer aged 20-64, counterfactual refitted on the smaller exposures",4.78,4.22,5.79,0.14,6.61,67.87
+"1.0 million fewer aged 20-64, counterfactual as fitted",4.89,4.32,5.94,0.143,6.78,68.07
+"1.0 million fewer aged 20-64, counterfactual refitted on the smaller exposures",4.84,4.27,5.87,0.143,6.7,67.66
+"2.0 million fewer aged 20-64, counterfactual as fitted",5.06,4.5,6.18,0.149,7.06,68.07
+"2.0 million fewer aged 20-64, counterfactual refitted on the smaller exposures",4.95,4.39,6.03,0.147,6.89,67.22

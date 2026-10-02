@@ -12,14 +12,13 @@
 #   mig_west   the western outflow, bracketed by source: each draw blends the
 #              crossings reading's whole path with the register reading's by
 #              one Beta-PERT(0, 0.5, 1) weight, so the mode is their midpoint
-#   mig_ru_by  displacement into Russia and Belarus, a single 2022 entry drawn
-#              from a PERT
+#   mig_ru     displacement into Russia, a single 2022 entry drawn from a PERT
 #
 # Each component is swept across its whole range, along the quantile u that
 # 11 draws (so every year moves together, as in the simulation), while the
 # other component and every conflict input stay at their mode: the western
 # component from the crossings reading's path to the register reading's,
-# Russia and Belarus across its PERT bounds. One deterministic projection per
+# Russia across its PERT bounds. One deterministic projection per
 # grid point, as in 13b.
 #
 # The sweep stays inside each component's range. Below it, the additive
@@ -28,12 +27,11 @@
 # an artefact of the allocation rather than a result. The loss with
 # no migration at all is 13's scenario, reported alongside.
 #
-# Section 5 then checks four specification choices of the migration input,
+# Section 5 then checks three specification choices of the migration input,
 # one at a time at the mode (documents/migration_methodology.md, section 10):
 # where the western mode sits in the bracket (A2), the age-sex profile of the
-# Russia and Belarus flow (A9), additive against proportional allocation (A5),
-# and the Canada and USA interpolation 30% lower and higher (A10). 15 reports
-# them as table A27.
+# Russian flow (A9), and additive against proportional allocation (A5). 15
+# reports them as table A27. The choice of register stock is checked in 13r.
 #
 # INPUTS   the same as 13
 #          data_inter/ukr_migration_decomposition.rds (from 13)
@@ -121,12 +119,12 @@ mig_bounds <- param_table |> filter(str_starts(role, "mig_")) |>
 # u is the PERT quantile of the swept component, shared by its years as in 11.
 # The 2.5% and 97.5% points bound the 95% interval of the simulated draws, and
 # the mode is added exactly (for the western component it is the median,
-# because its blend weight is symmetric; for Russia and Belarus it is not).
+# because its blend weight is symmetric; for Russia it is not).
 # rounded so the equality tests below are exact
 u_grid <- round(seq(0, 1, by = 0.025), 3)
 
-# as 11 draws: the western blend of the two readings' paths, Russia and
-# Belarus through its own PERT
+# as 11 draws: the western blend of the two readings' paths, Russia through
+# its own PERT
 component_at <- function(rl, u) {
   rows <- mig_bounds |> filter(role == rl)
   if (rl == "mig_west") {
@@ -141,15 +139,15 @@ component_at_mode <- function(rl) {
 }
 
 scenarios <-
-  expand_grid(component = c("mig_west", "mig_ru_by"), u = u_grid) |>
+  expand_grid(component = c("mig_west", "mig_ru"), u = u_grid) |>
   mutate(point = case_when(
     u == 0 ~ "min", u == 0.025 ~ "p2.5", u == 0.975 ~ "p97.5", u == 1 ~ "max",
     .default = NA_character_
   )) |>
-  bind_rows(tibble(component = c("mig_west", "mig_ru_by"), u = NA_real_, point = "mode"))
+  bind_rows(tibble(component = c("mig_west", "mig_ru"), u = NA_real_, point = "mode"))
 
 run_scenario <- function(comp, u) {
-  other <- setdiff(c("mig_west", "mig_ru_by"), comp)
+  other <- setdiff(c("mig_west", "mig_ru"), comp)
   swept <- if (is.na(u)) component_at_mode(comp) else component_at(comp, u)
   draw_mig <-
     bind_rows(swept, component_at_mode(other)) |>
@@ -237,16 +235,16 @@ message("Done. data_inter/ukr_migration_sensitivity_e0.rds written for 15.")
 # ==============================================================================
 # 5. SPECIFICATION CHECKS
 # ==============================================================================
-# Four assumptions in documents/migration_methodology.md (section 10) are
+# Three assumptions in documents/migration_methodology.md (section 10) are
 # tested by changing one of them at a time, deterministically, with every
 # conflict input at its mode:
 #
 #   A2  the western mode is the midpoint of the two readings. Alternative: a
 #       third of the way from the crossings reading to the register reading.
-#   A9  Russia and Belarus share the 2022 western departures profile, which the
-#       exit ban on men makes young and female. Alternative: the 1 January
-#       2022 age-sex structure of Donetsk and Luhansk oblasts, as if whole
-#       households left - older and more male.
+#   A9  the flow into Russia shares the 2022 western departures profile,
+#       which the exit ban on men makes young and female. Alternative: the
+#       1 January 2022 age-sex structure of Donetsk and Luhansk oblasts, as if
+#       whole households left - older and more male.
 #   A5  a draw away from the mode is added along the departures profile.
 #       Alternative: the signed age-sex profile scaled in proportion, which
 #       also scales returns. At the mode the two coincide, so the check is run
@@ -271,14 +269,14 @@ west_at <- function(w) {
   mig_bounds |> filter(role == "mig_west") |> transmute(year, value = crossings + w * (register - crossings))
 }
 totals_with_west <- function(w) {
-  bind_rows(west_at(w), component_at_mode("mig_ru_by")) |> summarise(draw_mig = sum(value), .by = year)
+  bind_rows(west_at(w), component_at_mode("mig_ru")) |> summarise(draw_mig = sum(value), .by = year)
 }
 mode_totals <- totals_with_west(0.5)
 
-# A9: move the Russia and Belarus flow (2022) from the departures profile w to
+# A9: move the flow into Russia (2022) from the departures profile w to
 # the Donetsk-Luhansk population structure. The population on 1 January 2022
 # at age a is the cohort that sits in row a + 1 of 2022 (00_setup.R).
-ru_by_mode <- mig_bounds |> filter(role == "mig_ru_by") |> pull(mode)
+ru_mode <- mig_bounds |> filter(role == "mig_ru") |> pull(mode)
 dl_profile <-
   read_rds("data_inter/ukr_pop_sssu.rds") |>
   filter(reg %in% c("dnk", "luk"), year == 2022) |>
@@ -290,7 +288,7 @@ dl_profile <-
 static_a9 <-
   static_inputs |>
   left_join(dl_profile, by = c("year", "sex", "age")) |>
-  mutate(ems = if_else(year == 2022, ems - ru_by_mode * w + ru_by_mode * coalesce(p_dl, 0), ems)) |>
+  mutate(ems = if_else(year == 2022, ems - ru_mode * w + ru_mode * coalesce(p_dl, 0), ems)) |>
   select(-p_dl)
 stopifnot(isTRUE(all.equal(sum(static_a9$ems), sum(static_inputs$ems))))
 
@@ -304,38 +302,16 @@ proportional <- function(totals) {
     select(-target, -base)
 }
 
-
-# A fourth check: the Canada and USA interpolation (06) scaled up and down by
-# 30%. Canada and the USA enter the register reading through their year-end
-# stocks, so the reading moves by 30% of each year's change in their stock, and
-# the western mode, the midpoint of the two readings, by half of that.
-readings <- read_rds("data_inter/ukr_migration_readings.rds")
-programme_flow <-
-  readings |>
-  arrange(year) |>
-  transmute(year, flow = (canada + usa) -
-              lag(canada + usa, default = 0))
-programme_totals <- function(k) {
-  mig_bounds |>
-    filter(role == "mig_west") |>
-    left_join(programme_flow, by = "year") |>
-    transmute(year, value = (crossings + register + k * flow) / 2) |>
-    bind_rows(component_at_mode("mig_ru_by")) |>
-    summarise(draw_mig = sum(value), .by = year)
-}
-
 specification <- bind_rows(
   loss_of(static_inputs, mode_totals) |> mutate(scenario = "Mode"),
   loss_of(static_inputs, totals_with_west(1 / 3)) |> mutate(scenario = "A2: western mode a third of the way from the crossings reading"),
-  loss_of(static_a9, mode_totals) |> mutate(scenario = "A9: Russia and Belarus on the Donetsk-Luhansk population structure"),
+  loss_of(static_a9, mode_totals) |> mutate(scenario = "A9: Russia on the Donetsk-Luhansk population structure"),
   loss_of(static_inputs, totals_with_west(0)) |> mutate(scenario = "A5: crossings end, additive (as used)"),
   # the rescaled profile is projected at the totals it was rescaled to: at any
   # other, run_single_sim() adds the difference back along the departures profile
   loss_of(proportional(totals_with_west(0)), totals_with_west(0)) |> mutate(scenario = "A5: crossings end, proportional"),
   loss_of(static_inputs, totals_with_west(1)) |> mutate(scenario = "A5: register end, additive (as used)"),
-  loss_of(proportional(totals_with_west(1)), totals_with_west(1)) |> mutate(scenario = "A5: register end, proportional"),
-  loss_of(static_inputs, programme_totals(-0.3)) |> mutate(scenario = "A10: Canada and USA 30% lower"),
-  loss_of(static_inputs, programme_totals(0.3)) |> mutate(scenario = "A10: Canada and USA 30% higher")
+  loss_of(proportional(totals_with_west(1)), totals_with_west(1)) |> mutate(scenario = "A5: register end, proportional")
 )
 
 # the first row must reproduce 13's loss at the mode

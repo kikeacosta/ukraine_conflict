@@ -68,6 +68,8 @@
 #   tableA5_register_dropout.csv                    09
 #   tableA7_resolution_hazards.csv                  09
 #   tableA44_civil_register_check.csv                11, data_input/official_figures.csv
+#   tableA47_register_stock_reconciliation.csv       06, 13r
+#   tableA48_register_stock_e0.csv                   13r
 #
 # INPUTS   the .rds products of steps 07-14
 # ==============================================================================
@@ -174,8 +176,8 @@ message("simulation draws available: ", n_sim)
 # the drawn input parameters themselves, one row per simulation, year and role
 param_draws <- read_rds("data_inter/ukr_sim_param_draws.rds")
 
-MIG_ROLES <- c(mig_west = "Western displacement", mig_ru_by = "Russia / Belarus")
-COL_MIG <- c("Western displacement" = "#0A9396", "Russia / Belarus" = "#EE9B00")
+MIG_ROLES <- c(mig_west = "Western displacement", mig_ru = "Russia")
+COL_MIG <- c("Western displacement" = "#0A9396", "Russia" = "#EE9B00")
 
 # ==============================================================================
 # FIGURE 1 - Death and disappearance of Ukrainian combatants
@@ -413,7 +415,7 @@ UNC_LAB <- c(
   window = "Release windows: bound and lag",
   lc    = "Counterfactual forecast",
   mig_w = "Migration: western",
-  mig_r = "Migration: Russia / Belarus",
+  mig_r = "Migration: Russia",
   resid = "Interaction"
 )
 COL_UNC <- c(
@@ -422,7 +424,7 @@ COL_UNC <- c(
   "Release windows: bound and lag" = "#7F7F7F",
   "Counterfactual forecast"     = "#94D2BD",
   "Migration: western"          = "#0A9396",
-  "Migration: Russia / Belarus" = "#EE9B00",
+  "Migration: Russia" = "#EE9B00",
   "Interaction"                 = "#E9E9E9"
 )
 
@@ -440,11 +442,11 @@ unc_inputs <-
     role == "lc_f"      ~ "lc_f",
     role == "lc_m"      ~ "lc_m",
     role == "mig_west"  ~ "mig_w",
-    role == "mig_ru_by" ~ "mig_r"
+    role == "mig_ru" ~ "mig_r"
   )) |>
   filter(!is.na(bucket)) |>
   summarise(draw = sum(draw), .by = c(sim_id, year, bucket)) |>
-  # mig_ru_by is entered once, in 2022, but the people it removes are still
+  # mig_ru is entered once, in 2022, but the people it removes are still
   # absent in 2025, so the grid is filled with zeros before accumulating
   complete(sim_id, year, bucket, fill = list(draw = 0)) |>
   arrange(sim_id, bucket, year) |>
@@ -586,8 +588,8 @@ save_fig(figA1, "figA4_pert_draw_distributions.png", 10, 5)
 # spread is a coverage scenario rather than four independent accidents. For
 # the western component the dotted lines are that year's two readings, which
 # every draw blends with one weight across the four years.
-# west first, so its four years fill the top row and the single Russia and
-# Belarus panel sits on its own below rather than breaking the row
+# west first, so its four years fill the top row and the single Russia panel
+# sits on its own below rather than breaking the row
 mig_component <- function(r) factor(MIG_ROLES[r], levels = unname(MIG_ROLES))
 
 mig_bounds <-
@@ -632,7 +634,7 @@ figA2 <-
     caption = paste0(
       "Draws (n = ", scales::comma(n_sim), "). Dashed line: mode. Dotted lines: ",
       "western, the year's two readings, blended with one Beta-PERT weight per ",
-      "simulation;\nRussia and Belarus, its PERT minimum and maximum. Each ",
+      "simulation;\nRussia, its PERT minimum and maximum. Each ",
       "component is drawn once per simulation and held across all four years."
     )
   ) +
@@ -879,12 +881,12 @@ tab_pert <-
     combatants_mode, combatants_min, combatants_max,
     civilians_mode, civilians_min, civilians_max,
     mig_west_mode, mig_west_crossings, mig_west_register,
-    mig_ru_by_mode, mig_ru_by_min, mig_ru_by_max
+    mig_ru_mode, mig_ru_min, mig_ru_max
   )
 
 tab_pert <- bind_rows(
   tab_pert |> mutate(year = as.character(year)),
-  # mig_ru_by has a 2022 row only, so the other years are empty, not zero
+  # mig_ru has a 2022 row only, so the other years are empty, not zero
   tab_pert |> summarise(across(-year, \(x) sum(x, na.rm = TRUE))) |> mutate(year = "Total")
 )
 
@@ -1429,7 +1431,7 @@ save_fig(figA4, "figA6_missing_alive_sensitivity.png", 14, 5)
 mig_sens <- read_rds("data_inter/ukr_migration_sensitivity_e0.rds")
 mig_decomp_2025 <- mig |> filter(year == 2025)
 
-mig_labels <- c(mig_west = "Western", mig_ru_by = "Russia and Belarus")
+mig_labels <- c(mig_west = "Western", mig_ru = "Russia")
 point_order <- c("min", "p2.5", "mode", "p97.5", "max")
 
 tA7 <-
@@ -1443,8 +1445,8 @@ tA7 <-
   ) |>
   pivot_wider(names_from = sex, values_from = loss) |>
   mutate(
-    component = factor(component, levels = c("mig_west", "mig_ru_by", "none"),
-                       labels = c("Western", "Russia and Belarus", "None")),
+    component = factor(component, levels = c("mig_west", "mig_ru", "none"),
+                       labels = c("Western", "Russia", "None")),
     point = factor(point, levels = c(point_order, "no migration"))
   ) |>
   arrange(component, point) |>
@@ -1537,11 +1539,11 @@ save_fig(figA5, "figA7_migration_sensitivity.png", 12, 7)
 # ==============================================================================
 # TABLE A27 - Migration specification checks
 # ==============================================================================
-# Four assumptions of the migration input changed one at a time (13c,
+# Three assumptions of the migration input changed one at a time (13c,
 # section 5): where the western mode sits in the bracket (A2), the age-sex
-# profile of the Russia and Belarus flow (A9), additive versus proportional
+# profile of the flow into Russia (A9), and additive versus proportional
 # allocation of a draw away from the mode (A5, at both ends of the western
-# bracket), and the Canada and USA interpolation 30% lower and higher (A10).
+# bracket). The choice of register stock is table A48 (13r).
 # Loss in years, every conflict input at its mode.
 spec <- read_rds("data_inter/ukr_migration_specification_e0.rds")
 spec_order <- unique(spec$scenario)
@@ -2405,6 +2407,34 @@ figA8 <-
   theme_paper() +
   theme(panel.grid.major.x = element_line(colour = "grey90"), panel.grid.major.y = element_blank())
 save_fig(figA8, "figA5_structural_tornado.png", 13, 5.2)
+
+# ==============================================================================
+# TABLES A47 and A48 - The register stock: UNHCR's totals and the bottom-up stock
+# ==============================================================================
+# A47: the stock at 31 December, UNHCR's totals (06) against the stock built
+# bottom-up (13r) and its parts, and the readings of the western flow from
+# each; the bottom-up stock with Eurostat's clean-ups back-cast and as
+# published. A48: the loss under each stock, every conflict input at its
+# central value, the western flow at the mode or the register end of its
+# bracket, and the Russian component at its central value: Russia with
+# UNHCR's totals, Russia and Belarus with the bottom-up stock, which leaves
+# out both.
+bottom_up <- read_rds("data_inter/ukr_bottom_up_stock.rds")
+tA47 <-
+  bottom_up$stock |>
+  left_join(bottom_up$readings, by = "year") |>
+  mutate(across(-year, round))
+save_tab(tA47, "tableA47_register_stock_reconciliation.csv")
+print(tA47)
+
+bottom_up_e0 <- read_rds("data_inter/ukr_bottom_up_stock_e0.rds")
+tA48 <-
+  bottom_up_e0 |>
+  mutate(scenario = factor(scenario, levels = unique(bottom_up_e0$scenario))) |>
+  loss_wide("scenario") |>
+  arrange(scenario)
+save_tab(tA48, "tableA48_register_stock_e0.csv")
+print(tA48)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # provenance stamp for the whole table set

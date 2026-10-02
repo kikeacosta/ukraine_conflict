@@ -1,18 +1,18 @@
 design,prisoners_of_war_among_missing,military_deaths,male_2022,male_2023,male_2024,female_2025,male_2025
-the missing counted dead but the prisoners and half the bound on the alive outside captivity (production),1565,178605,4.72,4.15,5.7,0.137,6.48
-none alive outside captivity,1565,180720,4.73,4.18,5.72,0.137,6.61
-alive outside captivity at the bound,1565,176490,4.7,4.11,5.67,0.137,6.36
-every person no longer listed counted in the bound,1565,177228,4.7,4.12,5.67,0.137,6.42
-"one bound for every event year, all resolutions pooled",1565,177278,4.7,4.14,5.63,0.137,6.45
-the bound of the events of 2023-2025 for every event year,1565,178927,4.72,4.16,5.67,0.137,6.53
-the events of 2022 on their own bound,1565,176817,4.53,4.15,5.7,0.137,6.48
-returns from captivity left out of the population at risk,1565,178598,4.72,4.15,5.7,0.137,6.48
-people listed as missing in the first release only,1565,179539,4.72,4.15,5.7,0.137,6.56
-every unrecorded prisoner among the missing,2966,177234,4.66,4.14,5.66,0.137,6.45
-unrecorded prisoners among the missing as the returned of every year had been,710,179442,4.75,4.15,5.72,0.137,6.51
-the register's prisoners with no recorded event year left out,2297,177889,4.69,4.14,5.68,0.137,6.47
-prisoners split over event years as the register's held and released are,1565,178605,4.69,4.14,5.71,0.137,6.51
-prisoners split over event years as the returned who had been listed as missing are,1565,178605,4.71,4.12,5.7,0.137,6.52
-"the duration model projected to 48 months, one set of hazards for every cohort",1565,176333,4.78,4.13,5.58,0.137,6.36
-"the duration model projected to 48 months, the events of 2022 with their own rate out of the register",1565,178865,4.78,4.16,5.66,0.137,6.48
-event-year cohorts standing in for duration,1565,177027,4.77,4.13,5.6,0.137,6.41
+the missing counted dead but the prisoners and half the bound on the alive outside captivity (production),1565,178605,4.73,4.16,5.72,0.138,6.52
+none alive outside captivity,1565,180720,4.74,4.2,5.74,0.138,6.65
+alive outside captivity at the bound,1565,176490,4.71,4.12,5.69,0.138,6.4
+every person no longer listed counted in the bound,1565,177228,4.72,4.14,5.69,0.138,6.45
+"one bound for every event year, all resolutions pooled",1565,177278,4.71,4.15,5.64,0.138,6.49
+the bound of the events of 2023-2025 for every event year,1565,178927,4.73,4.17,5.69,0.138,6.57
+the events of 2022 on their own bound,1565,176817,4.54,4.16,5.72,0.138,6.52
+returns from captivity left out of the population at risk,1565,178598,4.73,4.16,5.72,0.138,6.52
+people listed as missing in the first release only,1565,179539,4.73,4.16,5.72,0.138,6.6
+every unrecorded prisoner among the missing,2966,177234,4.67,4.15,5.68,0.138,6.49
+unrecorded prisoners among the missing as the returned of every year had been,710,179442,4.76,4.17,5.74,0.138,6.54
+the register's prisoners with no recorded event year left out,2297,177889,4.7,4.15,5.7,0.138,6.5
+prisoners split over event years as the register's held and released are,1565,178605,4.7,4.15,5.73,0.138,6.54
+prisoners split over event years as the returned who had been listed as missing are,1565,178605,4.72,4.13,5.71,0.138,6.56
+"the duration model projected to 48 months, one set of hazards for every cohort",1565,176333,4.79,4.14,5.59,0.138,6.4
+"the duration model projected to 48 months, the events of 2022 with their own rate out of the register",1565,178865,4.79,4.18,5.68,0.138,6.51
+event-year cohorts standing in for duration,1565,177027,4.78,4.14,5.62,0.138,6.45

@@ -113,17 +113,18 @@ cvs <-
   select(year, role, mode = dts, min = dts_l, max = dts_u)
 
 # --- migration --------------------------------------------------------------
-# Net emigration enters as TWO components, because two different things are
+# Net migration enters as TWO components, because two different things are
 # unknown about it and they are unknown to different degrees:
 #
 #   mig_west   how much of the western outflow the sources see. The two
 #              readings are CES's net border crossings and the cohort-
-#              differenced register stock built in 06; the gap between them
-#              is the discrepancy Pozniak (2023) set out - registers that keep
+#              differenced register stock, UNHCR's totals of refugees from
+#              Ukraine recorded outside Russia (06); the gap between them is
+#              the discrepancy Pozniak (2023) set out - registers that keep
 #              people after they return against a crossing balance that
 #              missed the peak weeks.
-#   mig_ru_by  displacement into Russia and Belarus, which no register sees;
-#              one 2022 entry centred on UNHCR's end-2022 statistical stock.
+#   mig_ru     displacement into Russia, which UNHCR's totals leave out; one
+#              2022 entry centred on UNHCR's end-2022 statistical stock there.
 #
 # 06 builds the bounds from the input data and allocates its age-sex flows at
 # the modes of the same table. Both components are systematic rather than
@@ -162,7 +163,7 @@ param_table <- bind_rows(cmb, cvs, mig)
 # than as an obscure error inside the simulation loop
 stopifnot(
   # 4 years x 2 conflict roles, 4 years of western migration, and the single
-  # 2022 row for Russia and Belarus
+  # 2022 row for Russia
   nrow(param_table) == 13,
   all(param_table$min <= param_table$mode),
   all(param_table$mode <= param_table$max)
@@ -209,8 +210,8 @@ param_table |>
 #                     (v19, from 08b)
 #   net outflow       UNHCR's border crossings out of Ukraine less those into
 #                     it, by month, as a share of the year's net; the western
-#                     crossings stand for Russia and Belarus too, for which no
-#                     monthly series exists
+#                     crossings stand for Russia too, for which no monthly
+#                     series exists
 month_mid <- tibble(month = 2:12) |>
   mutate(mid = if_else(month == 2, as.Date("2022-02-26"), as.Date(sprintf("2022-%02d-15", month))),
          u = as.numeric(mid - as.Date("2022-01-01")) / 365)

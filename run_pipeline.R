@@ -59,6 +59,8 @@ steps_to_run <- list(
   # event, and the three figures reported beside the headline (13q reads 13b and 13e)
   list(name = "13p", file = "code/13p_sensitivity_mariupol_split.R"),
   list(name = "13q", file = "code/13q_headline_companions.R"),
+  # 13r builds the register stock bottom-up and checks itself against 13's loss at the mode
+  list(name = "13r", file = "code/13r_sensitivity_bottom_up_stock.R"),
   list(name = "14", file = "code/14_e0_loss_decomposition_by_cause.R"),
   list(name = "14b", file = "code/14b_yll_45q15.R"),
   list(name = "14c", file = "code/14c_fixed_counterfactual.R"),
