@@ -7,7 +7,8 @@ source("code/00_setup.R")
 #
 # How many of the personnel recorded as "missing" are dead? Everyone listed as
 # missing is followed through the six register releases (ual_releases,
-# 00_setup.R: v14 of 16 Sep 2025 to v19 of 21 Jul 2026) and the five windows
+# 00_setup.R: v14 to v19, published from 16 Sep 2025 to 21 Jul 2026 and dated
+# by the data they hold, 13 Sep 2025 to 22 Jun 2026) and the five windows
 # between them. The register settles the fate of few of them, so the missing
 # are not projected forward: every missing person is counted as dead unless
 # there is evidence of life - the prisoners of war among them, from official
@@ -49,7 +50,8 @@ source("code/00_setup.R")
 #     release searched in full, whatever the event year or nationality field;
 #   - by exact full name and date of birth; if absent, under a corrected key:
 #     a key new in that release with the same surname and first name and the
-#     same date of birth or event month;
+#     same date of birth or event month, or with the same date of birth and
+#     event date and the same surname or first name (a re-spelt name);
 #   - a person no longer listed - absent from a release and from every later
 #     one - leaves the register at the first absence. Absent from one release
 #     but listed again later, they were still missing. Below, drop-out at the
@@ -90,18 +92,13 @@ linkage <- cache_rds(
     lu <- map(regs, ual_one_per_key)
     returned <- lu$v19 |>
       filter(status == "released_prisoner", year %in% 2022:2025, ukrainian) |>
-      select(key, name, dob, date_evnt, year)
+      select(key, name, surname, first, dob, date_evnt, year)
     earlier <- bind_rows(lu[head(names(lu), -1)])
     exact <- returned |> select(key) |> inner_join(earlier |> select(key, status), by = "key")
     gone <- earlier |> anti_join(lu$v19 |> select(key), by = "key")
     corrected <-
-      returned |>
-      anti_join(exact, by = "key") |>
-      transmute(key, name, dob, month = floor_date(date_evnt, "month")) |>
-      inner_join(gone |> transmute(name, dob_e = dob, month_e = floor_date(date_evnt, "month"), status),
-                 by = "name", relationship = "many-to-many") |>
-      filter((dob == dob_e) %in% TRUE | (month == month_e) %in% TRUE) |>
-      select(key, status)
+      ual_match_keys(returned |> anti_join(exact, by = "key"), gone) |>
+      select(key, status = status_new)
     prior <-
       bind_rows(exact, corrected) |>
       summarise(to = case_when(any(status == "prisoner") ~ "prisoner", any(status == "missing") ~ "missing",
@@ -127,6 +124,11 @@ linkage <- cache_rds(
         count(year, to) |>
         mutate(table = "released_prior"),
       hist |> count(year, entry, release, to = status, found) |> mutate(table = "found"),
+      # the corrected keys by the rule that found them, missing and dead
+      hist |> filter(found == "corrected") |> count(year, entry, release, to = rule) |>
+        mutate(table = "corrected_rule"),
+      hist_dead |> filter(found == "corrected") |> count(year, entry, release, to = rule) |>
+        mutate(table = "dead_corrected_rule"),
       # each person's sequence of statuses, for the documentation's counts of
       # people absent from one release and listed again
       hist |>
@@ -217,7 +219,7 @@ stocks_registered <-
 # is brought to the completeness events reach at four years by its own factor.
 # The deaths added are late registrations: people not yet in the register at
 # all. Prisoners and released prisoners are left as recorded. `row` points
-# into 08b's factor tables, so 11 can apply its resampled factors.
+# into 08b's factor table, so 11 can apply the factors of each draw.
 completion <- read_rds("data_inter/ukr_registration_completion.rds")
 stock_month <-
   completion$month |>
@@ -393,19 +395,22 @@ print(combined_losses)
 
 # What 10 and 11 need to rebuild the military total in any draw
 # (military_draws(), 00_setup.R): the registered dead and missing by event
-# month, 08b's point and resampled completion factors, the model and the
-# evidence. At the point values it must give this script's totals.
+# month, 08b's completion factors and what rebuilds them under other weights
+# on the release windows (lag_factor_draws()), the model and the evidence. At
+# the point values it must give this script's totals.
 military_inputs <- list(
   month = stock_month |> select(month, year, status, row, registered),
   factor_point = completion$month$factor,
-  factor_draws = completion$factor_draws,
+  lag = list(cells = completion$cells, month = completion$month |> select(status, lag),
+             L_ref = completion$L_ref),
   model = model,
   evidence = evidence,
   composition = composition,
   captive_share = captive_share
 )
 check_point <- military_draws(military_inputs, evidence$captives_central)
-stopifnot(isTRUE(all.equal(check_point$military, combined_losses$total_estimado)))
+stopifnot(isTRUE(all.equal(check_point$military, combined_losses$total_estimado)),
+          isTRUE(all.equal(as.vector(lag_factor_draws(military_inputs$lag)), military_inputs$factor_point)))
 write_rds(military_inputs, "data_inter/ukr_military_inputs.rds")
 
 # saved for the manuscript tables assembled in 15
@@ -605,6 +610,16 @@ released_first <-
 
 print(as.data.frame(linkage_designs |> select(-by_year)))
 print(as.data.frame(no_trace))
+# the records followed under a corrected key, by the release where they were
+# found and the rule that found them (ual_match_keys()): the missing, and the
+# dead followed the same way for the rate of list maintenance
+corrected_rule <-
+  linkage |>
+  filter(table %in% c("corrected_rule", "dead_corrected_rule")) |>
+  summarise(n = sum(n), .by = c(table, release, to)) |>
+  transmute(who = if_else(table == "corrected_rule", "missing", "dead"), release, rule = to, n)
+cat("\n=== RECORDS FOLLOWED UNDER A CORRECTED KEY, BY RELEASE AND RULE ===\n")
+print(as.data.frame(corrected_rule |> pivot_wider(names_from = release, values_from = n, values_fill = 0)))
 print(as.data.frame(released_first |> pivot_wider(names_from = entry, values_from = n, values_fill = 0)))
 cat("\n=== THE DEAD'S DROP-OUT BY WINDOW (%) ===\n")
 print(as.data.frame(dead_dropout |> mutate(rate = round(100 * rate, 2))))
@@ -618,7 +633,7 @@ write_rds(list(designs = linkage_designs, no_trace = no_trace, patterns = patter
                released_first = released_first, dead_dropout = dead_dropout,
                released_prior = released_prior, captivity_by_window = captivity_by_window,
                captive_share = captive_share, composition = composition, model_22 = model_22[c("multiplier_2022", "deviance")],
-               register_alive_known = register_alive_known,
+               register_alive_known = register_alive_known, corrected_rule = corrected_rule,
                window_multipliers = model$window_multipliers),
           "data_inter/ukr_ualosses_linkage_checks.rds")
 

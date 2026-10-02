@@ -18,8 +18,9 @@
 # times (simulation_draws(), 00_setup.R), and every draw is projected through
 # the full 2022-2025 accounting, which is what gives the results their
 # uncertainty intervals: civilian deaths, the evidence on the missing alive,
-# the sampling error of the resolution model and of the registration-lag
-# factors, the Lee-Carter forecast of the counterfactual, and net migration.
+# the weights on the release windows behind the bound on them and behind the
+# registration-lag factors, the Lee-Carter forecast of the counterfactual, and
+# net migration.
 #
 # They are drawn differently, because they are uncertain in different ways.
 # Each year's civilian total is its own unknown, so those draws are
@@ -190,8 +191,9 @@ stopifnot(
 # of war among them and the share of the rest alive for other reasons. Those
 # are properties of the missing, not four separate facts, so they are drawn
 # once per simulation and every year's total follows from them
-# (military_draws()), together with a draw of the resolution model's
-# estimates and of the registration-lag factors. Drawing the years
+# (military_draws()), together with one draw of the weights on the release
+# windows, under which the bound on the alive and the registration-lag factors
+# are both rebuilt. Drawing the years
 # independently would let one simulation put 2022 at "none of the missing
 # alive" and 2025 at "a fifth of them alive", which is not a scenario anyone
 # could defend, and the errors would partly cancel in the four-year total.
@@ -214,9 +216,9 @@ draws_df <- sampled$draws_df
 param_draws <- sampled$param_draws
 write_rds(sampled$alive_draws, "data_inter/ukr_sim_alive_draws.rds")
 
-# the draws of the evidence alone, the model and the lag at their point
-# values, must stay inside 10's bounds, which are the same total at the ends
-# of the evidence
+# the draws of the evidence alone, the bound and the lag factors at their
+# point values, must stay inside 10's bounds, which are the same total at the
+# ends of the evidence
 stopifnot(
   param_draws |>
     filter(role == "mil_alive") |>
@@ -246,15 +248,22 @@ write_rds(param_draws, "data_inter/ukr_sim_param_draws.rds")
 # draws and the static inputs is kept beside it, and any change in them - a new
 # bound on the missing alive, a new input - rebuilds the projections instead of
 # handing back those of other draws. Sums weighted by position, so a change of
-# order counts too.
+# order counts too. The projection reads three things besides: the timing of
+# 2022's deaths and net outflow (10), the sex ratio at birth, and its own code,
+# whose text is summed the same way, so a change in any of them rebuilds too.
 fingerprint <- function(...) {
   vapply(list(...), function(d) {
     sum(vapply(Filter(is.numeric, d), function(v) sum(v * seq_along(v), na.rm = TRUE), 0))
   }, 0)
 }
+code_sum <- function(...) {
+  v <- utf8ToInt(paste(unlist(lapply(list(...), deparse)), collapse = "\n"))
+  sum(v * seq_along(v))
+}
 sim_draws_file <- sprintf("data_inter/ukr_sim_draws_2022_2025_n%d.rds", n_sim)
 sim_inputs_file <- sub("[.]rds$", "_inputs.rds", sim_draws_file)
-inputs_now <- fingerprint(draws_df, static_inputs, pop22_ini)
+inputs_now <- c(fingerprint(draws_df, static_inputs, pop22_ini, absent_timing()), srb,
+                code_sum(run_single_sim, rates_to_rows, counts_to_rows, rows_to_ages))
 cache_fresh <- file.exists(sim_draws_file) && file.exists(sim_inputs_file) &&
   isTRUE(all.equal(read_rds(sim_inputs_file), inputs_now, tolerance = 1e-12))
 if (file.exists(sim_draws_file) && !cache_fresh) message("  the draws or inputs have changed: rebuilding ", sim_draws_file)

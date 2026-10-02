@@ -1,19 +1,21 @@
 analysis,group,supplementary_table,military_deaths,male_loss_2022,female_loss_2022,male_loss_2025,female_loss_2025
-Every input at its central value,,,"179,730",4.63,1.15,6.56,0.128
-The missing alive: 95% interval of the draws,Drawn inputs taken beyond their bounds,A18,"177,494 - 181,948",4.58 - 4.67,1.15,6.46 - 6.67,0.128
-The missing alive: floor to cap,Drawn inputs taken beyond their bounds,A18,"175,828 - 182,768",4.54 - 4.68,1.15,6.39 - 6.71,0.128
-Net migration: each component across its range,Drawn inputs taken beyond their bounds,A26,"179,730",4.60 - 4.67,1.13 - 1.18,6.51 - 6.62,0.124 - 0.133
-"Rules of the imputation and the linkage, and the prisoner-of-war evidence: sixteen alternatives",Rival specifications: sampled in the second interval,A20,"174,741 - 181,799",4.45 - 4.69,1.15,6.31 - 6.69,0.128
-"Timing within 2022: mid-year convention, or net outflow by 1 April",Rival specifications: sampled in the second interval,A28,"179,730",4.56 - 4.66,1.10 - 1.18,6.56,0.128
-"Counterfactual: Lee–Carter window, a coherent forecast with eight neighbors, and the forecast one SD lower or higher",Rival specifications: sampled in the second interval,A32,"179,730",4.33 - 4.76,1.07 - 1.17,6.09 - 6.83,0.116 - 0.131
-Specification of the net migration input,Rival specifications: sampled in the second interval,A27,"179,730",4.60 - 4.65,1.13 - 1.17,6.51 - 6.65,0.124 - 0.133
-Registration lag: corrected to 60 or 72 months,Biases of known direction: sized beside the estimate,"A22, A23","183,380 - 187,201",4.67 - 4.71,1.15,6.71 - 6.87,0.129
-"Registration lag beyond four years: a fitted tail, exponential or inverse power, to 72-120 months",Biases of known direction: sized beside the estimate,A24,"184,152 - 196,095",4.67 - 4.78,1.15,6.75 - 7.29,0.129
-Population base of Donetsk and Luhansk: 0.5 million lower to taken out,Biases of known direction: sized beside the estimate,A28,"179,730",4.68 - 5.36,1.17 - 1.35,6.64 - 7.66,0.130 - 0.155
-"Pre-war absentees in the base outside Donetsk and Luhansk: 0.5 or 1.0 million fewer aged 20-64, in proportion to the population there or two thirds of them men",Biases of known direction: sized beside the estimate,A28,"179,730",4.71 - 4.85,1.16 - 1.18,6.69 - 6.92,0.130 - 0.133
-"The same, 0.5 to 2.0 million fewer, with the counterfactual refitted on exposures smaller by the same share",Biases of known direction: sized beside the estimate,A29,"179,730",4.68 - 4.85,1.16 - 1.20,6.65 - 6.92,0.130 - 0.137
-"Civilian age profile: deaths beyond OHCHR's verified count with half over 60, or aged as pre-war deaths",Biases of known direction: sized beside the estimate,A30,"179,730",4.05 - 4.46,0.68 - 1.03,6.55 - 6.56,0.126 - 0.128
-Counterfactual: a quarter or a half of 2021's pandemic excess carried into 2022,Biases of known direction: sized beside the estimate,A33,"179,730",4.46 - 4.54,1.11 - 1.13,6.56,0.128
-"Register coverage: 10%, 25% or 40% of combatant deaths never listed",Biases no source measures: stated for their size,A25,"199,700 - 299,550",4.96 - 6.59,1.16 - 1.17,7.21 - 10.28,0.131 - 0.143
-"Residents of occupied Donbas killed in Russian-controlled forces: counted to September 2023, or continued to 2025",Biases no source measures: stated for their size,A31,"179,730",5.77 - 5.90,1.17,6.57 - 8.03,0.128 - 0.142
-De jure denominator: no net migration,A different quantity,A26,"179,730",4.39,0.99,5.88,0.102
+Every input at its central value,,,"178,605",4.72,1.22,6.48,0.137
+The missing alive: 95% interval of the draws,Drawn inputs taken beyond their bounds,A18,"176,355 - 180,895",4.67 - 4.76,1.22,6.39 - 6.60,0.137
+The missing alive: floor to cap,Drawn inputs taken beyond their bounds,A18,"174,671 - 181,695",4.63 - 4.77,1.22,6.31 - 6.64,0.136 - 0.137
+Net migration: each component across its range,Drawn inputs taken beyond their bounds,A26,"178,605",4.68 - 4.75,1.20 - 1.25,6.42 - 6.55,0.133 - 0.142
+"Rules of the imputation and the linkage, and the prisoner-of-war evidence: sixteen alternatives",Rival specifications: sampled in the second interval,A20,"176,333 - 180,720",4.53 - 4.78,1.22,6.36 - 6.61,0.137
+"Timing within 2022: mid-year convention, or net outflow by 1 April",Rival specifications: sampled in the second interval,A28,"178,605",4.64 - 4.75,1.17 - 1.24,6.48 - 6.49,0.137
+"Counterfactual: Lee–Carter window, a coherent forecast with eight neighbors, and the forecast one SD lower or higher",Rival specifications: sampled in the second interval,A32,"178,605",4.41 - 4.85,1.13 - 1.24,6.02 - 6.75,0.124 - 0.139
+Specification of the net migration input,Rival specifications: sampled in the second interval,A27,"178,605",4.69 - 4.74,1.20 - 1.24,6.42 - 6.57,0.133 - 0.140
+Registration lag: corrected to 60 or 72 months,Biases of known direction: sized beside the estimate,"A22, A23","181,480 - 184,451",4.75 - 4.79,1.22,6.60 - 6.71,0.137
+"Registration lag: growth measured per person listed, or the releases dated by Kaggle version",Biases of known direction: sized beside the estimate,A22,"177,572 - 177,925",4.71 - 4.72,1.22,6.42 - 6.45,0.136 - 0.137
+"Registration lag beyond four years: a fitted tail, exponential or inverse power, to 72-120 months",Biases of known direction: sized beside the estimate,A24,"180,665 - 185,195",4.74 - 4.80,1.22,6.57 - 6.75,0.137
+Population base of Donetsk and Luhansk: 0.5 million lower to taken out,Biases of known direction: sized beside the estimate,A28,"178,605",4.77 - 5.46,1.24 - 1.43,6.56 - 7.57,0.139 - 0.165
+"Pre-war absentees in the base outside Donetsk and Luhansk: 0.5 or 1.0 million fewer aged 20-64, in proportion to the population there or two thirds of them men",Biases of known direction: sized beside the estimate,A28,"178,605",4.79 - 4.94,1.23 - 1.25,6.61 - 6.84,0.138 - 0.142
+"The same, 0.5 to 2.0 million fewer, with the counterfactual refitted on exposures smaller by the same share",Biases of known direction: sized beside the estimate,A29,"178,605",4.77 - 4.94,1.23 - 1.27,6.57 - 6.84,0.139 - 0.146
+"Civilian age profile: deaths beyond OHCHR's verified count with half over 60, or aged as pre-war deaths",Biases of known direction: sized beside the estimate,A30,"178,605",4.08 - 4.53,0.70 - 1.09,6.47 - 6.48,0.129 - 0.136
+Counterfactual: a quarter or a half of 2021's pandemic excess carried into 2022,Biases of known direction: sized beside the estimate,A33,"178,605",4.54 - 4.63,1.17 - 1.20,6.49,0.137
+"Register coverage: 10%, 25% or 40% of combatant deaths never listed",Biases no source measures: stated for their size,A25,"198,451 - 297,675",5.05 - 6.68,1.22 - 1.24,7.13 - 10.16,0.139 - 0.151
+"Civilians of 2022: the deaths of unknown status in the siege of Mariupol counted none, 87% or all civilian",Biases no source measures: stated for their size,,"178,605",4.50 - 5.46,1.04 - 1.86,6.48 - 6.49,0.137
+"Residents of occupied Donbas killed in Russian-controlled forces: counted to September 2023, or continued to 2025",Biases no source measures: stated for their size,A31,"178,605",5.86 - 5.99,1.24,6.50 - 7.95,0.137 - 0.150
+De jure denominator: no net migration,A different quantity,A26,"178,605",4.46,1.05,5.83,0.108

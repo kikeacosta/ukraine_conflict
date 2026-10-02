@@ -32,7 +32,7 @@
 # Each horizon goes through production's imputation at the central values of
 # the evidence on the missing alive and through the deterministic projection,
 # every other input at its mode, as in 13d. The error of the tail is measured
-# as 08b measures the factors': by resampling event months.
+# as the factors' is (08b): by weighting the release windows.
 #
 # INPUTS   data_inter/ukr_registration_completion.rds (08b)
 #          data_inter/ukr_ualosses_resolution_model.rds, ukr_alive_missing.rds (09)
@@ -170,16 +170,15 @@ stopifnot(isTRUE(all.equal(
 )))
 
 # 4. THE ERROR OF THE TAIL =====================================================
-# Event months resampled with replacement, each keeping all its release pairs,
-# dead and missing together, as in 08b: the band rates and the curves are
-# re-estimated on each resample and the military total recomputed.
+# The release windows weighted as the simulation weighs them
+# (window_weight_draws(), 00_setup.R), dead and missing together, as for the
+# factors in 08b: under each set of weights the band rates and the curves are
+# re-estimated and the military total recomputed.
 set.seed(20260920)
 B_tail <- 500
-months_rates <- unique(growth$m)
-replicate_total <- function(ms) {
-  g <- tibble(m = ms) |> count(m, name = "times") |>
-    inner_join(growth, by = "m", relationship = "one-to-many") |>
-    mutate(wt = wt * times)
+wins <- ual_releases$release[-nrow(ual_releases)]
+replicate_total <- function(w) {
+  g <- growth |> mutate(wt = wt * w[match(from, wins)])
   lb <- lambda_band |>
     select(status, band, lo, hi, lambda0 = lambda) |>
     left_join(g |> summarise(lambda = sum(lambda * wt) / sum(wt), .by = c(status, band)),
@@ -191,7 +190,8 @@ replicate_total <- function(ms) {
     filter(is.finite(horizon)) |>
     mutate(total = map2_dbl(form, horizon, \(fm, h) sum(military_with(factors_under(fm, h, lb, fb))$total)))
 }
-boot <- map_dfr(seq_len(B_tail), \(b) replicate_total(sample(months_rates, replace = TRUE)) |> mutate(b = b))
+weights <- window_weight_draws(B_tail)
+boot <- map_dfr(seq_len(B_tail), \(b) replicate_total(weights[b, ]) |> mutate(b = b))
 boot_summary <-
   boot |>
   summarise(lo = quantile(total, 0.025), mid = median(total), hi = quantile(total, 0.975), .by = scenario)

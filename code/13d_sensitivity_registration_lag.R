@@ -8,10 +8,11 @@
 # years, and 09 imputes on those completed counts. Four years is where the
 # register's growth is last measured on enough event months, not where it
 # stops: at 42-48 months the dead still grow by about 0.07% a month and the
-# missing by about 0.3%. So the correction is a lower bound on the lag. This
-# step shows how far the results move without the correction, and with the
-# growth extrapolated beyond four years at a constant rate; 13l fits a curve to
-# the tail instead.
+# missing by about 0.2%. So the horizon makes the correction a lower bound on
+# the lag. This step shows how far the results move without the correction, and
+# with the growth extrapolated beyond four years at a constant rate; 13l fits a
+# curve to the tail instead. It also carries the two alternatives 08b keeps to
+# the way the growth is measured.
 #
 # SCENARIOS
 # ---------
@@ -19,6 +20,13 @@
 #   to 48 months (used)      08b's chain-ladder, the production estimate
 #   to 60 / 72 months        the same, with the rate of the 42-48 month band
 #                            carried on beyond 48 months
+#   growth per person        to 48 months, with the growth of each status
+#   listed                   measured per person the register lists for the
+#                            event month, dead or missing, not per record of
+#                            the status's own stock
+#   releases dated by        to 48 months, with lags and windows counted from
+#   Kaggle version           the day each release was published, not from the
+#                            data it holds
 #
 # Each scenario goes through production's imputation at the central values
 # of the evidence on the missing alive, and through the deterministic
@@ -56,21 +64,33 @@ chain_factor <- function(L_from, s, horizon) {
   lb <- extend_bands(horizon) |> filter(status == s)
   exp(sum(pmax(0, pmin(lb$hi, horizon) - pmax(lb$lo, L_from)) * lb$lambda))
 }
-# each event month's completion factor under a horizon (none: 1)
-factors_under <- function(horizon) {
+# each event month's completion factor under a horizon (none: 1), or under one
+# of 08b's alternatives to the way the growth is measured
+factors_under <- function(horizon, alternative = NA) {
+  if (!is.na(alternative)) {
+    return(completion$month |>
+             left_join(completion$alternatives |> filter(alternative == !!alternative) |> select(m, status, f),
+                       by = c("m", "status")))
+  }
   completion$month |>
     mutate(f = if (is.na(horizon)) 1 else map2_dbl(lag, status, \(l, s) chain_factor(l, s, horizon)))
 }
-ratio_under <- function(horizon) {
-  factors_under(horizon) |>
+ratio_under <- function(horizon, alternative = NA) {
+  factors_under(horizon, alternative) |>
     summarise(n_completed = sum(n_v19 * f), n_v19 = sum(n_v19), .by = c(year, status)) |>
     transmute(year, status, ratio = n_completed / n_v19)
 }
+# kind: the horizons, which the grid below crosses with the missing alive, and
+# the alternative specifications of the growth, at the horizon used
 scenarios <- tibble(
-  scenario = c("as registered", "to 48 months (used)", "to 60 months", "to 72 months"),
-  horizon = c(NA, 48, 60, 72)
+  scenario = c("as registered", "to 48 months (used)", "to 60 months", "to 72 months",
+               "to 48 months, growth per person listed", "to 48 months, releases dated by Kaggle version"),
+  kind = c(rep("horizon", 4), rep("specification", 2)),
+  horizon = c(NA, 48, 60, 72, 48, 48),
+  alternative = c(rep(NA, 4), "exposure", "dating")
 )
-ratios <- scenarios |> mutate(r = map(horizon, ratio_under)) |> unnest(r)
+stopifnot(setequal(na.omit(scenarios$alternative), completion$alternatives$alternative))
+ratios <- scenarios |> mutate(r = map2(horizon, alternative, ratio_under)) |> unnest(r)
 
 # the production ratios are 08b's own
 stopifnot(isTRUE(all.equal(
@@ -80,7 +100,8 @@ stopifnot(isTRUE(all.equal(
 
 cat("\n=== COMPLETION RATIOS BY SCENARIO ===\n")
 print(as.data.frame(ratios |> mutate(ratio = round(ratio, 4)) |>
-                      pivot_wider(names_from = c(status, year), values_from = ratio) |> select(-horizon)))
+                      pivot_wider(names_from = c(status, year), values_from = ratio) |>
+                      select(-horizon, -kind, -alternative)))
 
 # 2. THROUGH THE IMPUTATION CHAIN ==============================================
 stocks_registered <-
@@ -94,9 +115,9 @@ a_of <- function(other) if (other <= 1) other * bound else bound + (other - 1) *
 evidence <- read_rds("data_inter/ukr_alive_missing.rds")
 
 # each year's registered count spread over its months as v19 lists them, as
-# in 09, and each month completed by its factor under the horizon
-military_at <- function(horizon, captives = evidence$captives_central, other = 0.5) {
-  st <- factors_under(horizon) |>
+# in 09, and each month completed by its factor under the scenario
+military_at <- function(horizon, captives = evidence$captives_central, other = 0.5, alternative = NA) {
+  st <- factors_under(horizon, alternative) |>
     mutate(share = n_v19 / sum(n_v19), .by = c(year, status)) |>
     left_join(stocks_registered |> rename(n_year = n), by = c("year", "status")) |>
     mutate(completed = n_year * share * f)
@@ -106,8 +127,11 @@ military_at <- function(horizon, captives = evidence$captives_central, other = 0
     left_join(dead, by = "year") |>
     transmute(year, confirmed, missing = missing_stock, imputed_dead, total = confirmed + imputed_dead)
 }
-military_under <- function(horizon) military_at(horizon)
-military <- scenarios |> mutate(res = map(horizon, military_under)) |> unnest(res)
+military <-
+  scenarios |>
+  mutate(res = map2(horizon, alternative, \(h, a) military_at(h, alternative = a))) |>
+  select(-alternative) |>
+  unnest(res)
 
 # 3. THE DETERMINISTIC PROJECTION, AS IN 13b ===================================
 param_table <- read_rds("data_inter/ukr_param_table.rds")
@@ -139,8 +163,8 @@ static_inputs <-
 stopifnot(all(static_inputs$mx > 0), !any(is.na(static_inputs)))
 
 base_draws <-
-  param_table |> filter(role == "civilians") |> select(year, draw_cvs = mode) |>
-  left_join(param_table |> filter(str_starts(role, "mig_")) |> summarise(draw_mig = sum(mode), .by = year),
+  central_values(param_table) |> filter(role == "civilians") |> select(year, draw_cvs = mode) |>
+  left_join(central_values(param_table) |> filter(str_starts(role, "mig_")) |> summarise(draw_mig = sum(mode), .by = year),
             by = "year")
 
 e0_loss <- function(mil) {
@@ -153,7 +177,7 @@ e0_loss <- function(mil) {
   e0("mx_bsn") |> rename(ex_bsn = ex) |> left_join(e0("mx_all") |> rename(ex_all = ex), by = c("year", "sex")) |>
     transmute(year, sex, loss = ex_bsn - ex_all)
 }
-loss <- military |> nest(.by = c(scenario, horizon)) |>
+loss <- military |> nest(.by = c(scenario, kind, horizon)) |>
   mutate(res = map(data, e0_loss)) |> select(-data) |> unnest(res)
 
 # the scenario used must reproduce 13b at the central values
@@ -172,7 +196,7 @@ alive_points <-
   distinct(point, share_alive, captives, other) |>
   mutate(point = sub(" of draws", "", point))
 grid <-
-  expand_grid(scenarios, alive_points) |>
+  expand_grid(scenarios |> filter(kind == "horizon") |> select(scenario, horizon), alive_points) |>
   mutate(mil = pmap(list(horizon, captives, other), military_at),
          # summed over rounded years, as table 3 builds its totals, so the two agree
          military = map_dbl(mil, \(m) sum(round(m$total))),
@@ -200,7 +224,7 @@ cat("\n=== MILITARY TOTAL BY SCENARIO, AT THE CENTRAL VALUES ===\n")
 print(as.data.frame(military |> summarise(across(c(confirmed, missing, imputed_dead, total), \(x) round(sum(x))),
                                           .by = scenario)))
 cat("\n=== LOSS, MEN ===\n")
-print(as.data.frame(loss |> filter(sex == "m") |> mutate(loss = round(loss, 2)) |> select(-horizon) |>
+print(as.data.frame(loss |> filter(sex == "m") |> mutate(loss = round(loss, 2)) |> select(-horizon, -kind) |>
                       pivot_wider(names_from = year, values_from = loss)))
 
 message("Done. data_inter/ukr_registration_lag.rds written.")

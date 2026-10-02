@@ -100,6 +100,8 @@ profile_props <- ual2 |> left_join(ohchr2, by = c("year", "sex", "age"))
 # 3. DETERMINISTIC "DRAW" AT THE MODE ==========================================
 draws_df <-
   param_table |>
+  # civilians and Russia and Belarus at the mean of their distributions (00_setup)
+  central_values() |>
   # the two migration components are one input to the projection
   mutate(role = if_else(str_starts(role, "mig_"), "migration", role)) |>
   summarise(mode = sum(mode), .by = c(year, role)) |>

@@ -55,6 +55,10 @@ steps_to_run <- list(
   list(name = "13m", file = "code/13m_sensitivity_base_coherent.R"),
   list(name = "13n", file = "code/13n_sensitivity_covid_carryover.R"),
   list(name = "13o", file = "code/13o_sensitivity_register_coverage.R"),
+  # 13p and 13q are rows and figures of 15's tables: the split of the Mariupol
+  # event, and the three figures reported beside the headline (13q reads 13b and 13e)
+  list(name = "13p", file = "code/13p_sensitivity_mariupol_split.R"),
+  list(name = "13q", file = "code/13q_headline_companions.R"),
   list(name = "14", file = "code/14_e0_loss_decomposition_by_cause.R"),
   list(name = "14b", file = "code/14b_yll_45q15.R"),
   list(name = "14c", file = "code/14c_fixed_counterfactual.R"),

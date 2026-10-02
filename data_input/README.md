@@ -24,8 +24,8 @@ pass `refresh = TRUE`.
 | `ucdp_ged_events_slim.rds` (1.7 MB) | `ucdp/GEDEvent_v26_1.csv` | 274 MB |
 | `ukr_asfr_wpp_2022_2025.rds` (4 kB) | `WPP2024_FERT_F01_*.xlsx` | 78 MB |
 | `ualosses_counts_2022_2025.rds` (3 kB) | the ualosses register, release v19 (step 08) | 30 MB |
-| `ualosses_registration_by_month.rds` (3 kB) | the four ualosses releases, for registration lag (step 08b) | 110 MB |
-| `ualosses_window_transitions.rds` (8 kB) | the four ualosses releases, for the linkage of the missing (step 09) | 110 MB |
+| `ualosses_registration_by_month.rds` (3 kB) | the six ualosses releases, for registration lag (step 08b) | 217 MB |
+| `ualosses_window_transitions.rds` (8 kB) | the six ualosses releases, for the linkage of the missing (step 09) | 217 MB |
 | `acled_fatalities_slim.rds` (14 kB) | `acled/*.xlsx` | 88 kB |
 
 ## Where to get the untracked files
@@ -52,21 +52,28 @@ Only needed if you want to rebuild a cache from scratch.
 Compiled by Olivier Hubert:
 <https://www.kaggle.com/datasets/ol4ubert/confirmed-ukrainian-military-personnel-losses>
 
-Four releases, in `ualosses_hubert_datasets/`, with their paths and dates in
+Six releases, in `ualosses_hubert_datasets/`, with their paths and dates in
 `ual_releases` (`code/00_setup.R`):
 
-- `250916_UKR_ualosses_Personnel_v14.xlsx` — v14, 16 September 2025
-- `251204_UKR_ualosses_Personnel_v16.xlsx` — v16, 4 December 2025
-- `260423_UKR_ualosses_Personnel_v18.xlsx` — v18, 23 April 2026
-- `260919_UKR_ualosses_Personnel_v19.xlsx` — v19, 21 July 2026: every age–sex
-  count, and the last release in the linkage
+- `250916_UKR_ualosses_Personnel_v14.xlsx` — v14, published 16 September 2025,
+  latest event 9 September 2025
+- `251102_UKR_ualosses_Personnel_v15.xlsx` — v15, published 2 November 2025,
+  latest event 16 October 2025
+- `251204_UKR_ualosses_Personnel_v16.xlsx` — v16, published 4 December 2025,
+  latest event 30 November 2025
+- `260206_UKR_ualosses_Personnel_v17.xlsx` — v17, published 6 February 2026,
+  latest event 7 January 2026
+- `260423_UKR_ualosses_Personnel_v18.xlsx` — v18, published 23 April 2026,
+  latest event 10 April 2026
+- `260919_UKR_ualosses_Personnel_v19.xlsx` — v19, published 21 July 2026, latest
+  event 18 June 2026: every age–sex count, and the last release in the linkage
 
-Each release is dated by its version on Kaggle, where the version history gives
-the dates; each file's latest events fall a few days to a few weeks before them.
-The v19 file is Kaggle's version 19 of 21 July 2026 (30.93 MB, latest events of
-18 June 2026); its name carries the date it was saved, not the release date.
-Versions 15 (2 November 2025) and 17 (6 February 2026) are on Kaggle too and are
-not used.
+Published is the date of the version on Kaggle, from its version history (the
+v19 file is version 19, 30.93 MB; its name carries the date it was saved). The
+pipeline dates each release by the data it holds, four days after its latest
+event, because the day the register was copied is not recorded and v17 and v19
+were published a month after their latest events; `code/08b` checks the latest
+events against the files.
 
 `260514_UKR_ualosses_Personnel.xlsx` is the same list as v18, saved again;
 nothing reads it.
@@ -86,7 +93,7 @@ aggregates them to anonymous counts before anything is written to
 | `a0.csv` | Infant mortality separation factors; supplied by SSSU |
 | `ohchr_civilian_deaths.xlsx` | OHCHR annual civilian death totals, and the monthly count of civilians killed that times 2022's civilian deaths (step 10); supplied by OHCHR |
 | `UKR_2022-2025_OHCHR.xlsx` | OHCHR civilian deaths by age and sex, supplied by OHCHR |
-| `refugees_eurostat/` | Eurostat temporary protection stock by age and sex (read by 06), and the TP decisions series (evaluated, not used) |
+| `refugees_eurostat/` | Eurostat temporary protection stock (`migr_asytpsm`) by age and sex: the end-of-year extract, and `migr_asytpsm_api_UA_monthly_by_country_sex_age.csv`, the monthly series by country, sex and age group, March 2022 to December 2025, from the SDMX API on 2 October 2026, with Eurostat's break flags (both read by 06: the monthly series dates and sizes the clean-ups of invalid statuses). Also the TP decisions series (evaluated, not used) |
 | `eurostat_neighbours/` | Eurostat deaths by single year of age (`demo_magec`) and population on 1 January (`demo_pjan`), 2000–2020, for Poland, Slovakia, Hungary, Romania, Bulgaria, Lithuania, Latvia and Estonia: the reference group of the coherent counterfactual (13j). Fetched by 13j from Eurostat's dissemination API when absent, then read from here |
 | `migration/` | UNHCR Data Finder extract, UNHCR's 2022 border crossings by month (the timing of 2022's net outflow), CES figures, the Canada and USA programme counts, and reference copies — see `migration/README.md` |
 | `official_figures.csv` | Figures used only to check the estimates: official statements of military deaths, US and CSIS estimates, returns from captivity and repatriated bodies (Coordination Headquarters for the Treatment of Prisoners of War), prisoners of war held, registered deaths and births (Ministry of Justice), and deaths in the units of the self-proclaimed Donetsk and Luhansk republics; one row per figure, with its source and URL (step 15) |

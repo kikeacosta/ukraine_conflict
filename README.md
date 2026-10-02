@@ -49,7 +49,7 @@ size every table was built at.
 | `07_ohchr` | Age-sex **profile** of civilian deaths | `ukr_ohchr_civilian_casualties.rds` |
 | `07_acled` | ACLED totals, comparison only | `ukr_acled.rds` |
 | `08` | Combatant deaths by age and sex from the ualosses register (release v19) | `ukr_ualosses_..._sex_age_...rds` |
-| `08b` | Registration lag: how much each event month of v19 will still grow, from the six releases - the dead net of records dropped, the missing by the new persons listed, a record being new only if its key is absent from the whole earlier release, so that an undated death that gains a date is not counted again - with 2,000 resampled sets of the completion factors | `ukr_registration_completion.rds` |
+| `08b` | Registration lag: how much each event month of v19 will still grow, from the six releases - the dead net of records dropped, the missing by the new persons listed, a record being new only if its key is absent from the whole earlier release, so that an undated death that gains a date is not counted again, and a missing person only if no earlier record is theirs under a corrected or re-spelt key. Each release is dated by the data it holds, four days after its latest event. The growth is kept by release window, so that the completion factors can be rebuilt under the weights each simulation puts on the windows; the factors under two other measures of the growth (per person listed, and with the releases dated by Kaggle version) are kept for `13d` | `ukr_registration_completion.rds` |
 | `09` | Linkage of everyone listed as missing across the six releases (v14 to v19), the composition of the register's first resolutions by event year and the bound on the missing alive it gives, the imputation of the missing completed for registration lag, the evidence on the prisoners of war among them, the resolution hazards by months since disappearance as a description of the register, and the comparison of alternative rules and readings of the evidence | `ukr_ualosses_..._imputed_...rds`, `ukr_alive_missing.rds`, `ukr_military_inputs.rds`, `ukr_ualosses_projection_table.rds` |
 | `09f`, `09g` | Investigation, not part of the estimates: per-person histories across the releases and a competing-risks multistate model, with the pass/fail test that keeps it out of production | `ukr_ualosses_multistate_test.rds` |
 | `09h` | Not part of the estimates: a random sample of 600 links and drop-outs for clerical review by hand. Its output holds names and dates of birth, is written to the gitignored `documents/clerical_review/` and must never be committed | (local only) |
@@ -63,17 +63,19 @@ size every table was built at.
 | `13` | Sensitivity: the migration denominator effect | `ukr_migration_decomposition.rds` |
 | `13b` | Sensitivity: the share of the missing who are alive, beyond the range the evidence allows, and the linkage rules | `ukr_alive_sensitivity_*.rds`, `ukr_linkage_rules_e0.rds` |
 | `13c` | Sensitivity: the range of each net migration component, and three specification checks of the migration input | `ukr_migration_sensitivity_e0.rds`, `ukr_migration_specification_e0.rds` |
-| `13d` | Sensitivity: the horizon of the registration-lag correction, alone and crossed with the share alive | `ukr_registration_lag.rds` |
+| `13d` | Sensitivity: the horizon of the registration-lag correction, alone and crossed with the share alive, and the two other measures of the register's growth at the horizon used | `ukr_registration_lag.rds` |
 | `13e` | Sensitivity: the population base of Donetsk and Luhansk, 0.5 million lower to taken out | `ukr_denominator_donetsk_luhansk.rds` |
 | `13f` | Sensitivity: the timing of 2022's deaths and departures against the mid-year convention | `ukr_timing_2022.rds` |
 | `13g` | Sensitivity: the Lee-Carter window, the forecast one standard deviation either way, and the shape of the PERT distributions | `ukr_baseline_window_e0.rds`, `ukr_pert_shape_e0.rds` |
 | `13h` | Sensitivity: an older age profile for the civilian deaths beyond OHCHR's verified count, mostly in occupied territory and besieged cities | `ukr_civilian_age_profile_e0.rds` |
 | `13i` | Sensitivity: residents of occupied Donbas killed in Russian-controlled forces, counted to September 2023 or continued to 2025 | `ukr_donbas_fighters_e0.rds` |
 | `13j` | Sensitivity: a coherent (Li-Lee) counterfactual, Ukraine forecast with eight EU neighbours from Eurostat, with its 95% band | `ukr_coherent_forecast_e0.rds` |
-| `13l` | Sensitivity: the registration lag beyond four years as a fitted curve, exponential and inverse power, in place of a truncation or a constant rate, with its error from resampled event months | `ukr_registration_lag_tail.rds` |
+| `13l` | Sensitivity: the registration lag beyond four years as a fitted curve, exponential and inverse power, in place of a truncation or a constant rate, with its error from the release windows re-weighted | `ukr_registration_lag_tail.rds` |
 | `13m` | Sensitivity: a smaller base at ages 20-64 outside Donetsk and Luhansk, with the Lee-Carter model refitted on exposures smaller by the same share, so that base and counterfactual stay coherent | `ukr_base_coherent_e0.rds` |
 | `13n` | Sensitivity: a quarter and a half of 2021's excess mortality carried into the 2022 counterfactual | `ukr_covid_carryover_e0.rds` |
 | `13o` | Sensitivity: the combatant total and the loss if the register never lists 10%, 25% or 40% of combatant deaths; a stated size for a bias nothing available measures, kept out of the second interval | `ukr_register_coverage_e0.rds` |
+| `13p` | Sensitivity: the 2022 civilian total and the loss by the rule that splits one UCDP event, the siege of Mariupol, whose 15,996 deaths of unknown status are 94% of the year's - none, the dyad-year share (used), Mariupol's own share or all of them civilian; a row of Table 6, not drawn and kept out of the second interval | `ukr_mariupol_split_e0.rds` |
+| `13q` | Three figures reported beside the headline, each in the central projection: the loss without the imputed missing, the change per 10 points of the missing alive (from `13b`'s sweep), and a territory-consistent second estimate for Ukraine without Crimea, Donetsk and Luhansk, with the combatants split by the register's place of origin (counted in `08`) and the civilians by UCDP's location | `ukr_headline_companions.rds` |
 | `13k` | Not part of the estimates: fetches Belarus and Russia from the Human Mortality Database for `13j`'s pool, reading an account from `HMD_USER` and `HMD_PASS` in `~/.Renviron`. Neither series reaches 2019, so `13j` leaves out any country that does not cover its whole fit window; using them means ending that window earlier. The cache is gitignored: the HMD agreement governs redistribution | `data_input/hmd_neighbours/` (local) |
 | `14` | **Life expectancy loss decomposed by cause** | `ukr_e0_loss_by_cause_*.rds` |
 | `14b` | Years of life lost and adult mortality (45q15) | `ukr_yll_45q15_summary.rds` |
@@ -109,8 +111,8 @@ is projected through the full accounting. Civilian deaths are drawn
 independently by year from PERT distributions. Combatant deaths follow from one
 draw of the evidence on how many of the missing are alive - the prisoners of war
 among them, and where between none and its bound the share alive outside
-captivity sits - with a draw of the weights on the release windows behind that
-bound, and of the registration-lag factors.
+captivity sits - with a draw of the weights on the release windows, under which
+that bound and the registration-lag factors are both rebuilt.
 The western
 net outflow follows from one weight blending the two sources' four-year paths,
 and Russia and Belarus from one draw. Each of these is held across the four
@@ -203,7 +205,7 @@ anything sitting directly in `figures/` is a manuscript deliverable.
 | `tableA26_migration_sensitivity.csv` | 2025 e0 loss across the range of each net migration component, and with no migration |
 | `tableA27_migration_specification.csv` | e0 loss under alternative specifications of the migration input, and the Canada and USA series +/-30% |
 | `tableA20_linkage_and_chain.csv` | Combatant deaths and e0 loss under alternative rules of the imputation and the linkage, models of resolution projected in its place, and readings of the prisoner-of-war evidence |
-| `tableA22_registration_lag.csv` | The same across the horizon of the registration-lag correction |
+| `tableA22_registration_lag.csv` | The same across the horizon of the registration-lag correction, and with the register's growth measured per person listed or the releases dated by Kaggle version |
 | `tableA28_population_base_and_timing.csv` | e0 loss with a smaller Donetsk-Luhansk base, and with other timings of 2022's deaths and net outflow |
 | `tableA32_counterfactual_window.csv` | e0 loss and counterfactual e0 by Lee-Carter window, with a coherent forecast with eight neighbors, and with the forecast one standard deviation either way; the 95% band of each forecast |
 | `tableA34_pert_shape.csv` | e0 loss and its interval by PERT shape |
@@ -225,5 +227,7 @@ anything sitting directly in `figures/` is a manuscript deliverable.
 | `tableA42_population_present.csv` | The population the rates are computed on, by draw: men aged 20-50, men, and both sexes, with 95% intervals (11, 15) |
 | `tableA3_register_status_by_year.csv` | The register's records of 2022-2025 events by event year and status in v19, the cross-section behind the linkage (15) |
 | `tableA25_register_coverage.csv` | Combatant deaths and the loss if the register misses 10%, 25% or 40% of combatant deaths (13o) |
+| `mariupol_split.csv` | The 2022 civilian total and loss under each rule for the Mariupol event's deaths of unknown status (13p); not yet numbered in the supplement |
+| `headline_companions.csv` | The loss without the imputed missing, the change per 10 points of the missing alive, and the estimate for Ukraine without Crimea, Donetsk and Luhansk, beside the central projection (13q); not yet numbered in the supplement |
 | `figA5_structural_tornado.png` | The range of each structural choice beside the 95% interval of the drawn inputs |
 | `_run_provenance.csv` | Draws, seed, draws file and commit the tables were built from |

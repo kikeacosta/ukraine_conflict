@@ -88,6 +88,10 @@ all2 <- cache_rds("data_inter/ucdp_ged_events_slim.rds", {
 crimea_adm1 <- regex("crimea|sevastopol", ignore_case = TRUE)
 in_crimea <- all2$country == "Ukraine" & str_detect(coalesce(all2$adm1, ""), crimea_adm1)
 crimea_civ <- sum(all2$c[in_crimea])
+# the same for the war years and the state dyad, kept for the attribution table
+# below, which is built after these deaths have been taken out
+crimea_civ_war <- sum(all2$c[in_crimea & all2$year >= 2022 &
+                               str_detect(all2$conflict_name, "Russia - Ukraine")])
 cat(sprintf("\nCrimea and Sevastopol: %s civilian deaths in %d events left out of the count\n",
             format(crimea_civ, big.mark = ","), sum(in_crimea)))
 # the civilian deaths come off the event's totals and bounds before anything is
@@ -388,10 +392,11 @@ attribution <- list(
     filter(country != "Ukraine") |>
     summarise(events = n(), deaths = sum(b), .by = c(country, adm1)) |>
     arrange(desc(deaths)),
-  # Crimea and Sevastopol are outside the estimand's territory
+  # Crimea and Sevastopol are outside the estimand's territory: the civilian
+  # deaths there are those left out above, counted before they were taken out
   crimea_civilians = dyad |>
     filter(country == "Ukraine", str_detect(coalesce(adm1, ""), crimea)) |>
-    summarise(events = n(), civilians = sum(c), deaths = sum(t))
+    summarise(events = n(), civilians = crimea_civ_war, deaths = sum(t))
 )
 write_rds(attribution, "data_inter/ukr_ucdp_attribution.rds")
 cat("\n=== HOW UCDP ATTRIBUTES THE DEAD: SIDE AGAINST PLACE ===\n")

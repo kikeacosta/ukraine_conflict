@@ -104,6 +104,7 @@ stopifnot(all(static_inputs$mx > 0), !any(is.na(static_inputs)))
 # conflict inputs held at their mode
 conflict_at_mode <-
   param_table |>
+  central_values() |>
   filter(role %in% c("civilians", "combatants")) |>
   select(year, role, mode) |>
   pivot_wider(names_from = role, values_from = mode) |>
@@ -136,7 +137,7 @@ component_at <- function(rl, u) {
   }
 }
 component_at_mode <- function(rl) {
-  mig_bounds |> filter(role == rl) |> transmute(year, value = mode)
+  mig_bounds |> central_values() |> filter(role == rl) |> transmute(year, value = mode)
 }
 
 scenarios <-
@@ -328,9 +329,11 @@ specification <- bind_rows(
   loss_of(static_inputs, totals_with_west(1 / 3)) |> mutate(scenario = "A2: western mode a third of the way from the crossings reading"),
   loss_of(static_a9, mode_totals) |> mutate(scenario = "A9: Russia and Belarus on the Donetsk-Luhansk population structure"),
   loss_of(static_inputs, totals_with_west(0)) |> mutate(scenario = "A5: crossings end, additive (as used)"),
-  loss_of(proportional(totals_with_west(0)), mode_totals) |> mutate(scenario = "A5: crossings end, proportional"),
+  # the rescaled profile is projected at the totals it was rescaled to: at any
+  # other, run_single_sim() adds the difference back along the departures profile
+  loss_of(proportional(totals_with_west(0)), totals_with_west(0)) |> mutate(scenario = "A5: crossings end, proportional"),
   loss_of(static_inputs, totals_with_west(1)) |> mutate(scenario = "A5: register end, additive (as used)"),
-  loss_of(proportional(totals_with_west(1)), mode_totals) |> mutate(scenario = "A5: register end, proportional"),
+  loss_of(proportional(totals_with_west(1)), totals_with_west(1)) |> mutate(scenario = "A5: register end, proportional"),
   loss_of(static_inputs, programme_totals(-0.3)) |> mutate(scenario = "A10: Canada and USA 30% lower"),
   loss_of(static_inputs, programme_totals(0.3)) |> mutate(scenario = "A10: Canada and USA 30% higher")
 )

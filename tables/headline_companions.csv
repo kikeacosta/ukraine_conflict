@@ -1,0 +1,5 @@
+figure,combatant_deaths,male_2022,male_2023,male_2024,male_2025,female_2022,female_2025
+As used: every input at its central value,178605,4.716,4.148,5.7,6.485,1.222,0.137
+Without the imputed missing: the registered dead and their late registrations alone,91900,3.942,3.061,3.049,2.308,1.221,0.132
+Change per 10 points of the missing alive,-9039,-0.074,-0.112,-0.272,-0.416,-0,-0
+"Ukraine without Crimea, Donetsk and Luhansk",171131,3.946,4.554,6.291,7.1,0.389,0.114

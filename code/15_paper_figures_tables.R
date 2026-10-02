@@ -59,7 +59,9 @@
 #   tableA15_structural_intervals.csv                14e
 #   figA5_structural_tornado.png                     14e
 #   out_of_sample_releases.csv                       09i (where it has run)
-#   table6_structural_sensitivity.csv                13, 13b-13n
+#   table6_structural_sensitivity.csv                13, 13b-13p
+#   mariupol_split.csv                               13p (no number yet: the supplement has no section for it)
+#   headline_companions.csv                          13q (likewise)
 #   tableA23_missing_alive_by_lag_horizon.csv        13d
 #   tableA43_military_triangulation.csv              09, data_input/official_figures.csv
 #   tableA6_returned_prisoners_prior_status.csv     09
@@ -400,15 +402,15 @@ save_fig(fig5, "fig5_decomposition_by_cause.png", 8, 4.4)
 # combined term is dominated by combatant variation - which is nearly
 # irrelevant to the female loss, where civilians drive almost all of it. The
 # combatants are split by what moves them: the evidence on the missing alive,
-# the release windows behind the bound on them and the registration-lag factors, each
-# summarised by the military total it gives with the other two at their point
-# values (simulation_draws(), 00_setup.R). The counterfactual enters through
+# and the weights on the release windows, which move the bound on the missing
+# alive and the registration-lag factors together - each summarised by the
+# military total it gives with the other at its point values
+# (simulation_draws(), 00_setup.R). The counterfactual enters through
 # the draw's forecast index for the sex and year.
 UNC_LAB <- c(
   cvs   = "Civilian deaths",
   alive = "Missing alive",
-  model = "Bound's release windows",
-  lag   = "Registration lag",
+  window = "Release windows: bound and lag",
   lc    = "Counterfactual forecast",
   mig_w = "Migration: western",
   mig_r = "Migration: Russia / Belarus",
@@ -417,8 +419,7 @@ UNC_LAB <- c(
 COL_UNC <- c(
   "Civilian deaths"             = "#AE2012",
   "Missing alive"               = "#333333",
-  "Bound's release windows"     = "#7F7F7F",
-  "Registration lag"            = "#B8B8B8",
+  "Release windows: bound and lag" = "#7F7F7F",
   "Counterfactual forecast"     = "#94D2BD",
   "Migration: western"          = "#0A9396",
   "Migration: Russia / Belarus" = "#EE9B00",
@@ -435,8 +436,7 @@ unc_inputs <-
   mutate(bucket = case_when(
     role == "civilians" ~ "cvs",
     role == "mil_alive" ~ "alive",
-    role == "mil_model" ~ "model",
-    role == "mil_lag"   ~ "lag",
+    role == "mil_window" ~ "window",
     role == "lc_f"      ~ "lc_f",
     role == "lc_m"      ~ "lc_m",
     role == "mig_west"  ~ "mig_w",
@@ -485,8 +485,7 @@ unc_shares <-
     s <- c(
       cvs   = first_order(d$loss_total, d$cvs),
       alive = first_order(d$loss_total, d$alive),
-      model = first_order(d$loss_total, d$model),
-      lag   = first_order(d$loss_total, d$lag),
+      window = first_order(d$loss_total, d$window),
       lc    = first_order(d$loss_total, if (sx == "f") d$lc_f else d$lc_m),
       mig_w = first_order(d$loss_total, d$mig_w),
       mig_r = first_order(d$loss_total, d$mig_r)
@@ -570,8 +569,8 @@ figA1 <-
       "Draws (n = ", scales::comma(n_sim),
       "). Dashed line: mode. Dotted lines: min and max, for combatants the evidence on the missing alive ",
       "at its ends.\nCombatant totals follow from one draw of that evidence per simulation, so their four ",
-      "years move together;\nthe resolution model and the registration-lag factors are drawn too, so a draw ",
-      "can pass the dotted lines."
+      "years move together;\nthe bound on the missing alive and the registration-lag factors are rebuilt under ",
+      "each draw's weights on the release windows, so a draw can pass the dotted lines."
     )
   ) +
   theme_paper() +
@@ -1587,7 +1586,8 @@ tA9 <-
 save_tab(tA9, "tableA20_linkage_and_chain.csv")
 print(tA9)
 
-# A10: the horizon of the registration-lag correction (08b, 13d)
+# A10: the registration-lag correction (08b, 13d): its horizon, and the two
+# alternatives to the way the register's growth is measured
 lag <- read_rds("data_inter/ukr_registration_lag.rds")
 tA10 <-
   lag$loss |>
@@ -1814,10 +1814,16 @@ alternatives <- bind_rows(
   alive_rows(c("floor", "cap")) |>
     mutate(analysis = "The missing alive: floor to cap", table = "A18"),
   lag_t8$loss |>
-    filter(!scenario %in% c("to 48 months (used)", "as registered")) |>
+    filter(kind == "horizon", !scenario %in% c("to 48 months (used)", "as registered")) |>
     left_join(lag_t8$military |> summarise(military = sum(round(total)), .by = scenario), by = "scenario") |>
     select(military, year, sex, loss) |>
     mutate(analysis = "Registration lag: corrected to 60 or 72 months", table = "A22, A23"),
+  lag_t8$loss |>
+    filter(kind == "specification") |>
+    left_join(lag_t8$military |> summarise(military = sum(round(total)), .by = scenario), by = "scenario") |>
+    select(military, year, sex, loss) |>
+    mutate(analysis = "Registration lag: growth measured per person listed, or the releases dated by Kaggle version",
+           table = "A22"),
   read_rds("data_inter/ukr_registration_lag_tail.rds") |>
     (\(lt) lt$loss |>
        filter(scenario != "to 48 months (used)") |>
@@ -1831,6 +1837,11 @@ alternatives <- bind_rows(
        left_join(rc$military |> summarise(military = sum(round(military)), .by = missed), by = "missed"))() |>
     select(military, year, sex, loss) |>
     mutate(analysis = "Register coverage: 10%, 25% or 40% of combatant deaths never listed", table = "A25"),
+  read_rds("data_inter/ukr_mariupol_split_e0.rds")$loss |>
+    filter(!str_detect(scenario, "used")) |>
+    transmute(military = mode_military, year, sex, loss,
+              analysis = "Civilians of 2022: the deaths of unknown status in the siege of Mariupol counted none, 87% or all civilian",
+              table = ""),
   read_rds("data_inter/ukr_linkage_rules_e0.rds") |>
     filter(!str_detect(design, "production")) |>
     mutate(analysis = paste0("Rules of the imputation and the linkage, and the prisoner-of-war evidence: ",
@@ -1899,6 +1910,7 @@ t6_groups <- c(
   "Counterfactual: Lee–Carter window" = "Rival specifications: sampled in the second interval",
   "Specification of the net migration input" = "Rival specifications: sampled in the second interval",
   "Registration lag: corrected to 60 or 72 months" = "Biases of known direction: sized beside the estimate",
+  "Registration lag: growth measured per person listed" = "Biases of known direction: sized beside the estimate",
   "Registration lag beyond four years" = "Biases of known direction: sized beside the estimate",
   "Population base of Donetsk and Luhansk" = "Biases of known direction: sized beside the estimate",
   "Pre-war absentees in the base" = "Biases of known direction: sized beside the estimate",
@@ -1906,6 +1918,7 @@ t6_groups <- c(
   "Civilian age profile" = "Biases of known direction: sized beside the estimate",
   "Counterfactual: a quarter or a half" = "Biases of known direction: sized beside the estimate",
   "Register coverage" = "Biases no source measures: stated for their size",
+  "Civilians of 2022" = "Biases no source measures: stated for their size",
   "Residents of occupied Donbas" = "Biases no source measures: stated for their size",
   "De jure denominator" = "A different quantity")
 group_of <- function(a) {
@@ -1947,6 +1960,50 @@ tab8 <-
   relocate(group, .after = analysis)
 save_tab(tab8, "table6_structural_sensitivity.csv")
 print(tab8)
+
+# The rules behind the Mariupol row (13p): the 2022 civilian total each gives,
+# and the loss of 2022. One UCDP event, the siege, holds 94% of the year's
+# deaths of unknown status, and the rule that splits it sets the civilian level.
+mariupol <- read_rds("data_inter/ukr_mariupol_split_e0.rds")
+tab_mariupol <-
+  mariupol$civilians |>
+  transmute(scenario, civilians_2022_mode = round(civilians_mode), civilians_2022_central = round(civilians_central)) |>
+  left_join(mariupol$loss |> filter(year == 2022) |>
+              mutate(col = if_else(sex == "m", "male_loss_2022", "female_loss_2022"), loss = round(loss, 2)) |>
+              select(scenario, col, loss) |> pivot_wider(names_from = col, values_from = loss),
+            by = "scenario") |>
+  left_join(mariupol$conflict_deaths |> transmute(scenario, change_in_conflict_deaths = round(change)), by = "scenario")
+save_tab(tab_mariupol, "mariupol_split.csv")
+print(tab_mariupol)
+
+# The figures reported beside the headline (13q), each in the central
+# projection: the loss without the imputed missing, the change per 10 points of
+# the missing alive, and the estimate for Ukraine without Crimea, Donetsk and
+# Luhansk. The first row is the central projection as used.
+companions <- read_rds("data_inter/ukr_headline_companions.rds")
+companion_row <- function(d, col, figure, combatants) {
+  d |>
+    filter(!is.na(year), sex == "m" | year %in% c(2022, 2025)) |>
+    # adding zero turns a rounded negative zero into zero
+    transmute(col = paste0(if_else(sex == "m", "male_", "female_"), year), value = round(.data[[col]], 3) + 0) |>
+    pivot_wider(names_from = col, values_from = value) |>
+    mutate(figure = figure, combatant_deaths = round(combatants), .before = 1)
+}
+tab_companions <-
+  bind_rows(
+    companion_row(companions$without_imputed, "loss_used", "As used: every input at its central value", mode_military),
+    companion_row(companions$without_imputed, "loss",
+                  "Without the imputed missing: the registered dead and their late registrations alone",
+                  sum(param_table$confirmed[param_table$role == "combatants"])),
+    companion_row(companions$per_10_points, "per_10_points", "Change per 10 points of the missing alive",
+                  companions$per_10_points$per_10_points[is.na(companions$per_10_points$year)]),
+    companion_row(companions$territory$loss, "loss", "Ukraine without Crimea, Donetsk and Luhansk",
+                  sum(companions$territory$deaths$combatants))
+  ) |>
+  select(figure, combatant_deaths, male_2022, male_2023, male_2024, male_2025, female_2022, female_2025)
+stopifnot(nrow(tab_companions) == 4, !anyNA(tab_companions))
+save_tab(tab_companions, "headline_companions.csv")
+print(tab_companions)
 
 # ==============================================================================
 # FIGURE A8 - The multistate model, evaluated and not used (09g, S6.12)

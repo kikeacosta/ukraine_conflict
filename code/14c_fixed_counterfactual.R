@@ -32,6 +32,12 @@ mil <- read_rds("data_inter/ukr_military_inputs.rds")
 lc_error <- read_rds("data_inter/ukr_lc_forecast_error.rds")
 draws_list <- simulation_draws(mi$param_table, mil, lc_error, n = n_sim)$draws_df |> group_split(sim_id)
 
+# The check: the first draw's civilians must be 11's, which they are only when
+# drawn from the same parameter table, modes and not central values, at the
+# same size.
+ref_draws <- read_rds("data_inter/ukr_sim_param_draws.rds") |> filter(role == "civilians", sim_id == 1) |> arrange(year)
+stopifnot(isTRUE(all.equal(draws_list[[1]]$draw_cvs, ref_draws$draw)))
+
 n_age <- 101L
 e0_chunk <- function(ids) {
   d <- as.data.table(map_dfr(ids, \(i) run_single_sim(i, draws_list[[i]], mi$static_inputs, mi$pop22_ini)))

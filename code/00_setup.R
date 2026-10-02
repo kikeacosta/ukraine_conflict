@@ -279,10 +279,27 @@ excel_date <- function(x) {
 # per-person histories without names, 08b into counts by event month. Nothing
 # these functions return may be written out with the key, name or
 # date-of-birth columns still in it.
-# Each release is dated by its Kaggle version (Olivier Hubert, "Confirmed
-# Ukrainian military personnel losses"): versions 14 to 19. Its latest events
-# fall a few days before that date - for v19, the version of 21 July 2026, on
-# 18 June 2026. The file names carry the date each file was saved.
+# The releases are Kaggle versions 14 to 19 of Olivier Hubert's "Confirmed
+# Ukrainian military personnel losses". The file names carry the date each file
+# was saved.
+#
+# Each release is dated by the data it holds, not by the day it was published.
+# What the lag of an event and the length of a window need is the day the
+# register was copied, which is not recorded. Two dates bracket it: the latest
+# event the release lists (latest_event) and its publication on Kaggle
+# (version). The interval between the two runs from 4 days (v16) to 30 (v17)
+# and 33 (v19), while in every release the daily counts fall away over the last
+# one or two weeks before the latest event, as they do in a list copied a few
+# days after it. A release published a month after its latest event was copied
+# long before it was published: v19 lists nothing after 18 June 2026, and the
+# register itself, read on 1 October 2026, stops at 21 June with about a
+# hundred more people than v19 holds. So every release is dated by its latest
+# event plus the shortest interval to publication observed, 4 days: the latest
+# day on which all six can have been copied if the register lists events as
+# promptly in each. Dating the releases by their Kaggle versions instead runs
+# the clock of v19 a month long; 08b measures what that does to the lag
+# correction (13d, Table A22). 08b also checks the latest events against the
+# files.
 # Six releases give five windows. What they show that four could not: the
 # register's clean-ups come in some releases and not others - the dead and the
 # missing both leave it in v15, v17 and v19 and hardly at all in between - so a
@@ -290,24 +307,30 @@ excel_date <- function(x) {
 # a lull.
 ual_releases <- tibble(
   release = c("v14", "v15", "v16", "v17", "v18", "v19"),
-  date = as.Date(c("2025-09-16", "2025-11-02", "2025-12-04",
-                   "2026-02-06", "2026-04-23", "2026-07-21")),
+  version = as.Date(c("2025-09-16", "2025-11-02", "2025-12-04",
+                      "2026-02-06", "2026-04-23", "2026-07-21")),
+  latest_event = as.Date(c("2025-09-09", "2025-10-16", "2025-11-30",
+                           "2026-01-07", "2026-04-10", "2026-06-18")),
   path = file.path("data_input/ualosses_hubert_datasets", c(
     "250916_UKR_ualosses_Personnel_v14.xlsx", "251102_UKR_ualosses_Personnel_v15.xlsx",
     "251204_UKR_ualosses_Personnel_v16.xlsx", "260206_UKR_ualosses_Personnel_v17.xlsx",
     "260423_UKR_ualosses_Personnel_v18.xlsx", "260919_UKR_ualosses_Personnel_v19.xlsx"
   ))
-)
+) |>
+  mutate(date = latest_event + min(version - latest_event), .after = release)
 ual_status_order <- c("dead", "released_prisoner", "prisoner", "missing")
 
 # What linkage needs from one release. A person's key is full name plus date
-# of birth; `name` (surname and first name) serves the corrected-key search.
+# of birth; `name` (surname and first name), and the two apart, serve the
+# corrected-key search.
 ual_read_release <- function(path) {
   read_xlsx(require_raw(path), sheet = "Database", col_types = "text") |>
     transmute(
       dob = excel_date(DateBirth),
       key = paste(LastName, FirstName, Patronym, dob),
       name = paste(LastName, FirstName),
+      surname = LastName,
+      first = FirstName,
       date_evnt = excel_date(DateEvent),
       year = year(date_evnt),
       ukrainian = ual_is_ukrainian(Nationality),
@@ -322,30 +345,54 @@ ual_one_per_key <- function(r) {
   r |> arrange(match(status, ual_status_order)) |> distinct(key, .keep_all = TRUE)
 }
 
-# A person not found under their key may be listed under a corrected name or
-# date of birth. The candidates are the later release's NEW keys - absent from
-# `before`, the release the search starts from - sharing surname and first
-# name and either the date of birth or the month of the event. Where several
-# qualify, the most resolved status is kept.
+# The two rules by which a record listed under another key is the same person:
+#   name    the same surname and first name, and the same date of birth or the
+#           same month of the event: a corrected patronymic, date of birth or
+#           event date
+#   dates   the same date of birth AND the same event date, and the same
+#           surname or the same first name: a re-spelt name. The register
+#           re-spells names in batches - of the records a release drops and the
+#           first rule cannot follow, this one finds 72, 11, 259, 10 and 357 of
+#           the missing and 53, 10, 427, 12 and 470 of the dead over the five
+#           windows, nearly all of them a surname spelt another way. A date of
+#           birth and an event date coincide by chance too seldom to matter:
+#           with the event date moved by one or two weeks the rule finds no one.
+# x: the records looked for; y: the candidates, with their status. Both carry
+# key, surname, first, dob, date_evnt and the column `name` names, the name the
+# first rule compares (08b adds the patronymic to it for the dead). Returns one
+# row per matching pair: key (of x), key_new and status_new (of y) and the rule.
+ual_match_keys <- function(x, y, name = "name") {
+  x <- x |> transmute(key, nm = .data[[name]], surname, first, dob, date_evnt)
+  y <- y |> transmute(nm = .data[[name]], surname_new = surname, first_new = first, dob_new = dob,
+                      date_new = date_evnt, key_new = key, status_new = status)
+  month <- \(d) floor_date(d, "month")
+  bind_rows(
+    inner_join(x, y, by = "nm", relationship = "many-to-many") |>
+      filter((dob == dob_new) %in% TRUE | (month(date_evnt) == month(date_new)) %in% TRUE) |>
+      mutate(rule = "name"),
+    inner_join(x |> filter(!is.na(dob), !is.na(date_evnt)), y,
+               by = c("dob" = "dob_new", "date_evnt" = "date_new"), relationship = "many-to-many") |>
+      filter((surname == surname_new | first == first_new) %in% TRUE) |>
+      mutate(rule = "dates")
+  ) |>
+    select(key, key_new, status_new, rule)
+}
+
+# A person not found under their key may be listed under a corrected one. The
+# candidates are the later release's NEW keys - absent from `before`, the
+# release the search starts from - that either rule of ual_match_keys() accepts.
+# Where several qualify, the most resolved status is kept.
 ual_corrected_key <- function(p, later, before) {
-  candidates <-
-    later |>
-    anti_join(before, by = "key") |>
-    transmute(name, dob_new = dob, month_new = floor_date(date_evnt, "month"),
-              key_new = key, status_new = status)
-  p |>
-    transmute(key, name, dob, month = floor_date(date_evnt, "month")) |>
-    inner_join(candidates, by = "name", relationship = "many-to-many") |>
-    filter((dob == dob_new) %in% TRUE | (month == month_new) %in% TRUE) |>
-    arrange(match(status_new, ual_status_order)) |>
-    distinct(key, .keep_all = TRUE) |>
-    select(key, key_new, status_new)
+  ual_match_keys(p, later |> anti_join(before, by = "key")) |>
+    arrange(match(status_new, ual_status_order), match(rule, c("name", "dates"))) |>
+    distinct(key, .keep_all = TRUE)
 }
 
 # Everyone listed as missing - event in 2022-2025, Ukrainian - in any release
 # but the last, entering at their first listing, and their status in every
-# later release: `found` says whether under the same key, a corrected key, or
-# not at all. regs: the releases in order, named, as read by
+# later release: `found` says whether under the same key, a corrected key
+# (`rule`: by which rule of ual_match_keys()), or not at all. regs: the
+# releases in order, named, as read by
 # ual_read_release(). One row per person and later release; the person is
 # identified by a sequential `pid`, and no key, name or date of birth is kept.
 # keep_keys = TRUE adds the key at entry and the key found at each release,
@@ -363,7 +410,7 @@ ual_follow_missing <- function(regs, keep_keys = FALSE) {
       distinct(key, .keep_all = TRUE) |>
       filter(!key %in% seen, !key %in% claimed) |>
       mutate(pid = paste0(rel[i], "-", row_number()))
-    cur <- entrants |> select(pid, key, name, dob, date_evnt)
+    cur <- entrants |> select(pid, key, name, surname, first, dob, date_evnt)
     rows <- list()
     for (j in (i + 1):length(rel)) {
       at_j <- cur |> left_join(lu[[j]] |> select(key, status), by = "key")
@@ -376,9 +423,9 @@ ual_follow_missing <- function(regs, keep_keys = FALSE) {
                status = coalesce(status, status_new),
                key = coalesce(key_new, key))
       claimed <- c(claimed, at_j$key[at_j$found == "corrected"])
-      rows[[j]] <- at_j |> transmute(pid, release = rel[j], status, found,
+      rows[[j]] <- at_j |> transmute(pid, release = rel[j], status, found, rule,
                                       key = if_else(found == "absent", NA_character_, key))
-      cur <- at_j |> select(pid, key, name, dob, date_evnt)
+      cur <- at_j |> select(pid, key, name, surname, first, dob, date_evnt)
     }
     out[[i]] <-
       entrants |>
@@ -864,15 +911,17 @@ captives_for <- function(ev, s, held) s * (held + ev$returned_military - ev$regi
 # that take the bound of the other cohorts, pooled under the same weights,
 # instead of their own. Returns a matrix, draws x event years.
 #
-# The events of 2022 borrow. Of their 279 drop-outs beyond list maintenance, 194
-# fall in one window, v14 to v15, at 15 per 1,000 person-months of the missing at
-# risk, where no other cohort exceeds 1.1; over the five windows they leave at
-# 3.4 per 1,000 person-months against 0.3-0.4 for the later cohorts, while their
-# resolutions to death run at half the later cohorts' rate (09l). That is a
-# clean-up of one cohort's records, in the months when repatriated remains ran
-# ahead of the register's resolutions to death, and not a rate at which the
-# living resurface: a bound of 48% read from it would say more about the list
-# than about the people. Their own bound is an alternative in 09 (Table A20).
+# The events of 2022 borrow. Of their 318 drop-outs beyond list maintenance, 185
+# fall in one window, v14 to v15, at 18 per 1,000 person-months of the missing at
+# risk, where no other cohort exceeds 1.1, and another 97 in the last, v18 to
+# v19, at 5.4 where no other cohort exceeds 1.8; over the five windows they leave
+# at 4.3 per 1,000 person-months against 0.3-0.5 for the later cohorts, while
+# their resolutions to death run at about half the later cohorts' rate (09l).
+# That is a clean-up of one cohort's records, in the months when repatriated
+# remains ran ahead of the register's resolutions to death, and not a rate at
+# which the living resurface: a bound of 51% read from it would say more about
+# the list than about the people. Their own bound is an alternative in 09
+# (Table A20).
 bound_borrowers <- 2022
 composition_bound <- function(comp, weights = NULL, borrow = bound_borrowers) {
   years <- sort(unique(comp$year))
@@ -918,30 +967,32 @@ impute_composition <- function(stock_missing, captives, alive_other, captive_sha
 #                        prisoners held (alive_evidence())
 #   the alive otherwise  alive_other: the share a_c of each cohort's missing,
 #                        prisoners apart, who are alive
-#   registration lag     the completion factors, one of 08b's resampled
-#                        replicates per draw (lag)
+#   registration lag     the completion factors under the draw's weights on the
+#                        release windows (lag_factor_draws())
 # mil holds 09's inputs (data_inter/ukr_military_inputs.rds): the registered
 # dead and missing by event month (month, year, status, registered, row: the
-# row of 08b's factor tables), the point and resampled factors, the evidence,
-# the composition by event year and window, and the split of the prisoners over
-# event years (captive_share). alive_other: NULL for the central values, half
-# of each cohort's bound; a vector, one share per draw for every cohort alike
-# (the sweeps); or a matrix, draws x event years. lag: the replicate for each
-# draw, or NULL for the point factors. Returns one row per draw and year:
-# confirmed (registered and late), missing, captives, alive_other, imputed_dead
-# and military.
+# row of 08b's factor tables), the point factors and what rebuilds them under
+# other window weights (lag), the evidence, the composition by event year and
+# window, and the split of the prisoners over event years (captive_share).
+# alive_other: NULL for the central values, half of each cohort's bound; a
+# vector, one share per draw for every cohort alike (the sweeps); or a matrix,
+# draws x event years. lag: the completion factors of each draw, rows of 08b's
+# factor table x draws (lag_factor_draws()), or NULL for the point factors.
+# Returns one row per draw and year: confirmed (registered and late), missing,
+# captives, alive_other, imputed_dead and military.
 military_draws <- function(mil, captives, alive_other = NULL, lag = NULL) {
   n <- length(captives)
   years <- sort(unique(mil$month$year))
   if (is.null(alive_other)) alive_other <- composition_bound(mil$composition)[rep(1, n), , drop = FALSE] / 2
   if (!is.matrix(alive_other)) alive_other <- matrix(alive_other, n, length(years))
   stopifnot(nrow(alive_other) == n, ncol(alive_other) == length(years),
-            all(alive_other >= 0 & alive_other <= 1), is.null(lag) || length(lag) == n)
+            all(alive_other >= 0 & alive_other <= 1),
+            is.null(lag) || (ncol(lag) == n && nrow(lag) == length(mil$factor_point)))
   dead <- mil$month |> filter(status == "dead")
   miss <- mil$month |> filter(status == "missing")
   factors <- function(rows) {
     if (is.null(lag)) matrix(mil$factor_point[rows], length(rows), n)
-    else mil$factor_draws[rows, lag, drop = FALSE]
+    else lag[rows, , drop = FALSE]
   }
   by_year <- function(x, yr) (outer(years, yr, "==") * 1) %*% x
   confirmed <- by_year(dead$registered * factors(dead$row), dead$year)
@@ -965,8 +1016,47 @@ military_draws <- function(mil, captives, alive_other = NULL, lag = NULL) {
   )
 }
 
+# The registration-lag factors under weights on the release windows. 08b pools
+# the register's monthly growth by lag band over the five windows; what the
+# register adds differs far more between windows than between event months - a
+# release brings a batch or it does not - so the error of the factors is the
+# error of resting on five windows, and it is carried the way the bound's is
+# (composition_bound()): by weighting the windows. lag: what 08b keeps for this
+# (cells: each band's sum of rate x weight and of weight by window; month: the
+# lag of each event month and status at the last release; L_ref: the horizon).
+# weights: NULL for the estimate, or a matrix, draws x windows. Returns the
+# factors, rows of 08b's factor table x draws.
+lag_factor_draws <- function(lag, weights = NULL) {
+  wins <- ual_releases$release[-nrow(ual_releases)]
+  if (is.null(weights)) weights <- matrix(1, 1, length(wins))
+  stopifnot(ncol(weights) == length(wins))
+  bands <- lag$cells |> filter(lo < lag$L_ref) |> distinct(status, lo, hi) |> arrange(status, lo)
+  cells <- lag$cells |> filter(lo < lag$L_ref)
+  wide <- function(col) {
+    m <- matrix(0, nrow(bands), length(wins))
+    m[cbind(match(paste(cells$status, cells$lo), paste(bands$status, bands$lo)),
+            match(cells$from, wins))] <- cells[[col]]
+    m
+  }
+  num <- wide("num")
+  den <- wide("den")
+  lambda <- (num %*% t(weights)) / (den %*% t(weights))
+  # a band measured only in windows the weights leave out keeps its estimate
+  empty <- !is.finite(lambda)
+  lambda[empty] <- (rowSums(num) / rowSums(den))[row(lambda)[empty]]
+  # the months each row of the factor table spends in each band on its way from
+  # its lag at the last release to the horizon
+  months <- outer(seq_len(nrow(lag$month)), seq_len(nrow(bands)), function(i, j) {
+    (lag$month$status[i] == bands$status[j]) *
+      pmax(0, pmin(bands$hi[j], lag$L_ref) - pmax(bands$lo[j], lag$month$lag[i]))
+  })
+  exp(months %*% lambda)
+}
+
 # The weights a draw puts on the windows between releases when it sums what
-# they record (composition_bound()). The estimate sums the windows as they
+# they record: the resolutions behind the bound (composition_bound()) and the
+# register's growth behind the lag factors (lag_factor_draws()), the same
+# weights for both. The estimate sums the windows as they
 # are. Five windows say little about what a sixth would record - the register's
 # clean-ups fall in some releases and not others - and how little is what the
 # draws carry: the weights come from a Dirichlet distribution centred on
@@ -1274,19 +1364,20 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
 #   alive            the prisoners held and the share of the unresolved alive
 #                    for other reasons, once per simulation each: they are
 #                    properties of the missing, not of a year
-#   the bound on     the weights on the release windows behind it, once per
-#   the alive        simulation from a Dirichlet (window_weight_draws())
-#   registration     one of 08b's resampled sets of completion factors
-#   lag
-#   counterfactual   the Lee-Carter index of each sex, a random walk with
+#   the release      the weights on the windows between releases, once per
+#   windows          simulation from a Dirichlet (window_weight_draws()): the
+#                    bound on the alive and the registration-lag factors are
+#                    both rebuilt under them, so a draw that leans on a window
+#                    leans on it for both
+#   counterfactual  the Lee-Carter index of each sex, a random walk with
 #                    drift: the drift's error and each year's innovation,
 #                    correlated between the sexes as 04 measured
 #   migration        the western blend weight once per simulation, applied to
 #                    every year's two readings; Russia and Belarus once
-# The military total follows from the four inputs of the missing
-# (military_draws()). Each of them is also run alone, the others at their
-# central values or point estimates, so that 15 can attribute the spread of
-# the results.
+# The military total follows from the three inputs on the missing alive and
+# the window weights (military_draws()). The two groups are also run alone, the
+# other at its central values or point estimates, so that 15 can attribute the
+# spread of the results.
 # Returns the draws by simulation and year (draws_df), the same by role
 # (param_draws) and the inputs on the missing by simulation (alive_draws).
 simulation_draws <- function(param_table, mil, lc_error, n, shape = 4, seed = 42) {
@@ -1315,20 +1406,29 @@ simulation_draws <- function(param_table, mil, lc_error, n, shape = 4, seed = 42
       u_other = runif(n)
     ) |>
     mutate(captives = captives_for(ev, s, held))
-  lag <- sample.int(ncol(mil$factor_draws), n, replace = TRUE)
-  alive_draws$lag <- lag
+  # The release windows: one set of weights per simulation, under which both
+  # the bound and the registration-lag factors are rebuilt. A release that adds
+  # many records tends to drop many as well - the last brought both, the one
+  # before it little of either - and more growth raises the total while more
+  # exits lower it, so the two move in opposite directions under the same
+  # weights, and drawing them apart would add a spread no set of releases could
+  # produce.
   window <- window_weight_draws(n)
   bound <- composition_bound(mil$composition, window)
   bound_point <- composition_bound(mil$composition)[rep(1, n), , drop = FALSE]
+  lag <- lag_factor_draws(mil$lag, window)
   a_draw <- alive_draws$u_other * bound
 
-  # every input drawn; then each group alone with the others at their centre,
-  # for the shares of the variance (15): the evidence on the missing alive (the
-  # prisoners and where between none and the bound the rest sit), the bound's
-  # own error, and the registration-lag factors
+  # every input drawn; then each group alone with the other at its centre, for
+  # the shares of the variance (15): the evidence on the missing alive (the
+  # prisoners and where between none and the bound the rest sit), and the
+  # release windows, through the bound and the lag factors together. The
+  # windows' two parts are kept apart as well (mil_model: the bound alone;
+  # mil_lag: the lag factors alone), to show how far they offset each other.
   mil_all <- military_draws(mil, alive_draws$captives, a_draw, lag)
   captives_c <- rep(ev$captives_central, n)
   mil_alive <- military_draws(mil, alive_draws$captives, alive_draws$u_other * bound_point)
+  mil_window <- military_draws(mil, captives_c, bound / 2, lag)
   mil_model <- military_draws(mil, captives_c, bound / 2)
   mil_lag <- military_draws(mil, captives_c, lag = lag)
   alive_draws <-
@@ -1377,6 +1477,7 @@ simulation_draws <- function(param_table, mil, lc_error, n, shape = 4, seed = 42
     as_role(mil_all, "military", "combatants"),
     as_role(mil_all, "confirmed", "confirmed"),
     as_role(mil_alive, "military", "mil_alive"),
+    as_role(mil_window, "military", "mil_window"),
     as_role(mil_model, "military", "mil_model"),
     as_role(mil_lag, "military", "mil_lag"),
     dk_long,
@@ -1403,11 +1504,25 @@ simulation_draws <- function(param_table, mil, lc_error, n, shape = 4, seed = 42
 # carried forward from 2023, and the age-sex profiles of civilian, registered
 # and imputed deaths. A sensitivity step changes one of these and projects
 # again. "At the mode" is shorthand, here and in the sensitivity steps, for
-# these central values: every input at the mode of its distribution, except
-# the three inputs on how many of the missing are alive, at their means
-# (alive_evidence()), which set the military total (the "mode" column of the
-# parameter table's combatant rows, 10).
+# these central values: every drawn input at the MEAN of its distribution, so
+# that the central projection stands where the mean of the draws does (11) -
+# the three inputs on how many of the missing are alive (alive_evidence()),
+# which set the military total (the "mode" column of the parameter table's
+# combatant rows, 10), and the civilians and Russia and Belarus
+# (central_values()).
+#
+# central_values(): a parameter table, or the migration bounds, with the "mode"
+# of the two inputs drawn from a Beta-PERT of its own - civilians, Russia and
+# Belarus - replaced by that distribution's mean, (min + 4 mode + max) / 6.
+# The civilian range is longer above its mode than below, so the mode sits
+# below the mean of the draws. The western net outflow is a blend of two
+# readings whose mode is their midpoint and its mean already.
+central_values <- function(p) {
+  p |> mutate(mode = if_else(role %in% c("civilians", "mig_ru_by"), (min + 4 * mode + max) / 6, mode))
+}
 mode_projection_inputs <- function() {
+  # returned as it is: 14c and 14d draw the simulation's inputs from it again,
+  # and those take the modes. Only the central draws below take the means.
   param_table <- read_rds("data_inter/ukr_param_table.rds")
   exp_mort <- read_rds("data_inter/ukr_mxs_obs_plus_frcst_1989_2025.rds") |>
     filter(year %in% 2022:2025, source == "frcst") |>
@@ -1446,6 +1561,7 @@ mode_projection_inputs <- function() {
   stopifnot(all(static_inputs$mx > 0), !any(is.na(static_inputs)))
   draws <-
     param_table |>
+    central_values() |>
     mutate(role = if_else(str_starts(role, "mig_"), "migration", role)) |>
     summarise(mode = sum(mode), .by = c(year, role)) |>
     pivot_wider(names_from = role, values_from = mode) |>

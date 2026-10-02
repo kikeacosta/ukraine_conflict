@@ -9,7 +9,8 @@ source("code/00_setup.R")
 # counts before being written out, so the cached extract is a few kB AND
 # carries no personal data (no names, no dates of birth).
 
-# The most recent release, v19 of 21 July 2026. Every age-sex count comes
+# The most recent release, v19: published on 21 July 2026, with events to
+# 18 June 2026 (ual_releases, 00_setup.R). Every age-sex count comes
 # from it; the earlier releases are read only by 09, to follow the missing.
 ual_file <- "data_input/ualosses_hubert_datasets/260919_UKR_ualosses_Personnel_v19.xlsx"
 
@@ -152,6 +153,46 @@ dts <- cache_rds("data_inter/ualosses_counts_2022_2025.rds", {
     ) |>
     summarise(dx = n(), .by = c(status, year, sex, age)) |>
     arrange(status, year, sex, age)
+})
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# raw register -> anonymised counts by place of origin (cached)
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# The From field gives a place of origin as "settlement, community, district,
+# oblast", the city of Kyiv as "Kyiv" alone, or "Unknown". The register does
+# not say whether it is the place of birth or of residence. The oblast is the
+# last part of the field. The Ukrainian dead and missing of 2022-2025 are
+# counted by event year, status and origin group: Donetsk, Luhansk, another
+# oblast, Kyiv city, unknown. 13q takes from these counts the share of the
+# combatants who come from outside Donetsk and Luhansk. Only the counts are
+# written: no names, dates of birth or individual records.
+origin <- cache_rds("data_inter/ualosses_origin_2022_2025.rds", {
+  ori <-
+    read_xlsx(require_raw(ual_file), sheet = "Database", col_types = "text") |>
+    transmute(
+      status = Status,
+      year = as.integer(year(excel_date(DateEvent))),
+      ukrainian = ual_is_ukrainian(Nationality),
+      place = str_trim(str_extract(From, "[^,]*$"))
+    ) |>
+    filter(ukrainian, status %in% c("dead", "missing"), year %in% 2022:2025)
+  # every value is an oblast, Kyiv city or unknown: a place of another kind
+  # (Crimea, Sevastopol) would otherwise be counted as unknown without notice
+  stopifnot(all(str_detect(ori$place, " Oblast$") | ori$place %in% c("Kyiv", "Unknown") |
+                  is.na(ori$place)))
+  ori |>
+    mutate(origin = case_when(
+      place == "Donetsk Oblast" ~ "Donetsk",
+      place == "Luhansk Oblast" ~ "Luhansk",
+      place == "Kyiv" ~ "Kyiv city",
+      str_detect(place, " Oblast$") ~ "another oblast",
+      .default = "unknown"
+    )) |>
+    count(year, status, origin, name = "n") |>
+    complete(year = 2022:2025, status = c("dead", "missing"),
+             origin = c("Donetsk", "Luhansk", "another oblast", "Kyiv city", "unknown"),
+             fill = list(n = 0L)) |>
+    arrange(year, status, origin)
 })
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
