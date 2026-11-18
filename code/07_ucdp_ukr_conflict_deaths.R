@@ -150,7 +150,6 @@ all_sum2 <-
       mutate(role = "combatants")
   )
 
-
 # write_rds(all_sum, "data_inter/dt_ucdp_unadjusted.rds")
 
 # identifying civilians and foreign and local soldiers in inter-state conflicts
@@ -339,7 +338,6 @@ all2 %>%
 # writes were unread by the rest of the pipeline; the slim cached extract at
 # data_inter/ucdp_ged_events_slim.rds now serves that purpose.)
 
-
 # in Ukraine ====
 # ~~~~~~~~~~~~~~~
 ukr <-
@@ -516,7 +514,6 @@ tst2 <-
   gather(-country, -year, key = role, value = dts) |>
   left_join(cmp_adj, by = c("country", "year", "role"))
 
-
 tst2 |>
   filter(role == "total") |>
   mutate(diff = round(dts - dts_adj)) |>
@@ -528,7 +525,6 @@ copy_this(
     mutate(diff = round(dts - dts_adj)) |>
     arrange(-diff)
 )
-
 
 # Colombia ====
 # ~~~~~~~~~~~~~
@@ -546,11 +542,3 @@ all2 |>
     total = sum(t)
   )
 
-all2 |>
-  filter(country == "Colombia") |>
-  summarise(
-    total = sum(t),
-    .by = c(year)
-  ) |>
-  ggplot() +
-  geom_line(aes(year, total))

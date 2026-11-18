@@ -71,7 +71,6 @@ dt2 <-
   select(-c(dts, tot_sum)) |>
   mutate(dx = ifelse(dx == 0, 1, dx))
 
-
 chunk <-
   dt2 |>
   filter(year == 2025, sex == "f")
@@ -98,23 +97,3 @@ dt3 <-
 
 write_rds(dt3, "data_inter/ukr_ohchr_civilian_casualties.rds")
 
-
-dt3 |>
-  mutate(cx = ifelse(sex == "m", -cx, cx)) |>
-  ggplot() +
-  geom_line(aes(age, cx, col = factor(year), group = interaction(sex, year))) +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  coord_flip() +
-  theme_bw()
-
-ggsave("figures/exploratory/ukr_unchr_civilians_2022_2025_cx.png")
-
-dt3 |>
-  mutate(dx = ifelse(sex == "m", -dx, dx)) |>
-  ggplot() +
-  geom_line(aes(age, dx, col = factor(year), group = interaction(sex, year))) +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  coord_flip() +
-  theme_bw()
-
-ggsave("figures/exploratory/ukr_unchr_civilians_2022_2025_dx.png")

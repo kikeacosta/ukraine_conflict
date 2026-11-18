@@ -1,4 +1,4 @@
-# Run the pipeline, steps 00-17:
+# Run the pipeline, steps 00-17. Steps 01-14 save processed data only; step 17 writes every table and figure:
 #   Rscript run_pipeline.R        every step
 #   Rscript run_pipeline.R 10     from step 10 on (the setup, 00, always runs)
 # Configure CRAN mirror
@@ -39,7 +39,6 @@ steps_to_run <- list(
   list(name = "09l", file = "code/09l_bound_stability.R"),
   list(name = "10", file = "code/10_dists_tables.R"),
   list(name = "11", file = "code/11_estimation_conflict_allcause_mortality.R"),
-  list(name = "12", file = "code/12_plotting_estimates.R"),
   list(name = "13", file = "code/13_sensitivity_migration_contributions.R"),
   list(name = "13b", file = "code/13b_sensitivity_missing_alive.R"),
   list(name = "13c", file = "code/13c_sensitivity_migration_range.R"),
@@ -73,8 +72,6 @@ steps_to_run <- list(
   list(name = "14d", file = "code/14d_drawn_population_base.R"),
   # 14e reads the draws (14) and every sensitivity step's output (13b-13n)
   list(name = "14e", file = "code/14e_structural_uncertainty.R"),
-  # 16 draws the pipeline itself, from the release list and n_sim
-  list(name = "16", file = "code/16_pipeline_figure.R"),
   # 17 writes the tables and figures of the paper, and only those, to outputs/.
   # (15, which wrote the working tables to tables/, is no longer run: see its header)
   list(name = "17", file = "code/17_paper_outputs.R")

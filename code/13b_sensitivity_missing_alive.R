@@ -55,8 +55,6 @@
 # OUTPUTS  data_inter/ukr_alive_sensitivity_military.rds
 #          data_inter/ukr_alive_sensitivity_e0.rds
 #          data_inter/ukr_linkage_rules_e0.rds (section 5)
-#          figures/exploratory/alive_sensitivity_military.png
-#          figures/exploratory/alive_sensitivity_e0.png
 # ==============================================================================
 
 rm(list = ls())
@@ -202,41 +200,6 @@ range_band <- function() {
     geom_vline(xintercept = share_of("central"), linetype = "dashed", colour = "grey40")
   )
 }
-
-p_mil <-
-  military_totals |>
-  ggplot(aes(share_alive, total_military)) +
-  range_band() +
-  geom_line(linewidth = 1) +
-  geom_point() +
-  scale_x_continuous(labels = scales::percent) +
-  scale_y_continuous(labels = scales::comma) +
-  labs(
-    x = "Share of the missing who are alive",
-    y = "Total military deaths, 2022-2025",
-    title = "Sensitivity of the military death total to the missing alive",
-    caption = "Shaded: the range the evidence allows. Dashed: its central values."
-  ) +
-  theme_bw()
-ggsave("figures/exploratory/alive_sensitivity_military.png", p_mil, w = 7, h = 4.5)
-
-p_e0 <-
-  e0_by_alive |>
-  mutate(sex = if_else(sex == "f", "Females", "Males")) |>
-  ggplot(aes(share_alive, loss, colour = factor(year))) +
-  range_band() +
-  geom_line(linewidth = 1) +
-  facet_wrap(~sex, scales = "free_y") +
-  scale_x_continuous(labels = scales::percent) +
-  labs(
-    x = "Share of the missing who are alive",
-    y = "Life expectancy loss (years)",
-    colour = "Year",
-    title = "Sensitivity of the life expectancy loss to the missing alive",
-    caption = "Shaded: the range the evidence allows. Dashed: its central values."
-  ) +
-  theme_bw()
-ggsave("figures/exploratory/alive_sensitivity_e0.png", p_e0, w = 9, h = 4.5)
 
 # ==============================================================================
 # 5. THE LINKAGE RULES

@@ -81,7 +81,6 @@ forecast_df <-
   select(year, sex, age, mx = .mean) |>
   mutate(source = "frcst")
 
-
 tst <-
   bind_rows(
     dt |>
@@ -138,32 +137,6 @@ write_rds(lc_error, "data_inter/ukr_lc_forecast_error.rds")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# visualizing observed and projected life expectancy ====
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-tst |>
-  mutate(
-    sex = case_when(sex == "m" ~ "Male", sex == "f" ~ "Female"),
-    sex = factor(sex, levels = c("Male", "Female")),
-    source = case_when(
-      source == "obs" ~ "Observed",
-      source == "frcst" ~ "Forecast"
-    ),
-    source = factor(source, levels = c("Observed", "Forecast"))
-  ) |>
-  filter(year %in% 2019:2025) |>
-  ggplot(aes(x = age, y = mx, lty = source)) +
-  geom_line() +
-  scale_y_log10() +
-  facet_grid(sex ~ year) +
-  theme_bw() +
-  theme(strip.background = element_blank())
-
-ggsave(
-  "figures/exploratory/labtalk/ukr_mx_forecasted.png",
-  w = 8,
-  h = 4
-)
-
 # Calculate life expectancy for forecasted years
 e0_forecast <-
   fc_rates %>%
@@ -195,24 +168,3 @@ e0_obs <-
 
 e0 <- bind_rows(e0_obs, e0_forecast)
 
-e0 |>
-  mutate(
-    sex = case_when(sex == "m" ~ "Male", sex == "f" ~ "Female"),
-    sex = factor(sex, levels = c("Male", "Female")),
-    source = case_when(
-      source == "obs" ~ "Observed",
-      source == "frcst" ~ "Forecast"
-    ),
-    source = factor(source, levels = c("Observed", "Forecast"))
-  ) |>
-  ggplot(aes(x = year, y = ex, lty = source)) +
-  facet_wrap(~sex) +
-  geom_line() +
-  theme_bw() +
-  theme(strip.background = element_blank())
-
-ggsave(
-  "figures/exploratory/labtalk/ukr_le_forecasted.png",
-  w = 8,
-  h = 3
-)

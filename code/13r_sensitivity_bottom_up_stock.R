@@ -84,7 +84,6 @@
 #                  register year, sex, register (breaks back-cast),
 #                           register_published (the clean-ups differenced as
 #                           returns of the year)
-#          figures/exploratory/migration_register_stock_components.png
 # ==============================================================================
 
 # ==============================================================================
@@ -770,21 +769,5 @@ print(as.data.frame(
     pivot_wider(names_from = col, values_from = loss) |>
     mutate(across(where(is.numeric), \(x) round(x, 3)))
 ))
-
-# bottom-up stock and its parts
-register_stock |>
-  select(year, eurostat, unhcr_other, canada, usa) |>
-  pivot_longer(-year, names_to = "part", values_to = "stock") |>
-  mutate(part = factor(part, levels = c("usa", "canada",
-                                        "unhcr_other", "eurostat"))) |>
-  ggplot(aes(factor(year), stock / 1e6, fill = part)) +
-  geom_col(width = 0.7) +
-  scale_fill_manual(values = c(eurostat = "#0A9396", unhcr_other = "#94D2BD",
-                               canada = "#EE9B00", usa = "#CA6702")) +
-  labs(x = NULL, y = "Stock at 31 December (millions)", fill = NULL,
-       caption = paste("Canada and USA interpolated between published counts.",
-                       "Eurostat with the flagged clean-ups back-cast.")) +
-  theme_minimal()
-ggsave("figures/exploratory/migration_register_stock_components.png", w = 7, h = 4)
 
 message("Done. data_inter/ukr_bottom_up_stock.rds and ukr_bottom_up_stock_e0.rds written for 15.")

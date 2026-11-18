@@ -34,7 +34,7 @@
 # migration effect, not about its uncertainty.
 #
 # INPUTS   the same as step 11
-# OUTPUTS  figures/loss_decomp_migration_mortality*.png
+# OUTPUTS  data_inter/ukr_migration_decomposition.rds
 # ==============================================================================
 
 rm(list = ls())
@@ -207,63 +207,5 @@ plot_dat <-
   mutate(Component = factor(Component, levels = c("Mortality", "Migration")))
 
 cols_comp <- c("Mortality" = "#555555", "Migration" = "#FF4D4D")
-
-# absolute
-plot_dat |>
-  ggplot(aes(x = factor(year), y = Loss, fill = Component)) +
-  geom_col(position = "stack", width = 0.65, color = "white", linewidth = 0.2) +
-  geom_text(
-    aes(label = if_else(Loss >= 0.05, sprintf("%.2f", Loss), "")),
-    position = position_stack(vjust = 0.5),
-    colour = "black", size = 3
-  ) +
-  facet_wrap(
-    ~sex,
-    labeller = labeller(sex = c("f" = "Females", "m" = "Males"))
-  ) +
-  scale_fill_manual(values = cols_comp) +
-  labs(
-    x = "Year",
-    y = "Life expectancy loss (years)",
-    fill = NULL
-  ) +
-  theme_minimal(base_size = 11) +
-  theme(
-    legend.position = "bottom",
-    panel.grid.major.x = element_blank(),
-    strip.text = element_text(face = "bold", size = 12)
-  )
-
-ggsave("figures/exploratory/loss_decomp_migration_mortality_abs.png", w = 7, h = 4)
-
-# relative
-plot_dat |>
-  mutate(pct = Loss / sum(Loss), .by = c(year, sex)) |>
-  ggplot(aes(x = factor(year), y = Loss, fill = Component)) +
-  geom_col(position = "fill", width = 0.65, color = "white", linewidth = 0.2) +
-  geom_text(
-    aes(label = scales::percent(pct, accuracy = 0.1)),
-    position = position_fill(vjust = 0.5),
-    colour = "black", fontface = "bold", size = 3
-  ) +
-  facet_wrap(
-    ~sex,
-    labeller = labeller(sex = c("f" = "Females", "m" = "Males"))
-  ) +
-  scale_fill_manual(values = cols_comp) +
-  scale_y_continuous(labels = scales::percent) +
-  labs(
-    x = "Year",
-    y = "Percentage contribution to loss",
-    fill = "Effect"
-  ) +
-  theme_minimal(base_size = 11) +
-  theme(
-    legend.position = "bottom",
-    panel.grid.major.x = element_blank(),
-    strip.text = element_text(face = "bold", size = 12)
-  )
-
-ggsave("figures/exploratory/loss_decomp_migration_mortality.png", w = 7, h = 4)
 
 message("Done.")

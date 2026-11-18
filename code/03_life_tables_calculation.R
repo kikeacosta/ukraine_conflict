@@ -77,22 +77,6 @@ lt |>
 # ~~~~~~~~~~~~~~~~~~
 write_rds(lt, "data_inter/ukr_life_tables_1989_2021.rds")
 
-
-# VISUALISATION ===============================================================
-# e0
-lt |>
-  filter(age == 0) |>
-  ggplot(aes(x = year, y = ex, color = sex)) +
-  geom_line(linewidth = 1) +
-  scale_y_continuous(limits = c(60, 78)) +
-  labs(
-    title = "Life expectancy at birth",
-    y = "Years",
-    x = "Year",
-    color = "Sex"
-  ) +
-  theme_minimal()
-
 # qx
 qx_plot <- lt |>
   filter(
@@ -101,29 +85,3 @@ qx_plot <- lt |>
     age <= 99
   )
 
-ggplot(qx_plot, aes(x = age, y = qx, color = year, group = year)) +
-  geom_line(alpha = 0.6, linewidth = 0.5) +
-  scale_y_log10(labels = scales::label_number()) +
-  scale_color_viridis_c(option = "turbo", name = "Year", direction = -1) +
-  labs(
-    x = "Age",
-    y = "qx (log scale)",
-  ) +
-  theme_minimal(base_size = 12) +
-  theme(
-    plot.title = element_text(face = "bold", size = 14, hjust = 0),
-    plot.subtitle = element_text(size = 11, color = "gray40", hjust = 0),
-    strip.text = element_text(face = "bold", size = 12),
-    strip.background = element_rect(fill = "gray95", color = NA),
-    panel.grid.minor = element_blank(),
-    panel.grid.major = element_line(color = "gray90", linewidth = 0.3),
-    legend.position = c(0.15, 0.8),
-    legend.background = element_rect(
-      fill = "white",
-      color = "gray80",
-      linewidth = 0.3
-    ),
-    legend.key.width = unit(1.5, "cm"),
-    plot.caption = element_text(color = "gray50", size = 9, hjust = 1)
-  ) +
-  guides(color = guide_colorbar(title.position = "top", title.hjust = 0.5))

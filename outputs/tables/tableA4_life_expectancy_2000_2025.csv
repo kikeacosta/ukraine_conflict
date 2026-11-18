@@ -1,4 +1,4 @@
-year,sex,observed,expected,with_war_resolution_based,with_war_lower_bound,with_war_upper_bound
+year,sex,observed,expected,with_war_resolution_based,with_war_minimum_scenario,with_war_maximum_scenario
 2000,Males,62.57,,,,
 2001,Males,62.61,,,,
 2002,Males,62.48,,,,

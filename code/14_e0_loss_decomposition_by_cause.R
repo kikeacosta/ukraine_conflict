@@ -41,7 +41,6 @@
 # OUTPUTS  data_inter/ukr_e0_loss_by_cause_draws_2022_2025.rds
 #          data_inter/ukr_e0_loss_by_cause_summary_2022_2025.rds
 #          data_inter/ukr_conflict_deaths_by_cause_summary_2022_2025.rds
-#          figures/e0_loss_*.png
 # ==============================================================================
 
 rm(list = ls())
@@ -283,95 +282,6 @@ theme_decomp <- function() {
     )
 }
 
-# --- plot builders ----------------------------------------------------------
-# `causes`      the categories to stack, in order
-# `total_cause` whose 95% UI the whiskers show, and what the shares are taken
-#               as a percentage OF. "Total" for the whole loss, "Combatants"
-#               when only the combatant loss is being subdivided.
-plot_abs <- function(causes, total_cause = "Total", min_label = 0.05,
-                     caption = NULL) {
-  dat <- e0_loss_by_cause |> filter(cause %in% causes) |> nice_sex()
-  tot <- e0_loss_by_cause |> filter(cause == total_cause) |> nice_sex()
-
-  ggplot() +
-    geom_col(
-      data = dat,
-      aes(x = factor(year), y = loss_mean, fill = cause),
-      width = 0.68, colour = "white", linewidth = 0.2
-    ) +
-    geom_text(
-      data = dat,
-      aes(
-        x = factor(year), y = loss_mean, group = cause,
-        label = if_else(loss_mean >= min_label, sprintf("%.2f", loss_mean), "")
-      ),
-      position = position_stack(vjust = 0.5),
-      colour = "black", size = 3
-    ) +
-    geom_errorbar(
-      data = tot,
-      aes(x = factor(year), ymin = loss_lo, ymax = loss_hi),
-      width = 0.16, linewidth = 0.4, colour = "grey25"
-    ) +
-    facet_wrap(~sex) +
-    scale_fill_manual(values = cols_cause, breaks = causes) +
-    labs(
-      x = "Year",
-      y = "Life expectancy loss (years)",
-      fill = "Cause of loss",
-      caption = caption %||% paste0(
-        "Bars: mean contribution. Whiskers: 95% UI on the ",
-        tolower(total_cause), " loss."
-      )
-    ) +
-    theme_decomp()
-}
-
-# Shares are recomputed WITHIN the plotted categories, so they always sum to
-# 100% and the printed labels match the bar heights that position = "fill"
-# produces. Using the stored `share` column (which is always a share of the
-# grand total) would desynchronise the two whenever a subset is plotted.
-plot_share <- function(causes, min_label = 0.03, y_lab = NULL,
-                       facet_sex = TRUE, caption = NULL) {
-  dat <-
-    e0_loss_by_cause |>
-    filter(cause %in% causes) |>
-    nice_sex() |>
-    mutate(share_plot = loss_mean / sum(loss_mean), .by = c(year, sex))
-
-  # when the split does not vary by sex, showing two identical panels implies
-  # a comparison that is not there
-  if (!facet_sex) dat <- dat |> filter(sex == "Males")
-
-  p <-
-    ggplot(dat, aes(x = factor(year), y = share_plot, fill = cause)) +
-    geom_col(position = "fill", width = 0.68, colour = "white", linewidth = 0.2) +
-    geom_text(
-      aes(label = if_else(
-        share_plot >= min_label,
-        scales::percent(share_plot, accuracy = 0.1),
-        ""
-      )),
-      position = position_fill(vjust = 0.5),
-      colour = "black", size = 3
-    ) +
-    scale_fill_manual(values = cols_cause, breaks = causes) +
-    scale_y_continuous(
-      labels = scales::percent,
-      expand = expansion(mult = c(0.03, 0.03))
-    ) +
-    labs(
-      x = "Year",
-      y = y_lab %||% "Share of the life expectancy loss",
-      fill = "Cause of loss",
-      caption = caption
-    ) +
-    theme_decomp()
-
-  if (facet_sex) p <- p + facet_wrap(~sex)
-  p
-}
-
 # The three-way split is the reported decomposition: civilians, combatants
 # confirmed individually in the register, and combatants imputed from the
 # missing. Two- and three-way variants were also trialled; the three-way is
@@ -384,11 +294,5 @@ plot_share <- function(causes, min_label = 0.03, y_lab = NULL,
 three_way <- c(
   "Civilians", "Registered combatants", "Missing combatants (imputed)"
 )
-
-plot_abs(three_way)
-ggsave("figures/exploratory/e0_loss_three_way_abs.png", w = 8, h = 4.2, dpi = 300)
-
-plot_share(three_way)
-ggsave("figures/exploratory/e0_loss_three_way_share.png", w = 8, h = 4.2, dpi = 300)
 
 message("Done.")

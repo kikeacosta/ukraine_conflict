@@ -38,7 +38,6 @@
 #          data_inter/ukr_pop_sssu.rds, Donetsk and Luhansk (from 01)
 # OUTPUTS  data_inter/ukr_migration_sensitivity_e0.rds
 #          data_inter/ukr_migration_specification_e0.rds (section 5)
-#          figures/exploratory/migration_sensitivity_e0.png
 # ==============================================================================
 
 rm(list = ls())
@@ -218,18 +217,6 @@ print(as.data.frame(
     pivot_wider(names_from = sex, values_from = loss, names_prefix = "loss_") |>
     arrange(component, cumulative_net_migration)
 ))
-
-# 4. DIAGNOSTIC PLOT (the manuscript figure is assembled in 15) ================
-migration_sensitivity |>
-  filter(!is.na(u)) |>
-  mutate(sex = if_else(sex == "f", "Females", "Males")) |>
-  ggplot(aes(cumulative_net_migration / 1e6, loss, colour = factor(year))) +
-  geom_line(linewidth = 1) +
-  facet_wrap(component ~ sex, scales = "free") +
-  labs(x = "Cumulative net migration of the component, 2022-2025 (millions)",
-       y = "Life expectancy loss (years)", colour = "Year") +
-  theme_bw()
-ggsave("figures/exploratory/migration_sensitivity_e0.png", w = 9, h = 6)
 
 message("Done. data_inter/ukr_migration_sensitivity_e0.rds written for 15.")
 

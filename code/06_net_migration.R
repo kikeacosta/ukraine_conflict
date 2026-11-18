@@ -202,27 +202,3 @@ print(as.data.frame(migration_bounds))
 # ==============================================================================
 nice <- function(d) d |> mutate(sex = if_else(sex == "f", "Females", "Males"))
 
-# net flow by age and sex at the mode, returns below zero
-dt5 |>
-  nice() |>
-  ggplot(aes(age, -mix / 1e3, colour = factor(year))) +
-  geom_hline(yintercept = 0, colour = "grey60") +
-  geom_line() +
-  facet_wrap(~sex) +
-  scale_colour_manual(values = c("black", "grey20", "grey45", "grey70")) +
-  labs(x = "Age at end of year", y = "Net outflow (thousands, negative = return)",
-       colour = NULL) +
-  theme_bw()
-ggsave("figures/exploratory/migration_net_flow_by_age_mode.png", w = 8, h = 3.5)
-
-# the same, from 2023, where the scale lets the returns show
-dt5 |>
-  filter(year > 2022) |>
-  nice() |>
-  ggplot(aes(age, -mix / 1e3, colour = factor(year))) +
-  geom_hline(yintercept = 0, colour = "grey60") +
-  geom_line() +
-  facet_wrap(~sex) +
-  labs(x = "Age at end of year", y = "Net outflow (thousands)", colour = NULL) +
-  theme_bw()
-ggsave("figures/exploratory/migration_net_flow_by_age_mode_2023_2025.png", w = 8, h = 3.5)
