@@ -199,7 +199,8 @@ their own diagnostic plots in `figures/exploratory/`; those are not the paper's.
 | Table A4 | `tables/tableA4_resolution_of_missing.csv` | What became of the missing whose status a later release settled: the source of the 69.6% |
 | Table A5 | `tables/tableA5_net_migration.csv` | Net migration by year: border crossings, UNHCR's totals, their midpoint, and Russia |
 | Table A6 | `tables/tableA6_deaths_by_year_type_sex.csv` | Conflict deaths by year, type and sex |
-| Table A7 | `tables/tableA7a_ucdp_only_deaths.csv`, `tables/tableA7b_ucdp_only_loss.csv` | Every death from UCDP, in two panels: the deaths under uncertainUCDP beside the estimate, and the loss by sex with civilians, combatants and both replaced |
+| Table A7 | `tables/tableA7_ucdp_only_deaths.csv` | Every death from UCDP: civilian and combatant deaths under uncertainUCDP, beside the estimate |
+| Table A8 | `tables/tableA8_ucdp_only_loss.csv` | Every death from UCDP: the loss by sex with civilians, combatants and both replaced |
 | Figure A1 | `figures/figA1_loss_by_share_of_missing.png` | The loss and combatant deaths at every share of the missing counted dead (drawn by 13s) |
 | Figure A2 | `figures/figA2_loss_ucdp_only.png` | Figure 3 with the scenario that takes every death from UCDP |
 

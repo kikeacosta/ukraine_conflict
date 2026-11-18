@@ -7,7 +7,7 @@
 # Writes every table and figure that appears in the manuscript, main text and
 # Supplement, and nothing else, numbered as the manuscript numbers them:
 #
-#   outputs/tables/    Tables 1-4 and A1-A7
+#   outputs/tables/    Tables 1-4 and A1-A8
 #   outputs/figures/   Figures 1-5, A1 and A2
 #   outputs/manifest.csv   one row per item: its number, title, file, and
 #                                the files it is built from
@@ -287,14 +287,14 @@ out_tab(tA6, "Table A6", "Conflict deaths by year, type and sex, Ukraine, 2022-2
         "tableA6_deaths_by_year_type_sex.csv", f$loss_draws)
 
 # ==============================================================================
-# TABLE A7 - Every death from UCDP
+# TABLE A7 and TABLE A8 - Every death from UCDP
 # ==============================================================================
-# Two panels, so that neither is wider than a page: the deaths by year, which
-# are not by sex, and the loss by sex and year.
+# Two tables, since they hold different things: the deaths by year, which are
+# not by sex, and the loss by sex and year.
 # the total's mean is the sum of the years' exact means, rounded as in the rows;
 # its interval is that of the four years summed within each draw
 total_ci <- function(means, draws) ci(sum(round(means)), quantile(colSums(draws), .025), quantile(colSums(draws), .975))
-tA7a <- uu$compare |>
+tA7 <- uu$compare |>
   transmute(year = as.character(year), civilians_estimate = comma0(central_projection),
             civilians_ucdp_corrected = ci(uu_mean, uu_lo, uu_hi)) |>
   left_join(uu$combatants |> transmute(year = as.character(year),
@@ -305,17 +305,17 @@ tA7a <- uu$compare |>
           civilians_ucdp_corrected = total_ci(uu$compare$uu_mean, uu$draws),
           combatants_resolution_based = comma0(sum(round(uu$combatants$register_central))),
           combatants_ucdp_corrected = total_ci(uu$combatants$uu_mean, uu$combatant_draws))
-out_tab(tA7a, "Table A7, panel A", "Deaths with every death taken from UCDP, beside the estimate",
-        "tableA7a_ucdp_only_deaths.csv", f$uu)
-tA7b <- uu$ucdp_only_parts |>
+out_tab(tA7, "Table A7", "Conflict deaths with every death taken from UCDP, beside the estimate, Ukraine, 2022-2025",
+        "tableA7_ucdp_only_deaths.csv", f$uu)
+tA8 <- uu$ucdp_only_parts |>
   arrange(desc(sex), year) |>
   transmute(sex = sex_label(sex), year, as_estimated = dec2(loss_used),
             civilians_replaced = dec2(loss_used + `civilians alone`),
             combatants_replaced = dec2(loss_used + `combatants alone`),
             both_replaced = dec2(loss_used + both))
-stopifnot(nrow(tA7b) == 8, !anyNA(tA7b))
-out_tab(tA7b, "Table A7, panel B", "Loss of life expectancy with every death taken from UCDP, by sex",
-        "tableA7b_ucdp_only_loss.csv", f$uu)
+stopifnot(nrow(tA8) == 8, !anyNA(tA8))
+out_tab(tA8, "Table A8", "Loss of life expectancy with every death taken from UCDP, by sex, Ukraine, 2022-2025",
+        "tableA8_ucdp_only_loss.csv", f$uu)
 
 # ==============================================================================
 # FIGURES
