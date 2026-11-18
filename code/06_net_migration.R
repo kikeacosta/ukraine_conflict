@@ -7,7 +7,7 @@
 # Builds the net outflow that the projection subtracts from exposure, and the
 # PERT bounds that 10 turns into the migration rows of the parameter table.
 # Every number comes from a file in data_input/; the reasoning behind each
-# step is in documents/migration_methodology.md. The functions it calls are in
+# step is in documents/reports/migration_methodology.md. The functions it calls are in
 # 00_setup.R (mig_*), shared with 13r.
 #
 #   1. REGISTER STOCK of refugees from Ukraine recorded outside Russia, at the
@@ -162,7 +162,7 @@ bounds_west <-
 # citizenship and 98k granted temporary asylum in 2022 bring it to about
 # 1.64M, and the rest is a margin for informal renters and people in temporary
 # accommodation, up to the 2.0M that Russian officials cited in autumn 2022.
-# The sources are in documents/migration_methodology.md, section 6.
+# The sources are in documents/reports/migration_methodology.md, section 6.
 ru_onward <- crossings |> filter(year == min(yrs)) |> pull(via_ru_by)
 ru_max <- 2000000
 

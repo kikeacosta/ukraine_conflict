@@ -415,7 +415,7 @@ unhcr_ru_by <-
 #           have happened.
 #
 # The two bases are spliced, so the Canadian decline is partly a change of
-# definition rather than pure return; see documents/migration_methodology.md
+# definition rather than pure return; see documents/reports/migration_methodology.md
 # section 8.
 anchors <-
   read_csv("data_input/migration/national_programme_counts.csv",

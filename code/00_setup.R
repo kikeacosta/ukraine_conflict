@@ -1201,7 +1201,7 @@ prop_male_birth <- srb / (1 + srb)
 prop_female_birth <- 1 / (1 + srb)
 
 # Net migration inputs and PERT bounds are built from data in 06 and written
-# to data_inter/ (ukr_migration_bounds.rds); see documents/migration_methodology.md.
+# to data_inter/ (ukr_migration_bounds.rds); see documents/reports/migration_methodology.md.
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # net migration: the register reading and the allocation at the mode ====

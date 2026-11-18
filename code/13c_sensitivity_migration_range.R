@@ -28,7 +28,7 @@
 # no migration at all is 13's scenario, reported alongside.
 #
 # Section 5 then checks three specification choices of the migration input,
-# one at a time at the mode (documents/migration_methodology.md, section 10):
+# one at a time at the mode (documents/reports/migration_methodology.md, section 10):
 # where the western mode sits in the bracket (A2), the age-sex profile of the
 # Russian flow (A9), and additive against proportional allocation (A5). 15
 # reports them as table A29. The choice of register stock is checked in 13r.
@@ -235,7 +235,7 @@ message("Done. data_inter/ukr_migration_sensitivity_e0.rds written for 15.")
 # ==============================================================================
 # 5. SPECIFICATION CHECKS
 # ==============================================================================
-# Three assumptions in documents/migration_methodology.md (section 10) are
+# Three assumptions in documents/reports/migration_methodology.md (section 10) are
 # tested by changing one of them at a time, deterministically, with every
 # conflict input at its mode:
 #

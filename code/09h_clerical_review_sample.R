@@ -26,7 +26,7 @@
 # to, with empty columns for the reviewers' verdicts.
 #
 # PERSONAL DATA. The output holds names and dates of birth. It is written to
-# documents/clerical_review/, which is gitignored with the rest of documents/,
+# documents/team/clerical_review/, which is gitignored with the rest of documents/,
 # and must never be committed or shared outside the team.
 #
 # Besides the sample, the full list of the 2022 cohort's drop-outs in the first
@@ -34,15 +34,15 @@
 # survivals is the one judgement of the imputation that moves the 2022 loss.
 #
 # INPUTS   the six register releases (ual_releases, 00_setup.R; gitignored)
-# OUTPUTS  documents/clerical_review/clerical_review_sample.csv (local only)
-#          documents/clerical_review/removals_2022_v14_v15.csv (local only)
+# OUTPUTS  documents/team/clerical_review/clerical_review_sample.csv (local only)
+#          documents/team/clerical_review/removals_2022_v14_v15.csv (local only)
 # ==============================================================================
 
 rm(list = ls())
 gc()
 source("code/00_setup.R")
 
-out_dir <- "documents/clerical_review"
+out_dir <- "documents/team/clerical_review"
 dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 
 # what a reviewer needs to find the person: the linkage fields, and place of

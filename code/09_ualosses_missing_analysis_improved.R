@@ -6,7 +6,7 @@
 # not run it) and not an input to the estimates. It feeds the per-window
 # competing-risks model in 09d. The adoption test for the multistate approach
 # is run on the per-person trajectories instead (09f, 09g) and failed; see
-# documents/missing_combatants_methodology.md, section 10. Two rules differ
+# documents/reports/missing_combatants_methodology.md, section 10. Two rules differ
 # from production step 09 and from 09f: this script uses fuzzy name matching,
 # and it reads each release filtered to 2022-2025 Ukrainian records before
 # matching. A non-match is held as still missing and released prisoners are

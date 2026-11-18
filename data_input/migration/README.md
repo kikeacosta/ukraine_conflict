@@ -3,8 +3,8 @@
 Everything step 06 needs to build net migration and its PERT bounds, and step
 13r to build the register stock bottom-up, saved locally so the pipeline does
 not depend on web pages that can change. The full
-reasoning is in `documents/migration_methodology.md`; every file in the project
-is catalogued in `documents/data_sources.md`.
+reasoning is in `documents/reports/migration_methodology.md`; every file in the project
+is catalogued in `documents/reports/data_sources.md`.
 
 ## Files read by the code
 
