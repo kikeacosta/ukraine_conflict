@@ -133,7 +133,8 @@ military_with <- function(fac) {
     mutate(completed = n_year * share * f)
   dead <- st |> filter(status == "dead") |> summarise(confirmed = sum(completed), .by = year)
   miss <- st |> filter(status == "missing") |> select(month = m, year, missing_stock = completed)
-  impute_composition(miss, evidence$captives_central, composition_bound(mil$composition)[1, ] / 2, mil$captive_share) |>
+  # the central scenario: the register's resolved cases applied to the unresolved
+  impute_composition(miss, 0, 1 - mil$scenarios$p_central, mil$captive_share) |>
     left_join(dead, by = "year") |>
     transmute(year, confirmed, missing = missing_stock, imputed_dead, total = confirmed + imputed_dead)
 }

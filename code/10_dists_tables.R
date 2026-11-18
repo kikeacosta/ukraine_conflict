@@ -30,6 +30,10 @@
 #     listed as missing).
 #
 #   CIVILIANS (UCDP georeferenced event data)
+#     uncertainUCDP (civilian_source, 00_setup.R): min / mode / max = the 2.5th
+#     percentile, exact mean and 97.5th percentile of each year's deaths drawn
+#     event by event from Vesco et al. (2026), written with the draws to
+#     data_inter/ukr_civilians_uncertain_ucdp.rds. Under "pert",
 #     min / mode / max = the low / best / high bounds UCDP publishes,
 #     after the deaths of unknown side have been redistributed (step 07)
 #
@@ -71,11 +75,13 @@ ual2 <-
 # --- combatants -------------------------------------------------------------
 mil <- read_rds("data_inter/ukr_military_inputs.rds")
 ev <- mil$evidence
-at_evidence <- function(captives, other = NULL) military_draws(mil, captives, other)
-# the "mode" column of the combatant rows is the total at the central values
-# of the evidence, the means of its inputs (alive_evidence(), 00_setup.R):
-# the reference every deterministic analysis starts from
-at_central <- at_evidence(ev$captives_central)
+# the "mode" column of the combatant rows is the CENTRAL scenario at the point
+# factors - the register's resolved cases applied to the unresolved
+# (scenario_military(), 00_setup.R) - the reference every deterministic
+# analysis starts from; min and max are the bounds of the share of the missing
+# counted dead, none and all of them, reported beside the estimate and not drawn
+at_scenario <- function(s) scenario_military(mil, s) |> arrange(year)
+at_central <- at_scenario("central")
 
 cmb <-
   at_central |>
@@ -83,11 +89,12 @@ cmb <-
     year,
     role = "combatants",
     mode = military,
-    min = at_evidence(ev$captives_max, composition_bound(mil$composition))$military,
-    max = at_evidence(ev$captives_min, 0)$military,
+    min = at_scenario("bound_low")$military,
+    max = at_scenario("bound_high")$military,
     confirmed,
     listed = confirmed + missing
   )
+stopifnot(all(cmb$min < cmb$mode), all(cmb$mode < cmb$max))
 
 # the mode must be the total 09 imputed at the central values; the register
 # columns must be 09's counts completed for registration lag (08b), and those
@@ -111,6 +118,30 @@ cvs <-
   ucdp |>
   filter(role == "civilians") |>
   select(year, role, mode = dts, min = dts_l, max = dts_u)
+
+# uncertainUCDP (Vesco et al. 2026; civilian_source, 00_setup.R): each year's
+# civilian deaths drawn event by event, written for 11 and 13t whichever source
+# is used. When it is used, the civilian rows carry its exact mean as the mode
+# and the 2.5th and 97.5th percentiles of its draws as min and max (Table 2,
+# Figure A4); UCDP's low, best and high stay beside them.
+uu_events <- ucdp_civilian_events()
+uu_draws <- uncertain_ucdp_draws(uu_events, uncertain_ucdp_n)
+uu_mean <- uncertain_ucdp_mean(uu_events)
+stopifnot(identical(as.integer(rownames(uu_draws)), as.integer(uu_mean$year)),
+          # the draws' mean agrees with the exact mean to within simulation error
+          all(abs(rowMeans(uu_draws) / uu_mean$mean - 1) < 0.01))
+write_rds(list(draws = uu_draws, mean = uu_mean, n_draw = uncertain_ucdp_n,
+               package_version = as.character(packageVersion("uncertainUCDP"))),
+          "data_inter/ukr_civilians_uncertain_ucdp.rds")
+cvs <- cvs |> mutate(ucdp_low = min, ucdp_best = mode, ucdp_high = max)
+if (civilian_source == "uncertainUCDP") {
+  i <- match(as.character(cvs$year), rownames(uu_draws))
+  cvs <- cvs |>
+    mutate(mode = uu_mean$mean[match(year, uu_mean$year)],
+           min = apply(uu_draws[i, , drop = FALSE], 1, quantile, 0.025, names = FALSE),
+           max = apply(uu_draws[i, , drop = FALSE], 1, quantile, 0.975, names = FALSE))
+}
+print(cvs)
 
 # --- migration --------------------------------------------------------------
 # Net migration enters as TWO components, because two different things are

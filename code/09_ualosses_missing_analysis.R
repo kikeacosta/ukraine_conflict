@@ -24,17 +24,29 @@ source("code/00_setup.R")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # KEY ASSUMPTION
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# How many of the missing are alive drives the combatant total. The prisoners
+# How many of the missing are dead drives the combatant total, and no source
+# says. The estimate is given under THREE SCENARIOS (00_setup.R, the three
+# scenarios of the missing; scenario_military()): the floor, the named dead
+# plus the bodies not yet identified, placed across event years by months since
+# the event; the CENTRAL, the
+# register's resolved cases applied to the unresolved - the share of the
+# missing whose fate a later release settled that were recorded dead rather
+# than taken prisoner or gone from the list - which is the estimate; and the
+# upper, the rule below, which the rest of this header describes.
+#
+# THE UPPER SCENARIO. The prisoners
 # of war among the missing are set by the official figures, compared with the
 # prisoners the register records. Of the rest, the share alive outside
 # captivity lies between none and a bound: among the first resolutions outside
 # captivity of an event year's missing, the share that leave the register
 # beyond list maintenance (by the rules below) and are not recorded dead. It
 # is a bound because the missing not yet resolved are taken to be no more often
-# alive than those resolved, while the living resurface sooner than bodies are
-# identified. The events of 2022 take the bound of the later cohorts, because
-# their drop-outs are one clean-up of their records (composition_bound(); 09l
-# measures it). alive_evidence() and composition_bound() in 00_setup.R set out
+# alive than those resolved, provided the living resurface at least as fast as
+# bodies are identified. Every event year takes the pooled bound of the events
+# of 2023-2025: the events of 2022 because their drop-outs are one clean-up of
+# their records, the later cohorts because the exits behind each one's own bound
+# fall in one window (composition_bound(); 09l measures both). alive_evidence()
+# and composition_bound() in 00_setup.R set out
 # the evidence, its ranges and the sources. This script imputes at the central
 # values - the means of the evidence's inputs, half the bound - and records
 # the ranges, 10 turns them into the combatant bounds, and 11 draws them
@@ -362,8 +374,89 @@ impute <- function(captives = evidence$captives_central, other = alive_central,
                    stock = stock_missing_month, share = captive_share) {
   impute_composition(stock, captives, other, share)
 }
+# the rule - no evidence of life means dead - at the central values of its
+# evidence: the UPPER scenario (00_setup.R, the three scenarios of the missing)
 imputation_final <- impute() |> mutate(bound = bound[1, as.character(year)], .after = unresolved)
 print(imputation_final)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# the three scenarios: floor, central, upper
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# The CENTRAL scenario, the estimate: the register's resolved cases applied to
+# the unresolved. Of the missing whose fate a later release settled - recorded
+# dead, taken prisoner (held or returned), or gone from the list beyond list
+# maintenance - the share recorded dead, all event years and windows pooled,
+# February 2022 left out as it is from the bound. The FLOOR: the named dead
+# plus the bodies not yet identified (about 17,000, National Police, reported
+# September 2026; the source does not say whether they were repatriated or
+# found in Ukraine, nor whether they are combatants), nine in ten of them
+# assumed to be Ukrainian combatants listed as missing (bodies_combatant_share,
+# a judgement). The bodies are placed across event years as the register now
+# resolves its missing to death by months since the event: the fitted hazard of
+# resolution to death in each band of months since the event (`model`, pooled
+# over cohorts) applied to each event month's missing at its duration on the
+# last release's data date. Measured by duration, a recent cohort is not
+# penalised for the few months the releases observed it. The bodies in
+# proportion to each year's missing is an alternative (Table A22). The UPPER:
+# the rule above.
+resolved_by_window <-
+  maintain(production_windows) |>
+  summarise(dead = sum(n[to == "dead"]), captivity = sum(n[to == "prisoner"]),
+            out = sum(n[to == "no_longer_listed"]), .by = from_release) |>
+  arrange(match(from_release, ual_releases$release))
+resolved_all <- resolved_by_window |> summarise(across(c(dead, captivity, out), sum))
+p_central <- with(resolved_all, dead / (dead + captivity + out))
+bodies_unidentified <-
+  read_csv("data_input/official_figures.csv", show_col_types = FALSE) |>
+  filter(key == "unidentified_bodies") |>
+  slice_max(date) |>
+  pull(value)
+p_bodies <- bodies_combatant_share * bodies_unidentified / sum(stock_missing_2026$missing_stock)
+stopifnot(p_bodies > 0, p_bodies < p_central, p_central < 1)
+# the bodies scenario's bodies by event year, by the death hazard at each month's duration
+h_dead <- model$h[, "dead"]
+data_date <- max(ual_releases$date)
+bodies_split <-
+  stock_missing_month |>
+  mutate(duration = as.numeric(data_date - (month + 14)) / 30.4375,
+         band = pmin(findInterval(duration, model$breaks, rightmost.closed = TRUE), length(h_dead)),
+         flow = missing_stock * h_dead[band])
+stopifnot(all(bodies_split$duration > 0), all(bodies_split$band >= 1), !anyNA(bodies_split$flow))
+bodies_split <-
+  bodies_split |>
+  summarise(missing_stock = sum(missing_stock), flow = sum(flow), .by = year) |>
+  arrange(year) |>
+  mutate(share = flow / sum(flow),
+         bodies = bodies_combatant_share * bodies_unidentified * share,
+         p_bodies = bodies / missing_stock)
+stopifnot(all(bodies_split$flow > 0),
+          isTRUE(all.equal(sum(bodies_split$bodies), bodies_combatant_share * bodies_unidentified)),
+          all(bodies_split$p_bodies > 0 & bodies_split$p_bodies < p_central),
+          identical(bodies_split$year, sort(stock_missing_2026$year)))
+p_bodies_year <- setNames(bodies_split$p_bodies, bodies_split$year)
+cat("\n=== THE BODIES SCENARIO BY EVENT YEAR, BY MONTHS SINCE THE EVENT ===\n")
+print(as.data.frame(bodies_split |> mutate(across(c(missing_stock, flow, bodies), round), across(c(share, p_bodies), \(x) round(x, 3)))))
+scenario_par <- list(p_central = p_central, p_bodies = p_bodies, p_bodies_year = p_bodies_year, bodies_split = bodies_split,
+                     resolved_by_window = resolved_by_window, resolved_all = resolved_all,
+                     bodies_unidentified = bodies_unidentified, bodies_combatant_share = bodies_combatant_share,
+                     missing_point = sum(stock_missing_2026$missing_stock))
+cat(sprintf("\n=== THE SCENARIOS: SHARE OF THE MISSING COUNTED DEAD ===\nbounds: 0 and 1\nresolution-based (central) %.3f (%s dead of %s resolved: %s captivity, %s out)\nappendix: bodies %.3f (%s bodies x %.1f over %s missing); rule: no evidence of life means dead\n",
+            p_central, scales::comma(round(resolved_all$dead)), scales::comma(round(sum(resolved_all))),
+            scales::comma(round(resolved_all$captivity)), scales::comma(round(resolved_all$out)),
+            p_bodies, scales::comma(bodies_unidentified), bodies_combatant_share, scales::comma(round(scenario_par$missing_point))))
+print(as.data.frame(resolved_by_window |> mutate(across(-from_release, round))))
+# the main text's three (the bounds and the resolution-based scenario) and the
+# appendix's two
+imputation_scenarios <-
+  bind_rows(
+    bound_low = impute(captives = 0, other = 1),
+    central = impute(captives = 0, other = 1 - p_central),
+    bound_high = impute(captives = 0, other = 0),
+    bodies = impute(captives = 0, other = 1 - unname(p_bodies_year)),
+    rule = imputation_final |> select(-bound),
+    .id = "scenario"
+  ) |>
+  mutate(share_dead = imputed_dead / missing_stock)
 
 # what the duration model would project to the horizon, for the description of
 # the register in the supplement and for the alternatives below: not the estimate
@@ -383,6 +476,8 @@ confirmados_df <-
   ) |>
   mutate(late_registrations = confirmados_stock - registered)
 
+# the upper scenario's table, with its prisoners, bound and alive outside
+# captivity; total_estimado is the UPPER total
 combined_losses <- confirmados_df %>%
   left_join(imputation_final, by = "year") %>%
   mutate(
@@ -390,8 +485,24 @@ combined_losses <- confirmados_df %>%
     year = factor(year)
   )
 
-print("=== BALANCE DE PERDIDAS MORTALES TOTALES ESTIMADAS ===")
+print("=== THE UPPER SCENARIO (THE RULE) BY YEAR ===")
 print(combined_losses)
+
+# the three scenarios by year: the confirmed dead (registered and late), the
+# missing, the dead among them and the total. The central scenario is the
+# estimate every downstream step uses.
+scenario_table <-
+  imputation_scenarios |>
+  left_join(confirmados_df, by = "year") |>
+  transmute(scenario, year, registered, late_registrations, confirmed = confirmados_stock,
+            missing = missing_stock, share_dead, imputed_dead, total = confirmed + imputed_dead) |>
+  arrange(match(scenario, c(scenario_names, appendix_scenarios)), year)
+central_by_year <- scenario_table |> filter(scenario == "central")
+cat("\n=== THE THREE SCENARIOS BY YEAR ===\n")
+print(as.data.frame(scenario_table |> mutate(across(c(registered, late_registrations, confirmed, missing, imputed_dead, total), round),
+                                             share_dead = round(share_dead, 3))))
+print(as.data.frame(scenario_table |> summarise(total = round(sum(total)), .by = scenario)))
+write_rds(list(by_year = scenario_table, par = scenario_par), "data_inter/ukr_scenarios.rds")
 
 # What 10 and 11 need to rebuild the military total in any draw
 # (military_draws(), 00_setup.R): the registered dead and missing by event
@@ -406,10 +517,20 @@ military_inputs <- list(
   model = model,
   evidence = evidence,
   composition = composition,
-  captive_share = captive_share
+  captive_share = captive_share,
+  scenarios = scenario_par
 )
+# at the point values each scenario must give this script's totals
 check_point <- military_draws(military_inputs, evidence$captives_central)
 stopifnot(isTRUE(all.equal(check_point$military, combined_losses$total_estimado)),
+          isTRUE(all.equal(scenario_military(military_inputs, "rule")$military, combined_losses$total_estimado)),
+          isTRUE(all.equal(scenario_military(military_inputs, "central")$military, central_by_year$total)),
+          all(map_lgl(c("bound_low", "bound_high", "bodies"), \(s)
+            isTRUE(all.equal(scenario_military(military_inputs, s)$military,
+                             scenario_table$total[scenario_table$scenario == s])))),
+          isTRUE(all.equal(scenario_table$imputed_dead[scenario_table$scenario == "bound_low"], rep(0, 4))),
+          isTRUE(all.equal(scenario_table$imputed_dead[scenario_table$scenario == "bound_high"],
+                           scenario_table$missing[scenario_table$scenario == "bound_high"])),
           isTRUE(all.equal(as.vector(lag_factor_draws(military_inputs$lag)), military_inputs$factor_point)))
 write_rds(military_inputs, "data_inter/ukr_military_inputs.rds")
 
@@ -438,15 +559,19 @@ write_rds(tasas_long, "data_inter/ukr_ualosses_transition_rates.rds")
 #     between;
 #   - every person no longer listed counted in the bound, list maintenance
 #     included;
-#   - the events of 2022 on their own bound, their drop-outs read as people
-#     found alive rather than as one clean-up of their records;
-#   - one bound for every event year, from all the resolutions pooled; and the
-#     bound of the events of 2023-2025 for every year, each later cohort's own
-#     resolutions not trusted to speak for it alone;
+#   - each event year's own bound for 2023-2025, the events of 2022 on the
+#     later cohorts' pooled (the design before 16 Oct 2026); and the events of
+#     2022 on their own bound as well, their drop-outs read as people found
+#     alive rather than as one clean-up of their records;
+#   - one bound for every event year, from all the resolutions pooled, the
+#     events of 2022 included;
 #   - a return from captivity leaving the person out of the population at risk;
 #   - the people listed as missing in the first release only.
 # On the prisoners among the missing:
 #   - every unrecorded prisoner among the missing;
+#   - 10,000 prisoners of war held rather than about 7,000: the official count
+#     is Kyiv's count of confirmed captives, and a captive Russia has not
+#     confirmed is by definition among the missing;
 #   - the unrecorded prisoners among the missing in the proportion the
 #     returned prisoners of every event year had been;
 #   - the register's prisoners with no recorded event year left out, which
@@ -551,17 +676,41 @@ cohort_chain <-
            evidence$captives_central * missing_stock / sum(missing_stock))
 
 cc <- evidence$captives_central
-alt <- function(imp, design, captives = cc) design_total(imp) |> mutate(design = design, captives = captives)
+alt <- function(imp, design, captives = cc, scenario = "rule") {
+  design_total(imp) |> mutate(design = design, captives = captives, scenario = scenario)
+}
+# The central scenario's own alternatives: the resolved cases read by other
+# rules of the linkage - every drop-out a resolution out of the register, list
+# maintenance included; returns from captivity left out of the population at
+# risk; the people listed as missing in the first release only - and each event
+# year's own resolved cases in place of the pooled.
+p_of <- function(w) {
+  r <- w |> summarise(dead = sum(n[to == "dead"]), captivity = sum(n[to == "prisoner"]), out = sum(n[to == "no_longer_listed"]))
+  with(r, dead / (dead + captivity + out))
+}
+p_by_year <- function(w) {
+  w |> summarise(dead = sum(n[to == "dead"]), captivity = sum(n[to == "prisoner"]), out = sum(n[to == "no_longer_listed"]), .by = year) |>
+    arrange(year) |> with(dead / (dead + captivity + out))
+}
+central_alt <- function(p, design) alt(impute(captives = 0, other = 1 - p), design, 0, "central")
 linkage_designs <-
   bind_rows(
-    alt(impute(), "the missing counted dead but the prisoners and half the bound on the alive outside captivity (production)"),
+    central_alt(p_central, "the register's resolved cases applied to the unresolved (resolution-based scenario, production)"),
+    central_alt(p_of(production_windows |> filter(month != feb22)), "every drop-out counted as a resolution out of the register, list maintenance included"),
+    central_alt(p_of(maintain(windows |> filter(rule == "released_excluded"))), "the resolved cases with returns from captivity left out of the population at risk"),
+    central_alt(p_of(maintain(production_windows |> filter(entry == ual_releases$release[1]))), "the resolved cases of the people listed as missing in the first release only"),
+    central_alt(p_by_year(maintain(production_windows)), "each event year's own resolved cases in place of the pooled"),
+    central_alt(unname(p_bodies_year), "the bodies scenario: the named dead and the bodies awaiting identification, placed by months since the event") |> mutate(scenario = "bodies"),
+    central_alt(p_bodies, "the bodies scenario with the bodies in proportion to each event year's missing") |> mutate(scenario = "bodies"),
+    alt(impute(), "no evidence of life means dead: the prisoners and half the cap on the alive outside captivity (rule scenario)"),
     alt(impute(other = 0), "none alive outside captivity"),
     alt(impute(other = bound[1, ]), "alive outside captivity at the bound"),
     alt(impute(other = half_bound(composition_of(production_windows |> filter(month != feb22)))),
         "every person no longer listed counted in the bound"),
     alt(impute(other = one_bound(pooled)), "one bound for every event year, all resolutions pooled"),
-    alt(impute(other = one_bound(later)), "the bound of the events of 2023-2025 for every event year"),
-    alt(impute(other = composition_bound(composition, borrow = NULL)[1, ] / 2),
+    alt(impute(other = composition_bound(composition, pool = FALSE)[1, ] / 2),
+        "each event year's own bound, the events of 2022 on the later cohorts'"),
+    alt(impute(other = composition_bound(composition, borrow = NULL, pool = FALSE)[1, ] / 2),
         "the events of 2022 on their own bound"),
     alt(impute(other = half_bound(composition_of(maintain(windows |> filter(rule == "released_excluded"))))),
         "returns from captivity left out of the population at risk"),
@@ -569,6 +718,9 @@ linkage_designs <-
         "people listed as missing in the first release only"),
     alt(impute(captives = evidence$unrecorded_central), "every unrecorded prisoner among the missing",
         evidence$unrecorded_central),
+    alt(impute(captives = captives_for(evidence, evidence$s_central, 10000)),
+        "10,000 prisoners of war held, the captives Kyiv has not confirmed among them",
+        captives_for(evidence, evidence$s_central, 10000)),
     alt(impute(captives = share_listed_missing * evidence$unrecorded_central),
         "unrecorded prisoners among the missing as the returned of every year had been",
         share_listed_missing * evidence$unrecorded_central),
@@ -582,7 +734,9 @@ linkage_designs <-
     alt(cohort_chain, "event-year cohorts standing in for duration")
   ) |>
   relocate(design)
-stopifnot(isTRUE(all.equal(linkage_designs$military[1], sum(combined_losses$total_estimado))))
+stopifnot(isTRUE(all.equal(linkage_designs$military[1], sum(central_by_year$total))),
+          isTRUE(all.equal(linkage_designs$military[str_detect(linkage_designs$design, "rule scenario")],
+                           sum(combined_losses$total_estimado))))
 
 no_trace <-
   bind_rows(
@@ -637,26 +791,27 @@ write_rds(list(designs = linkage_designs, no_trace = no_trace, patterns = patter
                window_multipliers = model$window_multipliers),
           "data_inter/ukr_ualosses_linkage_checks.rds")
 
-# military deaths by event month at the central values, for 15's comparison
+# military deaths by event month in the central scenario, for 15's comparison
 # with official statements made at given dates: the registered dead, the dead
-# completed for registration lag, and the missing imputed as dead
+# completed for registration lag, and the missing counted dead
 military_by_month <-
   stock_month |>
   filter(status == "dead") |>
   select(month, year, registered_dead = registered, completed_dead = completed) |>
-  # within an event year every month's missing are dead in the year's share
+  # every month's missing are dead in the central scenario's share
   full_join(stock_missing_month |>
-              left_join(imputation_final |> transmute(year, dead_share = imputed_dead / missing_stock), by = "year") |>
-              transmute(month, year, missing = missing_stock, imputed_dead = missing_stock * dead_share),
+              transmute(month, year, missing = missing_stock, imputed_dead = missing_stock * p_central),
             by = c("month", "year")) |>
   mutate(across(c(registered_dead, completed_dead, missing, imputed_dead), \(x) coalesce(x, 0)),
          military = completed_dead + imputed_dead) |>
   arrange(month)
-stopifnot(isTRUE(all.equal(sum(military_by_month$military), sum(combined_losses$total_estimado))))
+stopifnot(isTRUE(all.equal(sum(military_by_month$military), sum(central_by_year$total))))
 write_rds(military_by_month, "data_inter/ukr_military_by_month.rds")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# rescale the confirmed-dead age-sex profile up to the imputed total
+# rescale the confirmed-dead age-sex profile up to the central scenario's total
+# (10 reads this file for its yearly sums only; the projection spreads the
+# imputed dead over the missing's profile, 11)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ual <- read_rds("data_inter/ukr_ualosses_conflict_deaths_sex_age_2022_2025.rds")
 
@@ -664,12 +819,7 @@ adj_fct <-
   ual |>
   summarise(dts = sum(dx), .by = c(year, status)) |>
   filter(status == "dead") |>
-  left_join(
-    combined_losses |>
-      select(year, total_estimado) |>
-      mutate(year = as.character(year) |> as.integer()),
-    by = "year"
-  ) |>
+  left_join(central_by_year |> select(year, total_estimado = total), by = "year") |>
   mutate(adj = total_estimado / dts) |>
   select(year, adj)
 

@@ -228,7 +228,8 @@ ggsave("figures/exploratory/losses_boxplot.png", w = 8, h = 3.5)
 # 4. THE DRAWN CONFLICT DEATH TOTALS
 # ==============================================================================
 # Densities of the draws, with the min / mode / max that defined each
-# PERT distribution marked as dashed lines.
+# PERT distribution marked as dashed lines; for the civilians from uncertainUCDP,
+# its mean and 2.5th and 97.5th percentiles (civilian_source, 00_setup.R).
 cols <- c("#AE2012", "#005F73")
 
 # param_table also carries the migration components; this plot is the conflict

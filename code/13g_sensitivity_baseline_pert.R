@@ -15,7 +15,7 @@
 #
 # 2. THE SHAPE OF THE PERT DISTRIBUTIONS
 # --------------------------------------
-# Every disputed input - civilian deaths, the three inputs on the missing
+# Every disputed input - the three inputs on the missing
 # alive (the share of the unrecorded prisoners among the missing, the
 # prisoners held, the share of the unresolved alive for other reasons), the
 # western blend weight, Russia - is a Beta-PERT with shape 4, the
@@ -23,6 +23,9 @@
 # sharper one (8) less. The simulation is re-run at each shape with the same
 # random numbers (simulation_draws(), 00_setup.R), so the differences in the
 # intervals come from the shape alone.
+# The civilian deaths are not a Beta-PERT when they come from uncertainUCDP
+# (civilian_source, 00_setup.R): their draws are the same at every shape, and
+# under "pert" they are a Beta-PERT like the rest.
 #
 # INPUTS   data_inter/ukr_life_tables_1989_2021.rds (03), data_input/DataDxEx.csv
 #          the static inputs at the mode; the parameter table (10), the

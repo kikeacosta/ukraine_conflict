@@ -45,7 +45,7 @@ bx <- tribble(
   "cross",   "src",   9, "Net crossings",              "CES survey, border data",                    "source", "none",
   "p08",     "prep", 77, "08 Register counts",         "Combatants by age, sex, status",             "combat", "fixed",
   "p08b",    "prep", 70, "08b Listing delay",          "Chain ladder to 48 months",                  "combat", "drawn",
-  "p09",     "prep", 63, "09 The missing",             "Dead unless alive: prisoners, bound",        "combat", "drawn",
+  "p09",     "prep", 63, "09 The missing",             "Bounds 0-100%; estimate: resolved cases",         "combat", "drawn",
   "p07",     "prep", 49, "07 Civilian deaths",         "Totals with bounds; age profile",            "civil",  "drawn",
   "p0103",   "prep", 33, "01–03 Life tables",     "Kannisto at old ages",                       "denom",  "fixed",
   "p04",     "prep", 26, "04 Lee–Carter",          "Counterfactual and its error",               "denom",  "drawn",

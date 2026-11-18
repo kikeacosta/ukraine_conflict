@@ -147,16 +147,14 @@ military_by_alive <-
   # the share of the missing, prisoners apart, that a point puts alive, all years together
   mutate(share_otherwise = sum(alive_otherwise) / sum(not_captive), .by = c(point, alive, captives, other))
 
-# the points of the evidence must reproduce 10's combatant bounds
-cmb_bounds <- param_table |> filter(role == "combatants") |> arrange(year)
+# the centre of the evidence is the RULE scenario of 09 (at its
+# central values, in the appendix); the estimate is the resolution-based scenario, which fixes the
+# share of the missing and is swept in 13s
+scen <- read_rds("data_inter/ukr_scenarios.rds")$by_year
 at_point <- function(p) {
   military_by_alive |> filter(point == p) |> arrange(year) |> pull(total_military)
 }
-stopifnot(
-  isTRUE(all.equal(at_point("central"), cmb_bounds$mode)),
-  isTRUE(all.equal(at_point("cap"), cmb_bounds$min)),
-  isTRUE(all.equal(at_point("floor"), cmb_bounds$max))
-)
+stopifnot(isTRUE(all.equal(at_point("central"), scen |> filter(scenario == "rule") |> arrange(year) |> pull(total))))
 
 write_rds(military_by_alive, "data_inter/ukr_alive_sensitivity_military.rds")
 
@@ -254,13 +252,22 @@ linkage_e0 <-
   mutate(res = map(by_year, \(d) loss_for(d |> select(year, draw_cmb = total, conf_cmb = confirmed))),
          # summed over rounded years, as the tables build their totals
          military = map_dbl(by_year, \(d) sum(round(d$total)))) |>
-  select(design, captives, military, res) |>
+  select(design, scenario, captives, military, res) |>
   unnest(res)
-stopifnot(isTRUE(all.equal(
-  linkage_e0 |> filter(str_detect(design, "production")) |> arrange(year, sex) |> pull(loss),
-  e0_by_alive |> filter(point %in% "central") |> arrange(year, sex) |> pull(loss),
-  tolerance = 1e-8
-)))
+# the rule scenario's row is the centre of the sweep above; the resolution-based
+# scenario's production row is the estimate at the mode
+mi_loss <- loss_at_mode(mi$draws, mi$static_inputs, mi$pop22_ini) |> arrange(year, sex)
+stopifnot(
+  isTRUE(all.equal(
+    linkage_e0 |> filter(str_detect(design, "rule scenario")) |> arrange(year, sex) |> pull(loss),
+    e0_by_alive |> filter(point %in% "central") |> arrange(year, sex) |> pull(loss),
+    tolerance = 1e-8
+  )),
+  isTRUE(all.equal(
+    linkage_e0 |> filter(str_detect(design, "production")) |> arrange(year, sex) |> pull(loss),
+    mi_loss$loss, tolerance = 1e-6
+  ))
+)
 write_rds(linkage_e0, "data_inter/ukr_linkage_rules_e0.rds")
 
 cat("\n=== THE LINKAGE RULES: MILITARY TOTAL AND LOSS ===\n")

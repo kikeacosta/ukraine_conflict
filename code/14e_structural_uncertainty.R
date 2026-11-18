@@ -33,7 +33,9 @@
 #     register's growth after four years, the population base of Donetsk and
 #     Luhansk and the pre-war absentees elsewhere (all raise the loss), the ages
 #     of the civilian deaths beyond OHCHR's count and pandemic mortality carried
-#     into 2022 (both lower it). Sampled with equal weights they would move the
+#     into 2022 and, with uncertainUCDP used, the civilian deaths drawn from the
+#     Beta-PERT on UCDP's bounds instead (13t); all of these lower it. Sampled with
+#     equal weights they would move the
 #     interval by an amount set by how many alternatives were coded, and nothing
 #     gives a distribution over their size. They are reported beside the
 #     estimate, each with its direction and its range, and not sampled - the
@@ -60,7 +62,7 @@
 #   - residents of occupied Donbas killed in Russian-controlled forces, who are
 #     outside the estimand and are reported as a second estimand (13i).
 #
-# INPUTS   the draws (11, 14) and the sensitivity steps' outputs (13b-13n)
+# INPUTS   the draws (11, 14) and the sensitivity steps' outputs (13b-13t)
 # OUTPUTS  data_inter/ukr_structural_uncertainty.rds:
 #            dimensions   every alternative's shift, by dimension
 #            intervals    the mean and 95% interval, drawn inputs alone and
@@ -113,10 +115,23 @@ alternatives <- bind_rows(
   lag_tail$loss |>
     left_join(lag_tail$military |> summarise(military = sum(total), .by = scenario), by = "scenario") |>
     shifts("Registration lag beyond four years", "scenario", "military"),
+  # the central scenario's own alternatives: the resolved cases read by other
+  # rules of the linkage; the upper scenario's family (the rule and its
+  # evidence) and the floor are scenarios reported beside the estimate, not
+  # rivals of it
   linkage |>
-    filter(!str_detect(design, drawn_already)) |>
+    filter(scenario == "central") |>
     mutate(design = if_else(str_detect(design, "production"), "as used", design)) |>
-    shifts("Rules of the imputation and the evidence on the prisoners of war", "design", "military"),
+    shifts("Rules of the linkage behind the resolved cases", "design", "military"),
+  # the civilian deaths by the method not used (13t): the Beta-PERT on UCDP's
+  # low-best-high against uncertainUCDP (Vesco et al. 2026), each at its mean
+  local({
+    uu <- r("ukr_uncertain_ucdp.rds")
+    uu$loss |>
+      filter(point %in% c(uu$used, uu$alternative)) |>
+      mutate(scenario = if_else(point == uu$used, "as used", point)) |>
+      shifts("Civilian deaths: uncertainUCDP or the Beta-PERT on UCDP's bounds", "scenario")
+  }),
   r("ukr_civilian_age_profile_e0.rds")$loss |>
     shifts("Age profile of the unverified civilian deaths", "scenario"),
   bind_rows(r("ukr_baseline_window_e0.rds"), r("ukr_coherent_forecast_e0.rds")$baseline) |>
@@ -154,7 +169,10 @@ directional <- c(
   "Population base of Donetsk and Luhansk" = "raises",
   "Population base outside Donetsk and Luhansk" = "raises",
   "Age profile of the unverified civilian deaths" = "lowers",
-  "Pandemic mortality carried into 2022" = "lowers")
+  "Pandemic mortality carried into 2022" = "lowers",
+  # uncertainUCDP lies above the Beta-PERT in every year, so the method not used
+  # moves the loss one way: down when uncertainUCDP is used, up when it is not
+  "Civilian deaths: uncertainUCDP or the Beta-PERT on UCDP's bounds" = if (civilian_source == "uncertainUCDP") "lowers" else "raises")
 stopifnot(all(names(directional) %in% alternatives$dimension))
 alternatives <- alternatives |>
   mutate(class = if_else(dimension %in% names(directional), unname(directional[dimension]), "rival"))

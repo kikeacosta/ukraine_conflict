@@ -27,6 +27,21 @@
 #   releases dated by        to 48 months, with lags and windows counted from
 #   Kaggle version           the day each release was published, not from the
 #                            data it holds
+#   the missing's rates      to 48 months, with the missing's band rates as 08b
+#   as measured              measures them, rising again after 24 months, in
+#                            place of the rates held non-increasing by lag
+#   the dead's rates for     to 48 months, with the missing given the dead's
+#   the missing beyond       rate of the same band from 24 months on
+#   24 months
+#
+# The last two change the missing's long-lag rates. Pooled over the windows,
+# the missing's rates as measured rise again after 24 months while the dead's
+# decay: those bands are measured on the 2022-23 cohorts alone, whose missing
+# lists were rebuilt when the register imported the Interior Ministry's
+# database from February 2025, so they carry that import, not time since the
+# event. 08b therefore holds the rates non-increasing by lag (the estimate); the
+# first alternative undoes that, the second goes further and gives the missing
+# the dead's decay.
 #
 # Each scenario goes through production's imputation at the central values
 # of the evidence on the missing alive, and through the deterministic
@@ -54,19 +69,48 @@ lambda_band <- completion$lambda_band
 L_ref <- completion$L_ref
 
 # the band table carried beyond L_ref at the rate of the last band below it
-extend_bands <- function(horizon) {
-  if (horizon <= L_ref) return(lambda_band |> filter(hi <= L_ref))
-  last <- lambda_band |> filter(hi == L_ref)
-  bind_rows(lambda_band |> filter(hi <= L_ref),
+extend_bands <- function(horizon, lb = lambda_band) {
+  if (horizon <= L_ref) return(lb |> filter(hi <= L_ref))
+  last <- lb |> filter(hi == L_ref)
+  bind_rows(lb |> filter(hi <= L_ref),
             last |> mutate(lo = L_ref, hi = horizon, band = NA))
 }
-chain_factor <- function(L_from, s, horizon) {
-  lb <- extend_bands(horizon) |> filter(status == s)
+chain_factor <- function(L_from, s, horizon, lb = lambda_band) {
+  lb <- extend_bands(horizon, lb) |> filter(status == s)
   exp(sum(pmax(0, pmin(lb$hi, horizon) - pmax(lb$lo, L_from)) * lb$lambda))
 }
-# each event month's completion factor under a horizon (none: 1), or under one
-# of 08b's alternatives to the way the growth is measured
+
+# the missing's long-lag rates otherwise, the dead's rates as they are:
+#   measured   08b's rates as measured, before they are held non-increasing
+#   dead_tail  the dead's rate of the same band from 24 months on
+lambda_constrained <- list(
+  measured = completion$lambda_measured |> arrange(status, lo),
+  dead_tail = lambda_band |>
+    left_join(lambda_band |> filter(status == "dead") |> select(lo, lambda_dead = lambda), by = "lo") |>
+    mutate(lambda = if_else(status == "missing" & lo >= 24, lambda_dead, lambda)) |>
+    select(-lambda_dead)
+)
+# (the dead's rate is above the missing's at 24-30 months, so the second
+# alternative raises that band and lowers the three after it)
+stopifnot(all(map_lgl(lambda_constrained, \(lb) all(lb$lambda >= -1e-6))),
+          all(map_lgl(lambda_constrained, \(lb) isTRUE(all.equal(lb$lambda[lb$status == "dead"], lambda_band$lambda[lambda_band$status == "dead"])))))
+cat("\n=== MONTHLY GROWTH OF THE MISSING BY LAG BAND: USED, AS MEASURED AND AT THE DEAD'S RATES (%) ===\n")
+print(as.data.frame(
+  lambda_band |> filter(status == "missing") |> select(band, lo, hi, used = lambda) |>
+    left_join(lambda_constrained$measured |> filter(status == "missing") |> select(lo, measured = lambda), by = "lo") |>
+    left_join(lambda_constrained$dead_tail |> filter(status == "missing") |> select(lo, dead_tail = lambda), by = "lo") |>
+    mutate(across(c(used, measured, dead_tail), \(x) round(100 * x, 3)))
+))
+
+# each event month's completion factor under a horizon (none: 1), under one of
+# 08b's alternatives to the way the growth is measured, or under one of the
+# constraints on the missing's rates
 factors_under <- function(horizon, alternative = NA) {
+  if (!is.na(alternative) && alternative %in% names(lambda_constrained)) {
+    lb <- lambda_constrained[[alternative]]
+    return(completion$month |>
+             mutate(f = map2_dbl(lag, status, \(l, s) chain_factor(l, s, horizon, lb))))
+  }
   if (!is.na(alternative)) {
     return(completion$month |>
              left_join(completion$alternatives |> filter(alternative == !!alternative) |> select(m, status, f),
@@ -80,16 +124,20 @@ ratio_under <- function(horizon, alternative = NA) {
     summarise(n_completed = sum(n_v19 * f), n_v19 = sum(n_v19), .by = c(year, status)) |>
     transmute(year, status, ratio = n_completed / n_v19)
 }
-# kind: the horizons, which the grid below crosses with the missing alive, and
-# the alternative specifications of the growth, at the horizon used
+# kind: the horizons, which the grid below crosses with the missing alive; the
+# alternative specifications of the growth, at the horizon used; and the
+# constraints on the missing's long-lag rates, at the horizon used
 scenarios <- tibble(
   scenario = c("as registered", "to 48 months (used)", "to 60 months", "to 72 months",
-               "to 48 months, growth per person listed", "to 48 months, releases dated by Kaggle version"),
-  kind = c(rep("horizon", 4), rep("specification", 2)),
-  horizon = c(NA, 48, 60, 72, 48, 48),
-  alternative = c(rep(NA, 4), "exposure", "dating")
+               "to 48 months, growth per person listed", "to 48 months, releases dated by Kaggle version",
+               "to 48 months, the missing's rates as measured, rising after 24 months",
+               "to 48 months, the dead's rates for the missing beyond 24 months"),
+  kind = c(rep("horizon", 4), rep("specification", 2), rep("long_lag", 2)),
+  horizon = c(NA, 48, 60, 72, 48, 48, 48, 48),
+  alternative = c(rep(NA, 4), "exposure", "dating", "measured", "dead_tail")
 )
-stopifnot(setequal(na.omit(scenarios$alternative), completion$alternatives$alternative))
+stopifnot(setequal(scenarios$alternative[scenarios$kind == "specification"], completion$alternatives$alternative),
+          setequal(scenarios$alternative[scenarios$kind == "long_lag"], names(lambda_constrained)))
 ratios <- scenarios |> mutate(r = map2(horizon, alternative, ratio_under)) |> unnest(r)
 
 # the production ratios are 08b's own
@@ -97,6 +145,12 @@ stopifnot(isTRUE(all.equal(
   ratios |> filter(scenario == "to 48 months (used)") |> arrange(status, year) |> pull(ratio),
   completion$year |> arrange(status, year) |> pull(ratio)
 )))
+# the two leave the dead's ratios as used, and the rates as measured, which
+# the estimate only ever lowers, cannot give fewer missing
+used <- ratios |> filter(scenario == "to 48 months (used)") |> select(year, status, used = ratio)
+stopifnot(ratios |> filter(kind == "long_lag") |> left_join(used, by = c("year", "status")) |>
+            summarise(ok = all(if_else(status == "dead", abs(ratio - used) < 1e-9,
+                                       alternative != "measured" | ratio >= used - 1e-9))) |> pull(ok))
 
 cat("\n=== COMPLETION RATIOS BY SCENARIO ===\n")
 print(as.data.frame(ratios |> mutate(ratio = round(ratio, 4)) |>
@@ -110,20 +164,30 @@ stocks_registered <-
   mutate(status = as.character(status))
 mil <- read_rds("data_inter/ukr_military_inputs.rds")
 bound <- composition_bound(mil$composition)[1, ]
-# the alive outside captivity along 13b's path: 0 none, 0.5 the centre, 1 the bound
-a_of <- function(other) if (other <= 1) other * bound else bound + (other - 1) * (1 - bound)
 evidence <- read_rds("data_inter/ukr_alive_missing.rds")
+# the scenarios of the missing (00_setup.R): the resolution-based one, the
+# estimate, through every horizon; it and the two bounds in the grid below
+scenario_args <- function(s) {
+  switch(s,
+    bound_low = list(captives = 0, other = 1),
+    central = list(captives = 0, other = 1 - mil$scenarios$p_central),
+    bound_high = list(captives = 0, other = 0),
+    bodies = list(captives = 0, other = 1 - unname(mil$scenarios$p_bodies_year[as.character(sort(unique(mil$month$year)))])),
+    rule = list(captives = evidence$captives_central, other = bound / 2)
+  )
+}
 
 # each year's registered count spread over its months as v19 lists them, as
 # in 09, and each month completed by its factor under the scenario
-military_at <- function(horizon, captives = evidence$captives_central, other = 0.5, alternative = NA) {
+military_at <- function(horizon, scenario = "central", alternative = NA) {
   st <- factors_under(horizon, alternative) |>
     mutate(share = n_v19 / sum(n_v19), .by = c(year, status)) |>
     left_join(stocks_registered |> rename(n_year = n), by = c("year", "status")) |>
     mutate(completed = n_year * share * f)
   dead <- st |> filter(status == "dead") |> summarise(confirmed = sum(completed), .by = year)
   miss <- st |> filter(status == "missing") |> select(month = m, year, missing_stock = completed)
-  impute_composition(miss, captives, a_of(other), mil$captive_share) |>
+  sa <- scenario_args(scenario)
+  impute_composition(miss, sa$captives, sa$other, mil$captive_share) |>
     left_join(dead, by = "year") |>
     transmute(year, confirmed, missing = missing_stock, imputed_dead, total = confirmed + imputed_dead)
 }
@@ -180,24 +244,26 @@ e0_loss <- function(mil) {
 loss <- military |> nest(.by = c(scenario, kind, horizon)) |>
   mutate(res = map(data, e0_loss)) |> select(-data) |> unnest(res)
 
-# the scenario used must reproduce 13b at the central values
-check <- read_rds("data_inter/ukr_alive_sensitivity_e0.rds") |> filter(point %in% "central") |> arrange(year, sex)
+# the horizon used must reproduce the central projection
+mi <- mode_projection_inputs()
+check <- loss_at_mode(mi$draws, mi$static_inputs, mi$pop22_ini) |> arrange(year, sex)
 stopifnot(isTRUE(all.equal(loss |> filter(scenario == "to 48 months (used)") |> arrange(year, sex) |> pull(loss),
-                           check$loss, tolerance = 1e-8)))
+                           check$loss, tolerance = 1e-6)))
 
-# 4. THE MISSING ALIVE AND THE HORIZON TOGETHER ===============================
-# The military total and the loss at five points of the evidence on the
-# missing alive - the floor, the ends of the 95% interval of the draws, the
-# central values and the ceiling, as 13b's sweep sets them - and the four
-# horizons, to show how the two assumptions move the results jointly.
-alive_points <-
-  read_rds("data_inter/ukr_alive_sensitivity_military.rds") |>
-  filter(point %in% c("floor", "2.5th percentile of draws", "central", "97.5th percentile of draws", "cap")) |>
-  distinct(point, share_alive, captives, other) |>
-  mutate(point = sub(" of draws", "", point))
+# 4. THE SCENARIOS AND THE HORIZON TOGETHER ===================================
+# The military total and the loss under the main text's three - the bounds and
+# the resolution-based scenario (00_setup.R) - and the four horizons, to show how
+# the two choices move the results jointly. share_alive: the share of the
+# missing counted alive under the scenario, at the horizon used.
+sc_tab <- read_rds("data_inter/ukr_scenarios.rds")$by_year
+scenario_points <-
+  sc_tab |>
+  filter(scenario %in% scenario_names) |>
+  summarise(share_alive = 1 - sum(imputed_dead) / sum(missing), .by = scenario) |>
+  rename(point = scenario)
 grid <-
-  expand_grid(scenarios |> filter(kind == "horizon") |> select(scenario, horizon), alive_points) |>
-  mutate(mil = pmap(list(horizon, captives, other), military_at),
+  expand_grid(scenarios |> filter(kind == "horizon") |> select(scenario, horizon), scenario_points) |>
+  mutate(mil = map2(horizon, point, \(h, p) military_at(h, scenario = p)),
          # summed over rounded years, as table 3 builds its totals, so the two agree
          military = map_dbl(mil, \(m) sum(round(m$total))),
          res = map(mil, e0_loss)) |>

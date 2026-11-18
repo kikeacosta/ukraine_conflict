@@ -5,22 +5,23 @@
 # WHY
 # ---
 # The headline loss rests on two choices a reader may weigh differently: the
-# missing with no evidence of life are counted as dead, and the loss is taken
+# missing are counted dead in the central scenario's share (the register's
+# resolved cases applied to the unresolved; 09), and the loss is taken
 # over continental Ukraine although the conflict deaths and the counterfactual
 # do not all refer to that territory. This step gives three figures that let a
 # reader see what each choice carries, every one in the deterministic central
 # projection (mode_projection_inputs(), loss_at_mode(), 00_setup.R):
 #
-#   (a) the loss without the imputed missing: combatant deaths equal to the
+#   (a) the loss without the missing counted dead: combatant deaths equal to the
 #       confirmed deaths alone - the registered dead with their late
-#       registrations - so the missing who are imputed dead stay in the
+#       registrations - so the missing who are counted dead stay in the
 #       population. This is the convention of studies that count identified
-#       deaths and leave the missing out. The share of the loss the imputed missing carry
+#       deaths and leave the missing out. The share of the loss the missing carry
 #       is 1 - (the loss without them) / (the loss used).
-#   (b) the scale of the rule on the missing: the change in the four-year
+#   (b) the scale of the share on the missing: the change in the four-year
 #       combatant total and in the loss per 10 percentage points of the missing
-#       alive, read from 13b's sweep between 10% and 20% alive. No projection
-#       is run for it.
+#       alive, read from 13s's sweep over the share counted dead, between 60%
+#       and 70% dead, around the central scenario. No projection is run for it.
 #   (c) a territory-consistent second estimate, Ukraine without Crimea,
 #       Donetsk and Luhansk, in which numerator, denominator and counterfactual
 #       refer to one territory. The headline keeps SSSU's population of
@@ -33,11 +34,10 @@
 # METHOD
 # ------
 #   (a) draw_cmb = conf_cmb in the central draws; everything else as used.
-#   (b) the rows of 13b's sweep at 10% and 20% of the missing alive, and at
-#       15% to check the sweep is linear between them: all three lie on its
-#       last segment, beyond the bound, where the prisoners are at their
-#       ceiling and only the share alive outside captivity moves, so the
-#       combatant total is linear in the share alive and the loss nearly so.
+#   (b) the rows of 13s's sweep at 60% and 70% of the missing counted dead
+#       (40% and 30% alive), and at 65% to check the sweep is linear between
+#       them: the combatant total is linear in the share by construction and
+#       the loss nearly so.
 #   (c) population  SSSU's 1 January 2022 population of Donetsk and Luhansk
 #                   taken out of the base by sex and age, as 13e's "taken out"
 #                   scenario takes it out, and the net outflow - the flows by
@@ -79,7 +79,7 @@
 #     this does to the loss.
 #
 # INPUTS   the static inputs and draws at the central values (mode_projection_inputs())
-#          data_inter/ukr_alive_sensitivity_military.rds, ukr_alive_sensitivity_e0.rds (13b)
+#          data_inter/ukr_missing_dead_share_sweep.rds (13s)
 #          data_inter/ualosses_origin_2022_2025.rds (08)
 #          data_inter/ucdp_ged_events_slim.rds (07)
 #          data_inter/ukr_pop_sssu.rds (01)
@@ -95,11 +95,12 @@ mi <- mode_projection_inputs()
 
 # 0. THE CENTRAL PROJECTION ===================================================
 used <- loss_at_mode(mi$draws, mi$static_inputs, mi$pop22_ini)
-# it must reproduce the central loss of 13b, which 13d and the tables report
+# it must reproduce the central scenario's loss of 13s, which 13d and the tables report
+sweep13s <- read_rds("data_inter/ukr_missing_dead_share_sweep.rds")
 stopifnot(isTRUE(all.equal(
   used |> arrange(year, sex) |> pull(loss),
-  read_rds("data_inter/ukr_alive_sensitivity_e0.rds") |> filter(point %in% "central") |>
-    arrange(year, sex) |> pull(loss),
+  sweep13s$loss |> filter(scenario %in% "central", year %in% as.character(2022:2025)) |>
+    mutate(year = as.numeric(year)) |> arrange(year, sex) |> pull(loss),
   tolerance = 1e-8
 )))
 loss_used <- used |> select(year, sex, loss_used = loss)
@@ -113,20 +114,20 @@ without_imputed <-
 stopifnot(all(without_imputed$loss <= without_imputed$loss_used + 1e-9))
 
 # 2. (b) THE CHANGE PER 10 POINTS OF THE MISSING ALIVE =========================
-sweep_mil <-
-  read_rds("data_inter/ukr_alive_sensitivity_military.rds") |>
-  summarise(combatants = sum(total_military), .by = c(point, share_alive, captives, other))
-sweep_e0 <- read_rds("data_inter/ukr_alive_sensitivity_e0.rds")
+# 13s sweeps the share of the missing counted dead; "per 10 points of the missing
+# alive" is read from 70% dead (30% alive) to 60% dead (40% alive), the grid
+# points around the central scenario, with 65% as the check of linearity
+sweep_mil <- sweep13s$sweep |> transmute(share_dead, share_alive = 1 - share_dead, combatants = military)
+sweep_e0 <-
+  sweep13s$loss |>
+  filter(year %in% as.character(2022:2025)) |>
+  transmute(share_dead, share_alive = 1 - share_dead, year = as.numeric(year), sex, loss)
 at_share <- function(d, s) d |> filter(abs(share_alive - s) < 1e-9) |> mutate(share_alive = s)
-shares_alive <- c(0.10, 0.15, 0.20)
+shares_alive <- c(0.30, 0.35, 0.40)
 mil3 <- map_dfr(shares_alive, \(s) at_share(sweep_mil, s))
 e03 <- map_dfr(shares_alive, \(s) at_share(sweep_e0, s))
-cap <- sweep_mil |> filter(point %in% "cap")
-# the three points lie on the sweep's last segment: beyond the bound (`other`
-# above 1), the prisoners at the ceiling of the evidence
-stopifnot(nrow(mil3) == 3, nrow(e03) == 3 * 8, cap$share_alive < 0.10,
-          all(mil3$other > 1), isTRUE(all.equal(mil3$captives, rep(cap$captives, 3))))
-# and the sweep is linear between 10% and 20%: the combatant total at 15% is the
+stopifnot(nrow(mil3) == 3, nrow(e03) == 3 * 8)
+# the sweep is linear between 30% and 40% alive: the combatant total at 35% is the
 # midpoint of the two, and the loss within 1% of the change from it (the women's
 # loss of 2023 hardly moves, hence the floor of 1e-6 years)
 off_mid <- function(v) v[2] - (v[1] + v[3]) / 2
@@ -134,16 +135,16 @@ stopifnot(abs(off_mid(mil3$combatants)) < 1e-6 * abs(diff(mil3$combatants[c(1, 3
 e0_lin <-
   e03 |>
   arrange(year, sex, share_alive) |>
-  summarise(at_10 = loss[1], at_20 = loss[3], off_mid = off_mid(loss), .by = c(year, sex))
-stopifnot(all(abs(e0_lin$off_mid) < 0.01 * abs(e0_lin$at_20 - e0_lin$at_10) + 1e-6))
+  summarise(at_30 = loss[1], at_40 = loss[3], off_mid = off_mid(loss), .by = c(year, sex))
+stopifnot(all(abs(e0_lin$off_mid) < 0.01 * abs(e0_lin$at_40 - e0_lin$at_30) + 1e-6))
 
 per_10_points <-
   bind_rows(
     tibble(measure = "combatants, 2022-2025", year = NA_real_, sex = NA_character_,
-           at_10 = mil3$combatants[1], at_20 = mil3$combatants[3]),
-    e0_lin |> transmute(measure = "loss", year, sex, at_10, at_20)
+           at_30 = mil3$combatants[1], at_40 = mil3$combatants[3]),
+    e0_lin |> transmute(measure = "loss", year, sex, at_30, at_40)
   ) |>
-  mutate(per_10_points = at_20 - at_10)
+  mutate(per_10_points = at_40 - at_30)
 
 # 3. (c) UKRAINE WITHOUT CRIMEA, DONETSK AND LUHANSK ===========================
 # the combatants: the share of the dead and of the missing from outside the two
@@ -178,10 +179,12 @@ by_group <-
                         .default = c + u * sum(c) / (sum(a) + sum(b) + sum(c))),
          .by = c(country, group)) |>
   filter(country == "Ukraine", year %in% 2022:2025)
-# the attribution must reproduce the civilian modes of the parameter table (10)
+# the attribution must reproduce UCDP's best civilian counts as 10 records them (its
+# ucdp_best column; the mode is uncertainUCDP's mean when that is the source). The
+# share outside the two oblasts is UCDP best's share, applied to the civilians as used
 stopifnot(isTRUE(all.equal(
   by_group |> summarise(c2 = sum(c2), .by = year) |> arrange(year) |> pull(c2),
-  mi$param_table |> filter(role == "civilians") |> arrange(year) |> pull(mode)
+  mi$param_table |> filter(role == "civilians") |> arrange(year) |> pull(ucdp_best)
 )))
 cvs_shares <-
   ged |>
@@ -267,11 +270,11 @@ print(as.data.frame(
     arrange(sex, year)
 ))
 
-cat("\n=== (b) CHANGE PER 10 POINTS OF THE MISSING ALIVE (13b's sweep, 10% to 20%) ===\n")
+cat("\n=== (b) CHANGE PER 10 POINTS OF THE MISSING ALIVE (13s's sweep, 30% to 40% alive) ===\n")
 print(as.data.frame(
-  per_10_points |> mutate(across(c(at_10, at_20, per_10_points), \(x) round(x, 3)))
+  per_10_points |> mutate(across(c(at_30, at_40, per_10_points), \(x) round(x, 3)))
 ))
-cat(sprintf("largest departure of the loss at 15%% from the line: %.5f years\n",
+cat(sprintf("largest departure of the loss at 35%% from the line: %.5f years\n",
             max(abs(e0_lin$off_mid))))
 
 cat("\n=== (c) UKRAINE WITHOUT CRIMEA, DONETSK AND LUHANSK ===\n")

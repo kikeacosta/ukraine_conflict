@@ -60,6 +60,24 @@
 # horizon makes the factor a lower bound on the lag; 13d shows how far a longer
 # horizon would move the results.
 #
+# THE RATES NON-INCREASING BY LAG
+# -------------------------------
+# A lag process cannot speed up with time since the event, yet the missing's
+# pooled rates as measured rise again after 24 months (0.145% a month at 24-30,
+# then 0.179, 0.241 and 0.203 at 30-36, 36-42 and 42-48), while the dead's
+# decay. The bands beyond 30 months are measured on the 2022-23 cohorts alone,
+# whose missing lists were rebuilt when the register imported the Interior
+# Ministry's database from February 2025: they carry that import, not time since
+# the event, and chained onto the 2024-25 cohorts they would have those cohorts
+# gain missing at 0.2% a month three to four years out. Each band's rate is
+# therefore held at the minimum over it and the bands before it, within each
+# status (lag_rates_monotone(), 00_setup.R); the dead's rates are unchanged by
+# it. The same constraint holds where the factors are rebuilt under window
+# weights (lag_factor_draws()) and under the two alternatives below. The rates
+# as measured are kept for 13d, which carries them through to the total as an
+# alternative, with the dead's rates given to the missing beyond 24 months as
+# another.
+#
 # WHAT THE CHAIN ASSUMES, AND ITS ERROR
 # -------------------------------------
 # The chain gives a recent event month the growth older months showed at the
@@ -88,9 +106,9 @@
 # INPUT   the six register releases (gitignored), through a cache of
 #         aggregate counts: data_inter/ualosses_registration_by_month.rds
 # OUTPUT  data_inter/ukr_registration_completion.rds: the growth rates by lag
-#         band and by window, the horizon, v19's dead and missing by event
-#         month with each month's completion factor, and the factors under the
-#         two alternatives
+#         band, as measured and held non-increasing, and by window, the
+#         horizon, v19's dead and missing by event month with each month's
+#         completion factor, and the factors under the two alternatives
 # ==============================================================================
 
 rm(list = ls())
@@ -259,17 +277,28 @@ band_rates <- function(gb) {
 }
 
 growth_band <- band_cells(growth_cells(rel_date))
-lambda_band <- band_rates(growth_band)
+lambda_measured <- band_rates(growth_band)
 
 # Guard against the asymmetry that broke this step once: the register cannot
 # lose deaths as it ages, so no band rate may be negative. The tolerance is for
 # a band where additions and drops balance exactly and the weighted mean lands a
 # few parts in ten million below zero.
-stopifnot(all(lambda_band$lambda >= -1e-6))
+stopifnot(all(lambda_measured$lambda >= -1e-6))
 
-cat("\n=== MONTHLY GROWTH OF THE REGISTER BY LAG SINCE THE EVENT ===\n")
-print(as.data.frame(lambda_band |> mutate(lambda_pct = round(100 * lambda, 3)) |>
-                      select(status, band, lambda_pct, n_obs)))
+# the rates held non-increasing by lag (see THE RATES NON-INCREASING BY LAG)
+constrain_bands <- function(lb) {
+  lb <- lb |> arrange(status, lo)
+  lb$lambda <- as.vector(lag_rates_monotone(lb$lambda, lb$status))
+  lb
+}
+lambda_band <- constrain_bands(lambda_measured)
+stopifnot(isTRUE(all.equal(lambda_band$lambda[lambda_band$status == "dead"],
+                           lambda_measured$lambda[lambda_measured$status == "dead"])))
+
+cat("\n=== MONTHLY GROWTH OF THE REGISTER BY LAG SINCE THE EVENT (%): AS MEASURED, AND HELD NON-INCREASING ===\n")
+print(as.data.frame(lambda_measured |> select(status, band, n_obs, measured = lambda) |>
+                      left_join(lambda_band |> select(status, band, used = lambda), by = c("status", "band")) |>
+                      mutate(across(c(measured, used), \(x) round(100 * x, 3)))))
 
 # 3. CHAIN TO THE LONGEST WELL-MEASURED LAG ===================================
 # the last band with at least a year's worth of event months (12) behind it
@@ -352,7 +381,7 @@ print(as.data.frame(
 # grows by exp(rate x months), and each status takes its rate's share of what
 # is added. The factor is the completed count of the status over v19's.
 gb_listed <- band_cells(growth_cells(rel_date), "listed")
-lambda_listed <- band_rates(gb_listed)
+lambda_listed <- constrain_bands(band_rates(gb_listed))
 stopifnot(all(lambda_listed$lambda >= -1e-6))
 factor_listed <- function(month, lb, L_to = L_ref) {
   bd <- lb |>
@@ -379,7 +408,7 @@ factor_listed <- function(month, lb, L_to = L_ref) {
 
 # dating: the same chain with the releases dated by their Kaggle versions
 rel_version <- set_names(releases$version, releases$release)
-lambda_version <- band_rates(band_cells(growth_cells(rel_version)))
+lambda_version <- constrain_bands(band_rates(band_cells(growth_cells(rel_version))))
 factor_version <- map2_dbl(lag_months(rel_version[[last_release]], completion_month$m), completion_month$status,
                            \(l, s) chain_factor(l, s, lb = lambda_version))
 
@@ -405,7 +434,8 @@ print(as.data.frame(
 # growth: the rates the bands pool, one row per event month, status and pair of
 # releases, for 13l to fit a curve through
 write_rds(
-  list(lambda_band = lambda_band, L_ref = L_ref, month = completion_month, year = completion_year,
+  list(lambda_band = lambda_band, lambda_measured = lambda_measured, L_ref = L_ref,
+       month = completion_month, year = completion_year,
        cells = window_cells, alternatives = alternatives,
        lambda_listed = lambda_listed, lambda_version = lambda_version,
        growth = growth_band |> select(m, status, from, to, Lmid, band, lambda, wt)),

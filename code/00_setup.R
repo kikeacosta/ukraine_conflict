@@ -39,7 +39,8 @@ packages_CRAN <- c(
   "R.utils",
   "vital",
   "fst",
-  "mc2d"
+  "mc2d",
+  "uncertainUCDP"
 )
 
 # Install required CRAN packages if not available yet
@@ -797,15 +798,22 @@ impute_missing_cohorts <- function(alive_other, tasas_long, stock_missing) {
 # list maintenance (09), the only way it has of recording a person found alive.
 # If the unresolved resembled the resolved of their own cohort, that share -
 # excess drop-outs over excess drop-outs plus deaths - would be alive. It is an
-# UPPER bound, twice over: the living resurface faster than bodies are recovered
-# and identified, so they are over-represented among the resolved; and a
-# drop-out need not be a person found alive. The events of 2022, whose drop-outs
-# are one clean-up of their records, take the bound of the later cohorts
-# (composition_bound()). So in every simulation the share
-# of a cohort's missing, prisoners apart, that is alive is drawn uniformly
-# between none and that bound, one draw for all cohorts, and the bound itself
-# carries the error of resting on five windows (composition_bound()). No source
-# counts these people; the bound is what the register can say about them.
+# UPPER bound on one condition: that the living outside captivity leave the
+# list at least as fast as the dead are identified. Then they are
+# over-represented among the resolved, since the living resurface faster than
+# bodies are recovered and identified, and a drop-out need not be a person
+# found alive, so the share overstates the living twice over. A living person
+# whom no one reports, who stays listed as missing for good, is what would
+# break it: the compiler says the Interior Ministry's database excludes
+# unauthorised absence, and a search ends only by a return from captivity, a
+# whereabouts established or a body identified, so the condition is likely to
+# hold, but nothing measures it. Every event year takes the pooled bound of
+# the events of 2023-2025 (composition_bound(): why not each cohort's own, and
+# why not 2022's). So in every simulation the share of a cohort's missing,
+# prisoners apart, that is alive is drawn uniformly between none and that
+# bound, one draw for all cohorts, and the bound itself carries the error of
+# resting on five windows (composition_bound()). No source counts these
+# people; the bound is what the register can say about them.
 #
 # SOURCES
 #   pow_held           "about 7,000 Ukrainian prisoners of war" held by
@@ -908,22 +916,34 @@ captives_for <- function(ev, s, held) s * (held + ev$returned_military - ev$regi
 # and one column per window (in the order of ual_releases), under which the
 # windows are summed - resampling the windows, since the clean-ups that produce
 # the drop-outs come in some releases and not others. borrow: the event years
-# that take the bound of the other cohorts, pooled under the same weights,
-# instead of their own. Returns a matrix, draws x event years.
+# whose own resolutions are not trusted to speak for them; pool: TRUE gives
+# every event year the bound of the other years' resolutions pooled under the
+# same weights (the estimate), FALSE gives each year its own bound and the
+# borrowers the others' pooled. Returns a matrix, draws x event years.
 #
-# The events of 2022 borrow. Of their 318 drop-outs beyond list maintenance, 185
-# fall in one window, v14 to v15, at 18 per 1,000 person-months of the missing at
-# risk, where no other cohort exceeds 1.1, and another 97 in the last, v18 to
-# v19, at 5.4 where no other cohort exceeds 1.8; over the five windows they leave
-# at 4.3 per 1,000 person-months against 0.3-0.5 for the later cohorts, while
-# their resolutions to death run at about half the later cohorts' rate (09l).
-# That is a clean-up of one cohort's records, in the months when repatriated
-# remains ran ahead of the register's resolutions to death, and not a rate at
-# which the living resurface: a bound of 51% read from it would say more about
-# the list than about the people. Their own bound is an alternative in 09
-# (Table A22).
+# The events of 2022 are not trusted on their own. Of their 318 drop-outs
+# beyond list maintenance, 185 fall in one window, v14 to v15, at 18 per 1,000
+# person-months of the missing at risk, where no other cohort exceeds 1.1, and
+# another 97 in the last, v18 to v19, at 5.4 where no other cohort exceeds 1.8;
+# over the five windows they leave at 4.3 per 1,000 person-months against
+# 0.3-0.5 for the later cohorts, while their resolutions to death run at about
+# half the later cohorts' rate (09l). That is a clean-up of one cohort's
+# records, in the months when repatriated remains ran ahead of the register's
+# resolutions to death, and not a rate at which the living resurface: a bound
+# of 51% read from it would say more about the list than about the people.
+#
+# The later cohorts are pooled. Of the exits beyond list maintenance behind
+# their own bounds, 72% (2023), 91% (2024) and 100% (2025) fall in the last
+# window, v18 to v19, so each cohort's own bound - 6.6%, 1.9% and 6.2% - divides
+# one clean-up of the list by that cohort's resolutions to death, and the
+# differences between the three are as likely the pace at which each cohort's
+# dead are identified as a difference in who is alive. One bound for the three,
+# 4.0%, is what the register can tell apart; it moves the total by about 300
+# against the own bounds. Each cohort's own bound, and 2022's own, are
+# alternatives in 09 (Table A22).
 bound_borrowers <- 2022
-composition_bound <- function(comp, weights = NULL, borrow = bound_borrowers) {
+bound_pool <- TRUE
+composition_bound <- function(comp, weights = NULL, borrow = bound_borrowers, pool = bound_pool) {
   years <- sort(unique(comp$year))
   wins <- ual_releases$release[-nrow(ual_releases)]
   wide <- function(col) {
@@ -936,8 +956,9 @@ composition_bound <- function(comp, weights = NULL, borrow = bound_borrowers) {
   out <- weights %*% wide("out")
   all <- out + weights %*% wide("dead")
   lend <- !years %in% borrow
-  out[, !lend] <- rowSums(out[, lend, drop = FALSE])
-  all[, !lend] <- rowSums(all[, lend, drop = FALSE])
+  take <- if (pool) rep(TRUE, length(years)) else !lend
+  out[, take] <- rowSums(out[, lend, drop = FALSE])
+  all[, take] <- rowSums(all[, lend, drop = FALSE])
   r <- ifelse(all > 0, out / all, 0)
   dimnames(r) <- list(NULL, years)
   r
@@ -1016,6 +1037,87 @@ military_draws <- function(mil, captives, alive_other = NULL, lag = NULL) {
   )
 }
 
+# The register's growth rates by lag band, held non-increasing by lag within
+# each status: each band's rate is the minimum over it and the bands before it.
+# A lag process cannot speed up with time since the event, yet the missing's
+# pooled rates rise again after 24 months, because the bands beyond are
+# measured on the 2022-23 cohorts alone, whose missing lists were rebuilt when
+# the register imported the Interior Ministry's database from February 2025
+# (08b). lambda: a vector, or a matrix with one row per band and one column per
+# set of weights; status: the status of each band, the bands ordered by status
+# and lag. The dead's rates already decay and are unchanged.
+lag_rates_monotone <- function(lambda, status) {
+  lambda <- as.matrix(lambda)
+  for (s in unique(status)) {
+    i <- which(status == s)
+    lambda[i, ] <- apply(lambda[i, , drop = FALSE], 2, cummin)
+  }
+  lambda
+}
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# the scenarios of the missing ====
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# No source says how many of the register's missing are dead. The main text
+# gives the estimate - the resolution-based scenario - between the BOUNDS of the
+# share of the missing counted dead, which assume nothing about the missing
+# (scenario_names); two evidence-based scenarios go to the appendix
+# (appendix_scenarios). 09 computes the shares and keeps them in mil$scenarios.
+#
+#   bound_low   none of the missing dead: the named dead alone, completed for
+#               listing lag. A logical limit, not a plausible value.
+#   central     the RESOLUTION-BASED SCENARIO, the estimate (described below).
+#   bound_high  all of the missing dead. A logical limit, not a plausible value.
+#
+# In the appendix:
+#   bodies   the named dead plus the bodies not yet identified, about 17,000
+#            (data_input/official_figures.csv, key unidentified_bodies; the
+#            source does not say whether they were repatriated or found in
+#            Ukraine, nor whether they are combatants). Nine in ten of them
+#            are assumed to be Ukrainian combatants listed as missing
+#            (bodies_combatant_share), a judgement stated here and nowhere
+#            else. Placed across event years as the register now resolves its
+#            missing to death by months since the event (09), and applied as
+#            each year's share of its missing (p_bodies_year), so that a draw's
+#            missing carry it. p_bodies is the share over the four years.
+#   rule     no evidence of life means dead. The prisoners of war among the
+#            missing from the official counts (alive_evidence()), and a share
+#            alive outside captivity drawn under the cap the register's own
+#            resolutions give (composition_bound()).
+#
+# The resolution-based scenario (central): the register's resolved cases
+# applied to the unresolved: of the missing whose fate a later release settled,
+# the share recorded dead rather than taken prisoner or gone from the list
+# beyond list maintenance (p_central, all event years and windows pooled,
+# February 2022 left out). It is conservative by construction: the living
+# resurface sooner than bodies are identified, so the resolved overstate the
+# living, and its captivity share implies more prisoners than the official
+# counts admit.
+#
+# scenario_military(): the combatant total of a scenario in every draw,
+# through military_draws(). lag: the completion factors of each draw, or NULL
+# for the point factors; n: the number of draws (one, or ncol(lag)). Every
+# scenario but the rule fixes its share; the rule takes its evidence at its
+# central values (the draws of its inputs are simulation_draws()'s business).
+bodies_combatant_share <- 0.9
+scenario_names <- c("bound_low", "central", "bound_high")
+appendix_scenarios <- c("bodies", "rule")
+scenario_military <- function(mil, scenario = c(scenario_names, appendix_scenarios), lag = NULL, n = NULL) {
+  scenario <- match.arg(scenario)
+  if (is.null(n)) n <- if (is.null(lag)) 1 else ncol(lag)
+  sc <- mil$scenarios
+  switch(scenario,
+    bound_low = military_draws(mil, rep(0, n), 1, lag),
+    central = military_draws(mil, rep(0, n), 1 - sc$p_central, lag),
+    bound_high = military_draws(mil, rep(0, n), 0, lag),
+    # one share per event year, the same in every draw: a row per draw
+    bodies = military_draws(mil, rep(0, n),
+                            matrix(1 - sc$p_bodies_year[as.character(sort(unique(mil$month$year)))],
+                                   n, length(sc$p_bodies_year), byrow = TRUE), lag),
+    rule = military_draws(mil, rep(mil$evidence$captives_central, n), NULL, lag)
+  )
+}
+
 # The registration-lag factors under weights on the release windows. 08b pools
 # the register's monthly growth by lag band over the five windows; what the
 # register adds differs far more between windows than between event months - a
@@ -1024,8 +1126,10 @@ military_draws <- function(mil, captives, alive_other = NULL, lag = NULL) {
 # (composition_bound()): by weighting the windows. lag: what 08b keeps for this
 # (cells: each band's sum of rate x weight and of weight by window; month: the
 # lag of each event month and status at the last release; L_ref: the horizon).
-# weights: NULL for the estimate, or a matrix, draws x windows. Returns the
-# factors, rows of 08b's factor table x draws.
+# weights: NULL for the estimate, or a matrix, draws x windows. The rates are
+# held non-increasing by lag under every set of weights, as 08b holds the
+# estimate's (lag_rates_monotone()). Returns the factors, rows of 08b's factor
+# table x draws.
 lag_factor_draws <- function(lag, weights = NULL) {
   wins <- ual_releases$release[-nrow(ual_releases)]
   if (is.null(weights)) weights <- matrix(1, 1, length(wins))
@@ -1044,6 +1148,7 @@ lag_factor_draws <- function(lag, weights = NULL) {
   # a band measured only in windows the weights leave out keeps its estimate
   empty <- !is.finite(lambda)
   lambda[empty] <- (rowSums(num) / rowSums(den))[row(lambda)[empty]]
+  lambda <- lag_rates_monotone(lambda, bands$status)
   # the months each row of the factor table spends in each band on its way from
   # its lag at the last release to the horizon
   months <- outer(seq_len(nrow(lag$month)), seq_len(nrow(bands)), function(i, j) {
@@ -1574,6 +1679,96 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# civilian deaths from uncertainUCDP ====
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# UCDP's low and high values come from its coding rules about sources, not from
+# an estimate of measurement error, and its best value undercounts, most of all
+# for small events (Vesco, Randahl, Hegre, Hogbladh and Yilmaz 2026, Journal of
+# Conflict Resolution 70(7-8)). From a survey of UCDP's coders they fit, for any
+# reported count and type of violence, a distribution of plausible deaths,
+# released as the R package uncertainUCDP. Each year's civilian deaths are drawn
+# from it: every event's deaths given UCDP's best count and its type of
+# violence, times the event's civilian share as 07 computes it, summed by year.
+# 10 draws them (uncertain_ucdp_n sets of the four years) and sets the central
+# value at their exact mean; 11 samples them through the same uniform numbers
+# the Beta-PERT took, so every other input keeps its draws. "pert" restores the
+# Beta-PERT on UCDP's low, best and high values; 13t reports whichever is not
+# used as the alternative (Table 6, Table A49).
+civilian_source <- "uncertainUCDP"
+uncertain_ucdp_n <- 4000
+
+# Each event's civilian deaths at UCDP's best, as 07 counts them: the deaths of
+# civilians plus the event's deaths of unknown side times the civilians' share of
+# the attributed deaths in its dyad-year, with 07's fallback to the dyad's
+# all-year shares, Crimea and Sevastopol left out. Returns, for 2022-2025, each
+# event's year, best count t, type of violence tov, civilian share s and
+# civilian deaths civ_best; their sums must reproduce 07's civilian totals.
+ucdp_civilian_events <- function() {
+  ev <-
+    read_rds("data_inter/ucdp_ged_events_slim.rds") |>
+    filter(country == "Ukraine") |>
+    mutate(u = coalesce(u, 0))
+  in_crimea <- str_detect(coalesce(ev$adm1, ""), regex("crimea|sevastopol", ignore_case = TRUE))
+  ev$t[in_crimea] <- ev$t[in_crimea] - ev$c[in_crimea]
+  ev$c[in_crimea] <- 0
+  ev <- ev |>
+    mutate(inter = type_of_violence == 1 & str_detect(side_b, "Government"),
+           grp = if_else(inter, paste(side_a, side_b, sep = " | "), "intra"))
+  gy <- ev |> summarise(a = sum(a), b = sum(b), c = sum(c), u = sum(u), .by = c(grp, year))
+  ga <- gy |> summarise(pi_all = sum(c) / sum(a + b + c), .by = grp)
+  gy <- gy |>
+    left_join(ga, by = "grp") |>
+    mutate(pi_c = case_when(u == 0 ~ 0,
+                            a != 0 & b != 0 & c != 0 ~ c / (a + b + c),
+                            .default = pi_all)) |>
+    select(grp, year, pi_c)
+  ev <- ev |>
+    left_join(gy, by = c("grp", "year")) |>
+    mutate(civ_best = c + u * pi_c,
+           s = if_else(t > 0, civ_best / t, 0),
+           tov = c("sb", "ns", "os")[type_of_violence]) |>
+    filter(year %in% 2022:2025) |>
+    select(year, t, tov, s, civ_best, type_of_violence, a, b, c, u)
+  stopifnot(all(ev$s >= 0 & ev$s <= 1 + 1e-9), !anyNA(ev$s))
+  check07 <- read_rds("data_inter/ukr_ucdp_invals.rds") |>
+    filter(role == "civilians", year %in% 2022:2025) |>
+    summarise(dts = sum(dts), .by = year) |>
+    left_join(ev |> summarise(ours = sum(civ_best), .by = year), by = "year")
+  stopifnot(isTRUE(all.equal(check07$dts, check07$ours, tolerance = 1e-6)))
+  ev
+}
+
+# n_draw sets of the four years' civilian deaths: a matrix, years by draws
+uncertain_ucdp_draws <- function(ev, n_draw, seed = 20261018) {
+  civ_ev <- ev |> filter(s > 0)
+  years <- 2022:2025
+  set.seed(seed)
+  draws <- matrix(0, length(years), n_draw, dimnames = list(years, NULL))
+  yr_idx <- match(civ_ev$year, years)
+  for (k in seq_len(n_draw)) {
+    d <- numeric(nrow(civ_ev))
+    for (tv in unique(civ_ev$tov)) {
+      i <- which(civ_ev$tov == tv)
+      d[i] <- uncertainUCDP::runcertainUCDP(length(i), fatalities = civ_ev$t[i], tov = tv)
+    }
+    draws[, k] <- rowsum(d * civ_ev$s, yr_idx, reorder = TRUE)[, 1]
+  }
+  stopifnot(all(is.finite(draws)), all(draws > 0))
+  draws
+}
+
+# the exact mean of each year's civilian deaths: each event's mean deaths given
+# its best count, times its civilian share, summed
+uncertain_ucdp_mean <- function(ev) {
+  m <- numeric(nrow(ev))
+  for (tv in unique(ev$tov)) {
+    i <- which(ev$tov == tv & ev$t > 0)
+    m[i] <- uncertainUCDP::mean_uncertainUCDP(ev$t[i], tov = tv)
+  }
+  ev |> mutate(m = m * s) |> summarise(mean = sum(m), .by = year) |> arrange(year)
+}
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # the simulation's draws ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Every uncertain input of one set of n simulations, drawn in a fixed order
@@ -1609,9 +1804,13 @@ simulation_draws <- function(param_table, mil, lc_error, n, shape = 4, seed = 42
   ev <- mil$evidence
 
   cvs <- param_table |> filter(role == "civilians") |> arrange(year)
+  # uncertainUCDP's draws (10) through the uniform the Beta-PERT would take
+  uu <- if (civilian_source == "uncertainUCDP") read_rds("data_inter/ukr_civilians_uncertain_ucdp.rds")$draws
   draws_cvs_long <- map_dfr(seq_len(nrow(cvs)), function(i) {
-    tibble(role = "civilians", year = cvs$year[i], sim_id = seq_len(n),
-           draw = q(runif(n), cvs$min[i], cvs$mode[i], cvs$max[i]))
+    tibble(role = "civilians", year = cvs$year[i], sim_id = seq_len(n), u = runif(n)) |>
+      mutate(draw = if (is.null(uu)) q(u, cvs$min[i], cvs$mode[i], cvs$max[i])
+                    else quantile(uu[as.character(cvs$year[i]), ], u, names = FALSE, type = 7)) |>
+      select(-u)
   })
 
   # The missing alive. The prisoners among them follow from two drawn inputs,
@@ -1642,13 +1841,21 @@ simulation_draws <- function(param_table, mil, lc_error, n, shape = 4, seed = 42
   lag <- lag_factor_draws(mil$lag, window)
   a_draw <- alive_draws$u_other * bound
 
-  # every input drawn; then each group alone with the other at its centre, for
-  # the shares of the variance (15): the evidence on the missing alive (the
-  # prisoners and where between none and the bound the rest sit), and the
-  # release windows, through the bound and the lag factors together. The
-  # windows' two parts are kept apart as well (mil_model: the bound alone;
-  # mil_lag: the lag factors alone), to show how far they offset each other.
-  mil_all <- military_draws(mil, alive_draws$captives, a_draw, lag)
+  # THE ESTIMATE is the central scenario (scenario_military()): the register's
+  # resolved cases applied to the unresolved, the share fixed, so that between
+  # draws only the registered dead and the missing move, through the lag
+  # factors under the draw's window weights. The bounds need no draw of their
+  # own: in every draw they are the confirmed dead, and the confirmed plus all
+  # the missing (roles confirmed and missing). The bodies scenario is drawn the
+  # same way as the estimate (mil_bodies). The RULE scenario draws its own
+  # evidence: the prisoners and where between none and the cap the rest sit, and
+  # the cap itself under the window weights (mil_rule). Then, for the shares of
+  # the variance (15), the rule's evidence alone (mil_alive), and the windows
+  # through the cap alone (mil_model), through the lag alone (mil_lag), and
+  # through both (mil_window), each with the rest at its centre.
+  mil_all <- scenario_military(mil, "central", lag, n)
+  mil_bodies <- scenario_military(mil, "bodies", lag, n)
+  mil_upper <- military_draws(mil, alive_draws$captives, a_draw, lag)
   captives_c <- rep(ev$captives_central, n)
   mil_alive <- military_draws(mil, alive_draws$captives, alive_draws$u_other * bound_point)
   mil_window <- military_draws(mil, captives_c, bound / 2, lag)
@@ -1656,8 +1863,8 @@ simulation_draws <- function(param_table, mil, lc_error, n, shape = 4, seed = 42
   mil_lag <- military_draws(mil, captives_c, lag = lag)
   alive_draws <-
     alive_draws |>
-    left_join(mil_all |> summarise(across(c(missing, alive_other, imputed_dead), sum),
-                                   .by = sim_id) |>
+    left_join(mil_upper |> summarise(across(c(missing, alive_other, imputed_dead), sum),
+                                     .by = sim_id) |>
                 rename(alive_other_n = alive_other),
               by = "sim_id")
 
@@ -1699,6 +1906,9 @@ simulation_draws <- function(param_table, mil, lc_error, n, shape = 4, seed = 42
     draws_cvs_long,
     as_role(mil_all, "military", "combatants"),
     as_role(mil_all, "confirmed", "confirmed"),
+    as_role(mil_all, "missing", "missing"),
+    as_role(mil_bodies, "military", "mil_bodies"),
+    as_role(mil_upper, "military", "mil_rule"),
     as_role(mil_alive, "military", "mil_alive"),
     as_role(mil_window, "military", "mil_window"),
     as_role(mil_model, "military", "mil_model"),
@@ -1740,7 +1950,10 @@ simulation_draws <- function(param_table, mil, lc_error, n, shape = 4, seed = 42
 # below the mean of the draws. The western net outflow is a blend of two
 # readings whose mode is their midpoint and its mean already.
 central_values <- function(p) {
-  p |> mutate(mode = if_else(role %in% c("civilians", "mig_ru"), (min + 4 * mode + max) / 6, mode))
+  # the civilians are a Beta-PERT only when civilian_source is "pert"; uncertainUCDP
+  # gives 10 their exact mean as the mode already
+  pert_roles <- c(if (civilian_source == "pert") "civilians", "mig_ru")
+  p |> mutate(mode = if_else(role %in% pert_roles, (min + 4 * mode + max) / 6, mode))
 }
 mode_projection_inputs <- function() {
   # returned as it is: 14c and 14d draw the simulation's inputs from it again,

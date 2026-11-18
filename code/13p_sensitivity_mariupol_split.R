@@ -33,7 +33,9 @@
 # The rules move only the mode of the 2022 civilian total. Its low and high are
 # scaled as 07 scales them, the deaths of each dyad and year times that year's
 # ratios of low and high to best, and the central value is the mean of the
-# Beta-PERT, (min + 4 mode + max) / 6, which is what the projection takes
+# Beta-PERT, (min + 4 mode + max) / 6, which is what the projection takes under
+# civilian_source "pert"; under uncertainUCDP, that model's mean with the event's
+# share changed
 # (central_values(), 00_setup.R). The scenario used must reproduce 07's civilian
 # totals and 13's loss at the central values.
 #
@@ -177,6 +179,19 @@ by_year <-
   mutate(res = map(event_share, civilians_of_ukraine)) |>
   unnest(res) |>
   mutate(central = central_values(tibble(role = "civilians", min = dts_l, mode = dts, max = dts_u))$mode)
+# Under uncertainUCDP (civilian_source, 00_setup.R) the central value is that
+# model's exact mean (10). Only the event's own civilian share moves between the
+# rules, and the mean is linear in each event's share, so the 2022 mean moves by
+# the change in the share times the event's own uncertainUCDP mean.
+if (civilian_source == "uncertainUCDP") {
+  stopifnot(event_row$t == event_row$u)
+  event_mean <- uncertainUCDP::mean_uncertainUCDP(event_row$t, tov = c("sb", "ns", "os")[event_row$type_of_violence])
+  uu_central <- read_rds("data_inter/ukr_param_table.rds") |> filter(role == "civilians") |> select(year, uu = mode)
+  by_year <- by_year |>
+    left_join(uu_central, by = "year") |>
+    mutate(central = uu + if_else(year == mariupol_event$year, (event_share - share_dyad) * event_mean, 0)) |>
+    select(-uu)
+}
 
 # the rule used must give 07's totals, bounds included, in every year
 ucdp <- read_rds("data_inter/ukr_ucdp_invals.rds") |> filter(role == "civilians") |> arrange(year)

@@ -216,14 +216,15 @@ draws_df <- sampled$draws_df
 param_draws <- sampled$param_draws
 write_rds(sampled$alive_draws, "data_inter/ukr_sim_alive_draws.rds")
 
-# the draws of the evidence alone, the bound and the lag factors at their
-# point values, must stay inside 10's bounds, which are the same total at the
-# ends of the evidence
+# in every draw the estimate, the resolution-based scenario, lies between the
+# bounds drawn with it - the confirmed dead, and the confirmed plus all the
+# missing - and the bodies scenario lies below it
 stopifnot(
   param_draws |>
-    filter(role == "mil_alive") |>
-    left_join(param_table |> filter(role == "combatants") |> select(year, min, max), by = "year") |>
-    with(all(draw >= min - 1e-6 & draw <= max + 1e-6)),
+    filter(role %in% c("combatants", "confirmed", "missing", "mil_bodies")) |>
+    pivot_wider(id_cols = c(sim_id, year), names_from = role, values_from = draw) |>
+    with(all(confirmed <= combatants + 1e-6 & combatants <= confirmed + missing + 1e-6 &
+             mil_bodies <= combatants + 1e-6)),
   !any(is.na(draws_df))
 )
 

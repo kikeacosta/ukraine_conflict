@@ -10,14 +10,17 @@
 # 00_setup.R). The drop-outs come in clean-ups of the list, in some releases and
 # not others, while the resolutions to death arrive in every window. So the
 # ratio is a running one: it falls as windows without a clean-up are added and
-# jumps when one comes. This step says how far it moves, and why the events of
-# 2022 take the bound of the later cohorts.
+# jumps when one comes. This step says how far it moves, why the events of
+# 2022 are not read on their own, and why the later cohorts are pooled: the
+# exits behind each one's own bound fall almost wholly in the last window.
 #
 # WHAT IT REPORTS
 # ---------------
 #   spans      the bound on each cumulative span of releases, v14-v15 to
-#              v14-v19, by event year: each cohort's own, and the one used,
-#              in which 2022 takes the pooled bound of 2023-2025
+#              v14-v19, by event year: each cohort's own; by cohort, in which
+#              2022 takes the pooled bound of 2023-2025 and the later cohorts
+#              their own (the design before 16 Oct 2026); and the one used, the
+#              pooled bound of 2023-2025 for every event year
 #   windows    by event year and window between releases: first resolutions to
 #              death and drop-outs beyond list maintenance, the missing at risk
 #              at the window's start, the person-months they give (at risk x the
@@ -54,10 +57,12 @@ years <- sort(unique(comp$year))
 spans <- map_dfr(seq_along(wins), function(k) {
   d <- comp |> filter(from_release %in% wins[seq_len(k)])
   # a span in which no later cohort has resolved at all has no bound to lend
-  used <- if (sum(d$out[d$year != 2022] + d$dead[d$year != 2022]) > 0) composition_bound(d)[1, ] else rep(NA_real_, length(years))
+  lends <- sum(d$out[d$year != 2022] + d$dead[d$year != 2022]) > 0
+  used <- if (lends) composition_bound(d)[1, ] else rep(NA_real_, length(years))
+  cohort <- if (lends) composition_bound(d, pool = FALSE)[1, ] else rep(NA_real_, length(years))
   tibble(span = span_name(k), windows = k, year = years,
-         own = unname(composition_bound(d, borrow = NULL)[1, ]), used = unname(used),
-         pooled = sum(d$out) / sum(d$out + d$dead))
+         own = unname(composition_bound(d, borrow = NULL, pool = FALSE)[1, ]), cohort = unname(cohort),
+         used = unname(used), pooled = sum(d$out) / sum(d$out + d$dead))
 })
 stopifnot(isTRUE(all.equal(spans$used[spans$windows == length(wins)], unname(composition_bound(comp)[1, ]))))
 
@@ -82,14 +87,24 @@ cohorts <-
             person_months = sum(person_months), .by = year) |>
   mutate(out_share = out / at_risk_v14, dead_share = dead / at_risk_v14,
          out_rate = 1000 * out / person_months, dead_rate = 1000 * dead / person_months,
-         own = unname(composition_bound(comp, borrow = NULL)[1, ]), used = unname(composition_bound(comp)[1, ]))
+         own = unname(composition_bound(comp, borrow = NULL, pool = FALSE)[1, ]),
+         cohort = unname(composition_bound(comp, pool = FALSE)[1, ]),
+         used = unname(composition_bound(comp)[1, ]))
+# the share of each cohort's exits beyond list maintenance that fall in the
+# last window: the reason the later cohorts are pooled
+last_window_share <-
+  windows |>
+  summarise(out_last = out[from_release == wins[length(wins)]], out = sum(out), .by = year) |>
+  mutate(share = if_else(out > 0, out_last / out, NA_real_))
 
 # 3. EACH WINDOW LEFT OUT, AND THE WINDOWS RESAMPLED ============================
 left_out <- map_dfr(seq_along(wins), function(k) {
   w <- matrix(1, 1, length(wins))
   w[1, k] <- 0
   tibble(left_out = paste(wins[k], ual_releases$release[k + 1], sep = "-"), year = years,
-         own = unname(composition_bound(comp, w, borrow = NULL)[1, ]), used = unname(composition_bound(comp, w)[1, ]))
+         own = unname(composition_bound(comp, w, borrow = NULL, pool = FALSE)[1, ]),
+         cohort = unname(composition_bound(comp, w, pool = FALSE)[1, ]),
+         used = unname(composition_bound(comp, w)[1, ]))
 })
 set.seed(20260922)
 b <- composition_bound(comp, window_weight_draws(20000))
@@ -98,18 +113,21 @@ resampled <- tibble(year = years,
                     lo = apply(b, 2, quantile, 0.025, names = FALSE),
                     hi = apply(b, 2, quantile, 0.975, names = FALSE))
 
-cat("\n=== THE BOUND ON EACH CUMULATIVE SPAN (%): OWN, AND USED ===\n")
-print(as.data.frame(spans |> mutate(across(c(own, used, pooled), \(v) round(100 * v, 1))) |>
-                      pivot_wider(id_cols = c(span, pooled), names_from = year, values_from = c(own, used))))
+cat("\n=== THE BOUND ON EACH CUMULATIVE SPAN (%): OWN, BY COHORT, AND USED ===\n")
+print(as.data.frame(spans |> mutate(across(c(own, cohort, used, pooled), \(v) round(100 * v, 1))) |>
+                      pivot_wider(id_cols = c(span, pooled), names_from = year, values_from = c(own, cohort, used))))
+cat("\n=== SHARE OF EACH COHORT'S EXITS BEYOND LIST MAINTENANCE IN THE LAST WINDOW ===\n")
+print(as.data.frame(last_window_share |> mutate(across(c(out_last, out), round), share = round(share, 2))))
 cat("\n=== DROP-OUTS AND DEATHS PER 1,000 PERSON-MONTHS, BY EVENT YEAR AND WINDOW ===\n")
 print(as.data.frame(windows |> mutate(across(c(out, out_rate, dead_rate), \(v) round(v, 2)), person_months = round(person_months))))
 cat("\n=== OVER THE FIVE WINDOWS ===\n")
 print(as.data.frame(cohorts |> mutate(across(c(out_share, dead_share, own, used), \(v) round(100 * v, 2)),
                                       across(c(out, out_rate, dead_rate), \(v) round(v, 2)))))
 cat("\n=== THE BOUND USED WITH EACH WINDOW LEFT OUT, AND RESAMPLED (%) ===\n")
-print(as.data.frame(left_out |> mutate(across(c(own, used), \(v) round(100 * v, 1)))))
+print(as.data.frame(left_out |> mutate(across(c(own, cohort, used), \(v) round(100 * v, 1)))))
 print(as.data.frame(resampled |> mutate(across(-year, \(v) round(100 * v, 1)))))
 
-write_rds(list(spans = spans, windows = windows, cohorts = cohorts, left_out = left_out, resampled = resampled),
+write_rds(list(spans = spans, windows = windows, cohorts = cohorts, last_window_share = last_window_share,
+               left_out = left_out, resampled = resampled),
           "data_inter/ukr_bound_stability.rds")
 message("Done. data_inter/ukr_bound_stability.rds written.")

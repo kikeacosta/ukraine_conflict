@@ -19,6 +19,9 @@
 #   fig4_decomposition_migration_mortality.png       13
 #   fig5_decomposition_by_cause.png                  14   <- new
 #   fig6_uncertainty_shares.png                      11, 14 <- new
+#   fig7_missing_scenarios.png                       13s (none of the missing dead, the central scenario, all of them)
+#   fig8_loss_by_scenario.png                        14, 13s (the loss by year, sex and scenario)
+#   figA9_missing_scenarios_all.png                  13s (every point named in the text)
 #   figA4_pert_draw_distributions.png                10, 11
 #   figA2_pert_draw_distributions_migration.png      10, 11 <- new
 #   figA3_cumulative_migration_draws.png             11   <- new
@@ -26,7 +29,9 @@
 #
 # TABLES (written to tables/ as .csv)
 #   table1_source_totals.csv                         07_*, 08
-#   table3_missing_imputation.csv                    09
+#   table3_missing_imputation.csv                    09 (the three scenarios by year)
+#   table3b_rule_scenario.csv                        09 (the rule scenario in its parts, appendix)
+#   table3c_appendix_scenarios.csv                   09 (the bodies and rule scenarios by year, appendix)
 #   table2_pert_input_bounds.csv                     10
 #   tableA12_missing_alive_inputs.csv                09
 #   table4_conflict_deaths_by_cause.csv              14   <- new
@@ -56,6 +61,7 @@
 #   tableA31_base_coherent.csv                       13m
 #   tableA35_covid_carryover.csv                     13n
 #   tableA48_held_out_window.csv                     09j
+#   tableA49_uncertain_ucdp_civilians.csv            13t
 #   tableA17_structural_intervals.csv                14e
 #   figA5_structural_tornado.png                     14e
 #   out_of_sample_releases.csv                       09i (where it has run)
@@ -154,6 +160,12 @@ mig <- read_rds("data_inter/ukr_migration_decomposition.rds")
 alive_mil <- read_rds("data_inter/ukr_alive_sensitivity_military.rds")
 alive_e0 <- read_rds("data_inter/ukr_alive_sensitivity_e0.rds")
 evidence <- read_rds("data_inter/ukr_alive_missing.rds")
+# the three scenarios of the missing (09) and the line over the share counted
+# dead with the loss at each scenario (13s): the central scenario is the estimate
+scen <- read_rds("data_inter/ukr_scenarios.rds")
+scen_year <- scen$by_year
+sweep13s <- read_rds("data_inter/ukr_missing_dead_share_sweep.rds")
+scen_loss <- sweep13s$loss |> filter(scenario %in% scenario_names) |> mutate(year = as.integer(year)) |> filter(!is.na(year))
 
 # The draws file is named for the simulation size, so 15 reads the one matching
 # the n_sim it was configured with rather than whatever the last run left behind.
@@ -409,10 +421,12 @@ save_fig(fig5, "fig5_decomposition_by_cause.png", 8, 4.4)
 # military total it gives with the other at its point values
 # (simulation_draws(), 00_setup.R). The counterfactual enters through
 # the draw's forecast index for the sex and year.
+# The estimate fixes the share of the missing (the central scenario), so the
+# register enters the spread through the lag factors alone, rebuilt under the
+# draw's window weights (role mil_lag).
 UNC_LAB <- c(
   cvs   = "Civilian deaths",
-  alive = "Missing alive",
-  window = "Release windows: bound and lag",
+  window = "Release windows: registration lag",
   lc    = "Counterfactual forecast",
   mig_w = "Migration: western",
   mig_r = "Migration: Russia",
@@ -420,8 +434,7 @@ UNC_LAB <- c(
 )
 COL_UNC <- c(
   "Civilian deaths"             = "#AE2012",
-  "Missing alive"               = "#333333",
-  "Release windows: bound and lag" = "#7F7F7F",
+  "Release windows: registration lag" = "#7F7F7F",
   "Counterfactual forecast"     = "#94D2BD",
   "Migration: western"          = "#0A9396",
   "Migration: Russia" = "#EE9B00",
@@ -437,8 +450,7 @@ unc_inputs <-
   param_draws |>
   mutate(bucket = case_when(
     role == "civilians" ~ "cvs",
-    role == "mil_alive" ~ "alive",
-    role == "mil_window" ~ "window",
+    role == "mil_lag"   ~ "window",
     role == "lc_f"      ~ "lc_f",
     role == "lc_m"      ~ "lc_m",
     role == "mig_west"  ~ "mig_w",
@@ -486,7 +498,6 @@ unc_shares <-
   mutate(sh = map2(data, sex, function(d, sx) {
     s <- c(
       cvs   = first_order(d$loss_total, d$cvs),
-      alive = first_order(d$loss_total, d$alive),
       window = first_order(d$loss_total, d$window),
       lc    = first_order(d$loss_total, if (sx == "f") d$lc_f else d$lc_m),
       mig_w = first_order(d$loss_total, d$mig_w),
@@ -570,7 +581,9 @@ figA1 <-
     caption = paste0(
       "Draws (n = ", scales::comma(n_sim),
       "). Dashed line: mode. Dotted lines: min and max, for combatants the evidence on the missing alive ",
-      "at its ends.\nCombatant totals follow from one draw of that evidence per simulation, so their four ",
+      "at its ends", if (civilian_source == "uncertainUCDP")
+        ".\nFor civilians, drawn from uncertainUCDP (Vesco et al. 2026): the mean and the 2.5th and 97.5th percentiles",
+      ".\nCombatant totals follow from one draw of that evidence per simulation, so their four ",
       "years move together;\nthe bound on the missing alive and the registration-lag factors are rebuilt under ",
       "each draw's weights on the release windows, so a draw can pass the dotted lines."
     )
@@ -789,56 +802,83 @@ save_tab(tab_src, "table1_source_totals.csv")
 print(tab_src)
 
 # ==============================================================================
-# TABLE 2 - Imputation of missing combatants
+# TABLE 3 - Combatant deaths between the bounds, and the resolution-based scenario
 # ==============================================================================
-# The missing imputed alive in their three parts: the prisoners of war among
-# them, set by the official figures; those projected to leave the register
-# (found alive); and those alive for other reasons, none at the central
-# values.
+# By event year: the register's dead and their late registrations, the missing
+# completed for lag, the dead among the missing in the resolution-based scenario
+# (09, ukr_scenarios.rds; the estimate), and the combatant total at the lower
+# bound (none of the missing dead), in that scenario, and at the upper bound
+# (all of them). imputed_dead, pct_dead and total_deaths are the
+# resolution-based scenario's, the columns the fill scripts read. The appendix
+# scenarios - bodies and rule - are table 3c.
+by_scen <-
+  scen_year |>
+  select(scenario, year, registered, late_registrations, missing, imputed_dead, total) |>
+  pivot_wider(names_from = scenario, values_from = c(imputed_dead, total), names_glue = "{.value}_{scenario}")
+stopifnot(isTRUE(all.equal(by_scen$total_bound_high, by_scen$total_bound_low + by_scen$missing)))
 tab_imput <-
-  imput |>
-  mutate(
-    pct_dead = imputed_dead / missing_stock,
-    pct_alive = imputed_alive / missing_stock
-  ) |>
-  select(
-    year,
-    registered_deaths = registered,
-    late_registrations,
-    missing = missing_stock,
-    imputed_dead,
-    pct_dead,
-    prisoners_of_war = captives,
-    bound_alive_other = bound,
-    alive_other = alive_other,
-    pct_alive,
-    total_deaths = total_estimado
-  )
-stopifnot(isTRUE(all.equal(imput$imputed_dead + imput$imputed_alive, imput$missing_stock)),
-          isTRUE(all.equal(imput$captives + imput$alive_other, imput$imputed_alive)))
-
+  by_scen |>
+  transmute(year, registered_deaths = registered, late_registrations, missing,
+            dead_central = imputed_dead_central,
+            total_bound_low, total_central, total_bound_high)
+count_cols <- c("registered_deaths", "late_registrations", "missing", "dead_central",
+                "total_bound_low", "total_central", "total_bound_high")
 # The Total row sums the rounded years, as tables 1 and 3 do, so the tables
 # print the same totals; rounding the four-year sum once can differ by one.
-count_cols <- c("registered_deaths", "late_registrations", "missing", "imputed_dead",
-                "prisoners_of_war", "alive_other",
-                "total_deaths")
 tab_imput <- bind_rows(
   tab_imput,
-  tab_imput |>
-    summarise(across(all_of(count_cols), ~ sum(round(.x)))) |>
-    mutate(
-      year = NA_integer_,
-      pct_dead = imputed_dead / missing,
-      pct_alive = (prisoners_of_war + alive_other) / missing,
-      # the bound of the four years together: the alive it allows over the missing it applies to
-      bound_alive_other = sum(imput$bound * imput$unresolved) / sum(imput$unresolved)
-    )
+  tab_imput |> summarise(across(all_of(count_cols), ~ sum(round(.x)))) |> mutate(year = NA_integer_)
 ) |>
   mutate(
     across(all_of(count_cols), ~round(.x)),
-    across(c(pct_dead, pct_alive, bound_alive_other), ~scales::percent(.x, accuracy = 0.1)),
+    pct_dead_central = scales::percent(dead_central / missing, accuracy = 0.1),
+    imputed_dead = dead_central, pct_dead = pct_dead_central, total_deaths = total_central,
     year = if_else(is.na(year), "Total", as.character(year))
-  )
+  ) |>
+  select(year, registered_deaths, late_registrations, missing, dead_central, pct_dead_central,
+         total_bound_low, total_central, total_bound_high, imputed_dead, pct_dead, total_deaths)
+
+# TABLE 3c - the appendix's two scenarios by event year: the bodies scenario
+# (the named dead and the bodies awaiting identification, placed by months since
+# the event) and the rule scenario (no evidence of life means dead)
+app_cols <- c("missing", "dead_bodies", "total_bodies", "dead_rule", "total_rule")
+tab_app <-
+  by_scen |>
+  transmute(year, missing, dead_bodies = imputed_dead_bodies, total_bodies, dead_rule = imputed_dead_rule, total_rule)
+tab_app <- bind_rows(
+  tab_app,
+  tab_app |> summarise(across(all_of(app_cols), ~ sum(round(.x)))) |> mutate(year = NA_integer_)
+) |>
+  mutate(across(all_of(app_cols), ~round(.x)),
+         pct_dead_bodies = scales::percent(dead_bodies / missing, accuracy = 0.1),
+         pct_dead_rule = scales::percent(dead_rule / missing, accuracy = 0.1),
+         year = if_else(is.na(year), "Total", as.character(year))) |>
+  select(year, missing, dead_bodies, pct_dead_bodies, total_bodies, dead_rule, pct_dead_rule, total_rule)
+save_tab(tab_app, "table3c_appendix_scenarios.csv")
+print(tab_app)
+
+# the rule scenario's own table, in its parts: the prisoners of war among the
+# missing, the cap on the alive outside captivity and the alive it allows at its
+# centre
+tab_upper <-
+  imput |>
+  mutate(pct_dead = imputed_dead / missing_stock, pct_alive = imputed_alive / missing_stock) |>
+  select(year, missing = missing_stock, prisoners_of_war = captives, bound_alive_other = bound,
+         alive_other, pct_alive, imputed_dead, pct_dead, total_deaths = total_estimado)
+stopifnot(isTRUE(all.equal(imput$imputed_dead + imput$imputed_alive, imput$missing_stock)),
+          isTRUE(all.equal(imput$captives + imput$alive_other, imput$imputed_alive)))
+upper_cols <- c("missing", "prisoners_of_war", "alive_other", "imputed_dead", "total_deaths")
+tab_upper <- bind_rows(
+  tab_upper,
+  tab_upper |> summarise(across(all_of(upper_cols), ~ sum(round(.x)))) |>
+    mutate(year = NA_integer_, pct_dead = imputed_dead / missing, pct_alive = (prisoners_of_war + alive_other) / missing,
+           bound_alive_other = sum(imput$bound * imput$unresolved) / sum(imput$unresolved))
+) |>
+  mutate(across(all_of(upper_cols), ~round(.x)),
+         across(c(pct_dead, pct_alive, bound_alive_other), ~scales::percent(.x, accuracy = 0.1)),
+         year = if_else(is.na(year), "Total", as.character(year)))
+save_tab(tab_upper, "table3b_rule_scenario.csv")
+print(tab_upper)
 
 # beside the imputation at the central values, the military total the
 # simulation gives: its mean and 95% interval, by year and in total
@@ -861,7 +901,9 @@ save_tab(tab_imput, "table3_missing_imputation.csv")
 print(tab_imput)
 
 # ==============================================================================
-# TABLE 3 - PERT simulation input bounds
+# TABLE 2 - the simulation's input bounds: Beta-PERT minimum, mode and maximum,
+# and for the civilians from uncertainUCDP its mean and 2.5th and 97.5th
+# percentiles (civilian_source, 00_setup.R)
 # ==============================================================================
 # The western component is bracketed by source, so its columns are the two
 # readings' paths (crossings, register) either side of the mode, not per-year
@@ -1108,10 +1150,90 @@ tab_e0 <-
               filter(counterfactual == "fixed at its point forecast") |>
               transmute(year, sex, loss_counterfactual_fixed = sprintf("%.2f (%.2f-%.2f)", mean, lo, hi)),
             by = c("year", "sex"))
-stopifnot(!anyNA(tab_e0$loss_counterfactual_fixed))
+# the loss at the two bounds of the share of the missing counted dead, none and
+# all of them, at the central values of every other input (13s), beside the
+# resolution-based scenario's
+tab_e0 <-
+  tab_e0 |>
+  left_join(scen_loss |> filter(scenario %in% c("bound_low", "bound_high")) |>
+              transmute(year, sex, col = paste0("loss_", scenario), loss = sprintf("%.2f", loss)) |>
+              pivot_wider(names_from = col, values_from = loss),
+            by = c("year", "sex"))
+stopifnot(!anyNA(tab_e0$loss_counterfactual_fixed), !anyNA(tab_e0$loss_bound_low), !anyNA(tab_e0$loss_bound_high))
 
 save_tab(tab_e0, "table5_life_expectancy_loss.csv")
 print(tab_e0)
+
+# ==============================================================================
+# FIGURE 8 - The loss by year, sex and scenario of the missing
+# ==============================================================================
+# Table 5 as a figure: the resolution-based scenario and the two bounds (09) side by side in
+# each year, for men and women. The central scenario at the mean of the draws
+# with its 95% interval, the estimate as Table 5 gives it; the lower and the
+# upper bound at the central projection, as Table 5's last columns, each with
+# the 95% interval of the same draws with the share of the missing fixed (13s).
+# One scale from zero for both sexes, so that the women's loss reads against the
+# men's: the scenarios hardly move it, since almost none of the missing are women.
+f8_bars <-
+  read_rds("data_inter/ukr_missing_dead_share_bars.rds")$loss |>
+  filter(scenario %in% scenario_names, year %in% as.character(2022:2025)) |>
+  mutate(year = as.integer(year))
+f8_central <-
+  loss_draws |>
+  as_tibble() |>
+  summarise(loss = mean(loss_total), lo = quantile(loss_total, 0.025), hi = quantile(loss_total, 0.975),
+            .by = c(year, sex)) |>
+  mutate(year = as.integer(year), scenario = "central")
+# 13s draws the central scenario from the same simulations, so its interval
+# must be Table 5's
+f8_check <- f8_central |>
+  inner_join(f8_bars |> filter(scenario == "central"), by = c("year", "sex"), suffix = c("", "_13s"))
+stopifnot(nrow(f8_check) == 8,
+          max(abs(f8_check$lo - f8_check$lo_13s)) < 0.02, max(abs(f8_check$hi - f8_check$hi_13s)) < 0.02)
+f8_share <- scen_loss |> distinct(scenario, share_dead)
+f8_labels <- c(
+  bound_low = sprintf("Lower bound: none of the missing dead (%s)",
+                      scales::percent(f8_share$share_dead[f8_share$scenario == "bound_low"], accuracy = 1)),
+  central = sprintf("Resolution-based scenario, the estimate: the register's resolved cases applied to the unresolved (%s)",
+                    scales::percent(f8_share$share_dead[f8_share$scenario == "central"], accuracy = 1)),
+  bound_high = sprintf("Upper bound: all of the missing dead (%s)",
+                       scales::percent(f8_share$share_dead[f8_share$scenario == "bound_high"], accuracy = 1)))
+f8_dat <-
+  bind_rows(
+    f8_central,
+    scen_loss |>
+      filter(scenario != "central") |>
+      select(scenario, year, sex, loss) |>
+      left_join(f8_bars |> select(scenario, year, sex, lo, hi), by = c("scenario", "year", "sex"))
+  ) |>
+  nice_sex() |>
+  mutate(sex = factor(sex, c("Males", "Females")),
+         scenario = factor(scenario, scenario_names, labels = unname(f8_labels[scenario_names])))
+stopifnot(nrow(f8_dat) == 24, !anyNA(f8_dat),
+          all(f8_dat$lo <= f8_dat$loss + 0.02), all(f8_dat$loss <= f8_dat$hi + 0.02))
+f8_pal <- setNames(c("#1b9e77", "#253494", "#d95f02"), levels(f8_dat$scenario))
+f8_dodge <- position_dodge(width = 0.55)
+fig8 <-
+  ggplot(f8_dat, aes(factor(year), loss, colour = scenario, fill = scenario, shape = scenario)) +
+  geom_linerange(aes(ymin = lo, ymax = hi, linewidth = scenario), position = f8_dodge) +
+  geom_point(aes(size = scenario), position = f8_dodge) +
+  facet_wrap(~sex) +
+  # the lower bound points down, the upper bound up; the estimate is the largest
+  scale_colour_manual(values = f8_pal) +
+  scale_fill_manual(values = f8_pal) +
+  scale_shape_manual(values = setNames(c(25, 21, 24), levels(f8_dat$scenario))) +
+  scale_size_manual(values = setNames(c(2, 3.2, 2), levels(f8_dat$scenario))) +
+  scale_linewidth_manual(values = setNames(c(0.6, 1.1, 0.6), levels(f8_dat$scenario))) +
+  scale_y_continuous(limits = c(0, NA), breaks = seq(0, 10, 1), expand = expansion(mult = c(0, 0.04))) +
+  labs(x = NULL, y = "Loss of life expectancy at birth (years)",
+       colour = NULL, fill = NULL, shape = NULL, size = NULL, linewidth = NULL,
+       caption = paste0("Resolution-based scenario: mean and 95% interval of ", scales::comma(n_sim),
+                        " simulation draws (Table 5). Bounds: the central projection, with the 95% interval ",
+                        "of the same draws with the share of the missing fixed.") |> str_wrap(120)) +
+  theme_paper() +
+  theme(legend.direction = "vertical", legend.justification = "left", plot.caption = element_text(hjust = 0), plot.caption.position = "plot", legend.text = element_text(size = 9),
+        panel.grid.major.x = element_blank())
+save_fig(fig8, "fig8_loss_by_scenario.png", 8, 5)
 
 # ==============================================================================
 # TABLE A40 - Life expectancy loss attributed to each cause
@@ -1584,7 +1706,7 @@ loss_wide <- function(d, keep_cols) {
 tA9 <-
   read_rds("data_inter/ukr_linkage_rules_e0.rds") |>
   mutate(prisoners_of_war_among_missing = round(captives), military_deaths = round(military)) |>
-  loss_wide(c("design", "prisoners_of_war_among_missing", "military_deaths"))
+  loss_wide(c("design", "scenario", "prisoners_of_war_among_missing", "military_deaths"))
 save_tab(tA9, "tableA22_linkage_and_chain.csv")
 print(tA9)
 
@@ -1800,7 +1922,15 @@ print(tA2)
 # alternative to the correction but a measure of it.
 # Military totals are summed over rounded years, as tables 3 and A6 build theirs.
 mil_total <- function(d) d |> summarise(military = sum(round(total_military)), .by = c(point, alive))
-mode_military <- alive_mil |> filter(point %in% "central") |> summarise(m = sum(round(total_military))) |> pull(m)
+# the estimate at the mode is the central scenario (09, 13s); the sweep of
+# 13b (alive_mil, alive_e0) is the UPPER scenario's evidence
+mode_military <- scen_year |> filter(scenario == "central") |> summarise(m = sum(round(total))) |> pull(m)
+scenario_rows <- function(s) {
+  scen_loss |>
+    filter(scenario == s) |>
+    mutate(military = scen_year |> filter(scenario == s) |> summarise(m = sum(round(total))) |> pull(m)) |>
+    select(military, year, sex, loss)
+}
 alive_rows <- function(points) {
   alive_e0 |>
     filter(point %in% points) |>
@@ -1811,10 +1941,12 @@ mig_sens_t8 <- read_rds("data_inter/ukr_migration_sensitivity_e0.rds")
 spec_t8 <- read_rds("data_inter/ukr_migration_specification_e0.rds")
 lag_t8 <- read_rds("data_inter/ukr_registration_lag.rds")
 alternatives <- bind_rows(
+  bind_rows(scenario_rows("bound_low"), scenario_rows("bound_high")) |>
+    mutate(analysis = "The missing: the bounds, none and all of them dead", table = "3, 5"),
   alive_rows(c("2.5th percentile of draws", "97.5th percentile of draws")) |>
-    mutate(analysis = "The missing alive: 95% interval of the draws", table = "A20"),
+    mutate(analysis = "The rule scenario's evidence on the missing alive: 95% interval of its draws", table = "A20"),
   alive_rows(c("floor", "cap")) |>
-    mutate(analysis = "The missing alive: floor to cap", table = "A20"),
+    mutate(analysis = "The rule scenario's evidence on the missing alive: floor to cap", table = "A20"),
   lag_t8$loss |>
     filter(kind == "horizon", !scenario %in% c("to 48 months (used)", "as registered")) |>
     left_join(lag_t8$military |> summarise(military = sum(round(total)), .by = scenario), by = "scenario") |>
@@ -1825,6 +1957,12 @@ alternatives <- bind_rows(
     left_join(lag_t8$military |> summarise(military = sum(round(total)), .by = scenario), by = "scenario") |>
     select(military, year, sex, loss) |>
     mutate(analysis = "Registration lag: growth measured per person listed, or the releases dated by Kaggle version",
+           table = "A24"),
+  lag_t8$loss |>
+    filter(kind == "long_lag") |>
+    left_join(lag_t8$military |> summarise(military = sum(round(total)), .by = scenario), by = "scenario") |>
+    select(military, year, sex, loss) |>
+    mutate(analysis = "Registration lag: the missing's growth beyond 24 months as measured, or at the dead's rates",
            table = "A24"),
   read_rds("data_inter/ukr_registration_lag_tail.rds") |>
     (\(lt) lt$loss |>
@@ -1845,8 +1983,8 @@ alternatives <- bind_rows(
               analysis = "Civilians of 2022: the deaths of unknown status in the siege of Mariupol counted none, 87% or all civilian",
               table = ""),
   read_rds("data_inter/ukr_linkage_rules_e0.rds") |>
-    filter(!str_detect(design, "production")) |>
-    mutate(analysis = paste0("Rules of the imputation and the linkage, and the prisoner-of-war evidence: ",
+    filter(scenario == "central", !str_detect(design, "production")) |>
+    mutate(analysis = paste0("Rules of the linkage behind the resolved cases: ",
                              c("one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
                                "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
                                "seventeen", "eighteen", "nineteen", "twenty")[n_distinct(design)], " alternatives"),
@@ -1880,6 +2018,19 @@ alternatives <- bind_rows(
     transmute(military = mode_military, year, sex, loss,
               analysis = "Civilian age profile: deaths beyond OHCHR's verified count with half over 60, or aged as pre-war deaths",
               table = "A32"),
+  # civilian deaths (13t): the method not used, uncertainUCDP (Vesco et al. 2026)
+  # or the Beta-PERT on UCDP's low-best-high, at its mean for each year, every
+  # other input as used
+  local({
+    uu <- read_rds("data_inter/ukr_uncertain_ucdp.rds")
+    uu$loss |>
+      filter(point == uu$alternative) |>
+      transmute(military = mode_military, year, sex, loss,
+                analysis = if (uu$alternative == "Beta-PERT mean")
+                  "Civilian deaths: the Beta-PERT on UCDP's low-best-high in place of uncertainUCDP's distributions (Vesco et al. 2026)"
+                else "Civilian deaths: uncertainUCDP's distributions (Vesco et al. 2026) in place of UCDP's low-best-high",
+                table = "A49")
+  }),
   bind_rows(read_rds("data_inter/ukr_baseline_window_e0.rds"),
             read_rds("data_inter/ukr_coherent_forecast_e0.rds")$baseline) |>
     filter(window != "2000-2019 (used)") |>
@@ -1904,20 +2055,22 @@ alternatives <- bind_rows(
               analysis = "De jure denominator: no net migration", table = "A28")
 )
 t6_groups <- c(
-  "The missing alive: 95% interval of the draws" = "Drawn inputs taken beyond their bounds",
-  "The missing alive: floor to cap" = "Drawn inputs taken beyond their bounds",
+  "The missing: the bounds, none and all of them dead" = "The bounds and the appendix scenarios, beside the estimate",
+  "The rule scenario's evidence on the missing alive" = "The bounds and the appendix scenarios, beside the estimate",
   "Net migration: each component across its range" = "Drawn inputs taken beyond their bounds",
-  "Rules of the imputation" = "Rival specifications: sampled in the second interval",
+  "Rules of the linkage behind the resolved cases" = "Rival specifications: sampled in the second interval",
   "Timing within 2022" = "Rival specifications: sampled in the second interval",
   "Counterfactual: Lee–Carter window" = "Rival specifications: sampled in the second interval",
   "Specification of the net migration input" = "Rival specifications: sampled in the second interval",
   "Registration lag: corrected to 60 or 72 months" = "Biases of known direction: sized beside the estimate",
   "Registration lag: growth measured per person listed" = "Biases of known direction: sized beside the estimate",
+  "Registration lag: the missing's growth beyond 24 months" = "Biases of known direction: sized beside the estimate",
   "Registration lag beyond four years" = "Biases of known direction: sized beside the estimate",
   "Population base of Donetsk and Luhansk" = "Biases of known direction: sized beside the estimate",
   "Pre-war absentees in the base" = "Biases of known direction: sized beside the estimate",
   "The same, 0.5 to 2.0 million fewer" = "Biases of known direction: sized beside the estimate",
   "Civilian age profile" = "Biases of known direction: sized beside the estimate",
+  "Civilian deaths:" = "Biases of known direction: sized beside the estimate",
   "Counterfactual: a quarter or a half" = "Biases of known direction: sized beside the estimate",
   "Register coverage" = "Biases no source measures: stated for their size",
   "Civilians of 2022" = "Biases no source measures: stated for their size",
@@ -1945,7 +2098,7 @@ cells_t8 <- function(d) {
     female_loss_2025 = fmt_range(d$loss[d$sex == "f" & d$year == 2025], f_f)
   )
 }
-mode_rows <- alive_e0 |> filter(point %in% "central") |> mutate(military = mode_military)
+mode_rows <- scenario_rows("central")
 tab8 <-
   bind_rows(
     cells_t8(mode_rows) |> mutate(analysis = "Every input at its central value", table = "", group = "", .before = 1),
@@ -2359,6 +2512,25 @@ tA30 <-
 save_tab(tA30, "tableA48_held_out_window.csv")
 print(tA30)
 
+# A49: civilian deaths from uncertainUCDP (13t; Vesco et al. 2026) beside the
+# Beta-PERT on UCDP's low-best-high and OHCHR's verified count, and the loss at
+# the central projection under each method's mean
+uu <- read_rds("data_inter/ukr_uncertain_ucdp.rds")
+uu_loss <- uu$loss |>
+  filter(point %in% c("uncertainUCDP mean", "Beta-PERT mean")) |>
+  mutate(method = if_else(point == "uncertainUCDP mean", "uncertainucdp", "pert")) |>
+  select(year, sex, method, loss) |>
+  pivot_wider(names_from = c(method, sex), values_from = loss, names_prefix = "loss_")
+tA49 <- uu$compare |>
+  transmute(year, ohchr_verified = ohchr, ucdp_best = best, ucdp_low = pert_min, ucdp_high = pert_max,
+            pert_mean, pert_lo, pert_hi,
+            uncertainucdp_mean = uu_mean, uncertainucdp_lo = uu_lo, uncertainucdp_hi = uu_hi,
+            ratio_mean) |>
+  left_join(uu_loss, by = "year") |>
+  mutate(used = uu$used)
+save_tab(tA49, "tableA49_uncertain_ucdp_civilians.csv")
+print(tA49)
+
 # A37: the intervals, the drawn inputs alone and with the structural choices (14e)
 structural <- read_rds("data_inter/ukr_structural_uncertainty.rds")
 tA37 <-
@@ -2458,6 +2630,13 @@ run_provenance <- tibble(
     )
   )
 )
+# FIGURE 7 and FIGURE A9 - the estimate over the share of the missing counted
+# dead, with the three scenarios (13s): the main text's version with the three
+# scenarios named, the supplement's with every point the text names and the
+# projected resolution models
+stopifnot(file.copy("figures/exploratory/missing_dead_share_main.png", file.path(fig_dir, "fig7_missing_scenarios.png"), overwrite = TRUE),
+          file.copy("figures/exploratory/missing_dead_share_sm.png", file.path(fig_dir, "figA9_missing_scenarios_all.png"), overwrite = TRUE))
+
 save_tab(run_provenance, "_run_provenance.csv")
 print(run_provenance)
 

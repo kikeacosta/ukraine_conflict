@@ -55,9 +55,15 @@ steps_to_run <- list(
   list(name = "13m", file = "code/13m_sensitivity_base_coherent.R"),
   list(name = "13n", file = "code/13n_sensitivity_covid_carryover.R"),
   list(name = "13o", file = "code/13o_sensitivity_register_coverage.R"),
-  # 13p and 13q are rows and figures of 15's tables: the split of the Mariupol
-  # event, and the three figures reported beside the headline (13q reads 13b and 13e)
+  # 13p is a row of 15's tables: the split of the Mariupol event
   list(name = "13p", file = "code/13p_sensitivity_mariupol_split.R"),
+  # 13s draws the estimate as a line over the share of the missing counted dead,
+  # with the three scenarios and their drawn intervals (reads 11's draws); 13q
+  # reads its sweep, so it runs first
+  list(name = "13s", file = "code/13s_missing_dead_share.R"),
+  # 13t draws the civilian deaths from uncertainUCDP (Vesco et al. 2026), for Table 6
+  list(name = "13t", file = "code/13t_sensitivity_uncertain_ucdp.R"),
+  # 13q gives the three figures reported beside the headline (reads 13s and 13e)
   list(name = "13q", file = "code/13q_headline_companions.R"),
   # 13r builds the register stock bottom-up and checks itself against 13's loss at the mode
   list(name = "13r", file = "code/13r_sensitivity_bottom_up_stock.R"),
