@@ -22,7 +22,9 @@
 #
 #   2. AGE-SEX NET FLOW BY COHORT DIFFERENCING. Eurostat's temporary
 #      protection stock for EU + EFTA at each year end, as published, gives
-#      the age-sex structure; it is scaled to the register stock, ungrouped to
+#      the age-sex structure, France left out because its figures hold almost
+#      no children (mig_eurostat_structure(), 00_setup.R); it is scaled to the
+#      register stock, ungrouped to
 #      single ages separately by year and sex, and differenced along the
 #      cohort diagonal:
 #        D_t(x) = S_t(x) - S_{t-1}(x-1) + deaths abroad

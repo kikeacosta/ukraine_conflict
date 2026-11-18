@@ -17,9 +17,9 @@
 # --------------------------------------
 # Every disputed input - the three inputs on the missing
 # alive (the share of the unrecorded prisoners among the missing, the
-# prisoners held, the share of the unresolved alive for other reasons), the
-# western blend weight, Russia - is a Beta-PERT with shape 4, the
-# standard choice. A flatter shape (2) puts more weight towards the bounds, a
+# prisoners held, the share of the unresolved alive for other reasons),
+# Russia - is a Beta-PERT with shape 4, the standard choice (the western blend
+# weight is uniform and the same at every shape). A flatter shape (2) puts more weight towards the bounds, a
 # sharper one (8) less. The simulation is re-run at each shape with the same
 # random numbers (simulation_draws(), 00_setup.R), so the differences in the
 # intervals come from the shape alone.

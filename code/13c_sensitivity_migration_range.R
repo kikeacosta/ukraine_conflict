@@ -11,7 +11,7 @@
 # per simulation and held across the four years (11):
 #   mig_west   the western outflow, bracketed by source: each draw blends the
 #              crossings reading's whole path with the register reading's by
-#              one Beta-PERT(0, 0.5, 1) weight, so the mode is their midpoint
+#              one weight, uniform between 0 and 1, so the centre is their midpoint
 #   mig_ru     displacement into Russia, a single 2022 entry drawn from a PERT
 #
 # Each component is swept across its whole range, along the quantile u that
@@ -31,7 +31,7 @@
 # one at a time at the mode (documents/reports/migration_methodology.md, section 10):
 # where the western mode sits in the bracket (A2), the age-sex profile of the
 # Russian flow (A9), and additive against proportional allocation (A5). 15
-# reports them as table A29. The choice of register stock is checked in 13r.
+# reports them as table A24. The choice of register stock is checked in 13r.
 #
 # INPUTS   the same as 13
 #          data_inter/ukr_migration_decomposition.rds (from 13)
@@ -116,7 +116,8 @@ mig_bounds <- param_table |> filter(str_starts(role, "mig_")) |>
   select(year, role, min, mode, max, crossings, register)
 
 # 2. THE GRID ==================================================================
-# u is the PERT quantile of the swept component, shared by its years as in 11.
+# u is the quantile of the swept component (of the uniform weight for the
+# western one, of the PERT for Russia), shared by its years as in 11.
 # The 2.5% and 97.5% points bound the 95% interval of the simulated draws, and
 # the mode is added exactly (for the western component it is the median,
 # because its blend weight is symmetric; for Russia it is not).
@@ -128,7 +129,7 @@ u_grid <- round(seq(0, 1, by = 0.025), 3)
 component_at <- function(rl, u) {
   rows <- mig_bounds |> filter(role == rl)
   if (rl == "mig_west") {
-    w <- qpert(u, min = 0, mode = 0.5, max = 1)
+    w <- u  # the weight is uniform (simulation_draws(), 00_setup.R)
     rows |> transmute(year, value = crossings + w * (register - crossings))
   } else {
     rows |> transmute(year, value = qpert(u, min = min, mode = mode, max = max))

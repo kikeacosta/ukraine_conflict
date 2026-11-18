@@ -90,7 +90,7 @@ stopifnot(all(diff(scenarios$share_dead) > 0))
 # unevenly over the years (09): the upper, the rule's own table, because the
 # prisoners and the bound fall unevenly; the floor, because its bodies are placed
 # by months since the event. Their points take that split, at the same total, so
-# that the figure agrees with Tables 5, 6, A22 and A25 (they sit off the line,
+# that the figure agrees with Tables 5, 6 and A19 (they sit off the line,
 # the floor's by up to a few tenths of a year). The central applies one share.
 own_split <- c("bodies", "rule")
 own_mil <- map(set_names(own_split), \(s) scenario_military(mil, s) |> transmute(year, draw_cmb = military, conf_cmb = confirmed))
@@ -288,7 +288,7 @@ base_theme <- theme_minimal(base_size = 11) + theme(panel.grid.minor = element_b
 # paper discusses, and the supplement's, with every point of the axis that the
 # text names - the register's named deaths alone, the heavy-desertion reading,
 # all of the missing dead, and the resolution models projected in the rule's
-# place (09, Table A22), which fall almost on the upper scenario.
+# place (09, Table A19), which fall almost on the upper scenario.
 # scen: the scenarios to mark, with the row of the label strip each takes and
 # the side its label reads to (hjust 0 right of the guide, 1 left of it);
 # models: NULL, or the projected models' shares, drawn as a grey bracket.

@@ -1,4 +1,4 @@
-# Run the pipeline, steps 00-16:
+# Run the pipeline, steps 00-17:
 #   Rscript run_pipeline.R        every step
 #   Rscript run_pipeline.R 10     from step 10 on (the setup, 00, always runs)
 # Configure CRAN mirror
@@ -31,7 +31,7 @@ steps_to_run <- list(
   list(name = "08", file = "code/08_ualosses.R"),
   list(name = "08b", file = "code/08b_registration_lag.R"),
   list(name = "09", file = "code/09_ualosses_missing_analysis.R"),
-  # 09j's table A48 is one of 15's deliverables, and 09k's tests are cited in the
+  # 09j's table A39 is one of 15's deliverables, and 09k's tests are cited in the
   # documentation; both read 09's cached linkage, so neither needs the register files
   list(name = "09j", file = "code/09j_held_out_window.R"),
   list(name = "09k", file = "code/09k_cohort_overlap_test.R"),
@@ -73,11 +73,11 @@ steps_to_run <- list(
   list(name = "14d", file = "code/14d_drawn_population_base.R"),
   # 14e reads the draws (14) and every sensitivity step's output (13b-13n)
   list(name = "14e", file = "code/14e_structural_uncertainty.R"),
-  # 15 builds every manuscript figure and table. It was missing from this
-  # list, so a full pipeline run produced none of the deliverables.
-  list(name = "15", file = "code/15_paper_figures_tables.R"),
-  # 16 draws figure A0, the pipeline itself, from the release list and n_sim
-  list(name = "16", file = "code/16_pipeline_figure.R")
+  # 16 draws the pipeline itself, from the release list and n_sim
+  list(name = "16", file = "code/16_pipeline_figure.R"),
+  # 17 writes the tables and figures of the paper, and only those, to outputs/.
+  # (15, which wrote the working tables to tables/, is no longer run: see its header)
+  list(name = "17", file = "code/17_paper_outputs.R")
 )
 
 # from a named step on, when one is given

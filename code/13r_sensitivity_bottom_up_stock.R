@@ -470,8 +470,9 @@ readings <-
 print(as.data.frame(readings |> select(year, register, crossings, departures, returns,
                                        deaths_abroad, births_abroad_dropped, ru_by)))
 
-# the register reading as it was specified
-stopifnot(identical(round(readings$register, 1), c(4227661.1, 488934.5, 369209.8, 203317.9)))
+# the register reading as it was specified (France out of the age structure,
+# mig_eurostat_structure(), 00_setup.R)
+stopifnot(identical(round(readings$register, 1), c(4226794.0, 487846.2, 368289.9, 202576.6)))
 
 # ==============================================================================
 # 3. THE CLEAN-UPS READ AS RETURNS
@@ -530,7 +531,7 @@ stopifnot(
       filter(paste(year, sex) %in% c("2022 f", "2022 m", "2024 f")) |>
       pull(register_published) |>
       round(2),
-    c(2887097.51, 1490206.08, -69050.84)
+    c(2879745.26, 1496702.84, -69875.49)
   )
 )
 

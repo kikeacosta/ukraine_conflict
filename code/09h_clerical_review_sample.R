@@ -99,7 +99,7 @@ print(count(sample_cases, case))
 # THE 2022 COHORT'S FIRST-WINDOW REMOVALS, IN FULL. The estimate reads the
 # drop-outs of the events of 2022 as clean-ups of their records, not as people
 # found alive (composition_bound(), 00_setup.R); read as survivals they would
-# lower the 2022 male loss by about 0.2 years (Table A22). Most of them fall in
+# lower the 2022 male loss by about 0.2 years (Table A19). Most of them fall in
 # the first window, v14 to v15, and they are not re-spellings: the corrected
 # keys find almost none. They are few enough to check one by one against the
 # register's source pages, which is the only test of that reading available.

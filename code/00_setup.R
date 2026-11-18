@@ -299,7 +299,7 @@ excel_date <- function(x) {
 # day on which all six can have been copied if the register lists events as
 # promptly in each. Dating the releases by their Kaggle versions instead runs
 # the clock of v19 a month long; 08b measures what that does to the lag
-# correction (13d, Table A24). 08b also checks the latest events against the
+# correction (13d, Table A20). 08b also checks the latest events against the
 # files.
 # Six releases give five windows. What they show that four could not: the
 # register's clean-ups come in some releases and not others - the dead and the
@@ -940,7 +940,7 @@ captives_for <- function(ev, s, held) s * (held + ev$returned_military - ev$regi
 # dead are identified as a difference in who is alive. One bound for the three,
 # 4.0%, is what the register can tell apart; it moves the total by about 300
 # against the own bounds. Each cohort's own bound, and 2022's own, are
-# alternatives in 09 (Table A22).
+# alternatives in 09 (Table A19).
 bound_borrowers <- 2022
 bound_pool <- TRUE
 composition_bound <- function(comp, weights = NULL, borrow = bound_borrowers, pool = bound_pool) {
@@ -1249,10 +1249,18 @@ mig_eurostat_total <- function(d) {
 }
 
 # the age-sex structure; unknown sex and age are allocated with the
-# distribution of the known cases
+# distribution of the known cases. France is left out of it: its figures hold
+# almost no children (none under 14 and 35 to 115 aged 14-17 among 50,000 to
+# 66,000 people in each year), so its adults would enter without the children
+# who came with them. Its people stay in the totals and take the structure of
+# the other countries. Hungary gives no ages before 2025 and so is in the
+# structure of that year only; it is under 1% of the stock.
+mig_structure_excluded <- "France"
 mig_eurostat_structure <- function(d) {
+  stopifnot(all(mig_structure_excluded %in% d$ctr))
   d |>
-    filter(ctr != mig_eu_row, sex %in% c("m", "f"), !age %in% c("Total", "Unknown")) |>
+    filter(ctr != mig_eu_row, !ctr %in% mig_structure_excluded,
+           sex %in% c("m", "f"), !age %in% c("Total", "Unknown")) |>
     summarise(mix = sum(mix), .by = c(year, sex, age)) |>
     mutate(cx = mix / sum(mix), .by = year) |>
     mutate(age = case_when(
@@ -1449,7 +1457,7 @@ mig_allocate <- function(flows, mode_tot) {
 #
 # Nothing silently depends on remembering the size: the cache file name
 # carries it, 15 refuses a cache that does not match, and
-# tables/_run_provenance.csv records what every table was built from.
+# outputs/manifest.csv records what every table and figure of the paper was built from.
 n_sim <- 20000
 
 # One-off override that does not need the file edited, e.g. a quick check at
@@ -1686,15 +1694,17 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
 # for small events (Vesco, Randahl, Hegre, Hogbladh and Yilmaz 2026, Journal of
 # Conflict Resolution 70(7-8)). From a survey of UCDP's coders they fit, for any
 # reported count and type of violence, a distribution of plausible deaths,
-# released as the R package uncertainUCDP. Each year's civilian deaths are drawn
-# from it: every event's deaths given UCDP's best count and its type of
-# violence, times the event's civilian share as 07 computes it, summed by year.
-# 10 draws them (uncertain_ucdp_n sets of the four years) and sets the central
-# value at their exact mean; 11 samples them through the same uniform numbers
-# the Beta-PERT took, so every other input keeps its draws. "pert" restores the
-# Beta-PERT on UCDP's low, best and high values; 13t reports whichever is not
-# used as the alternative (Table 6, Table A49).
-civilian_source <- "uncertainUCDP"
+# released as the R package uncertainUCDP. Under it, each year's civilian deaths
+# are every event's deaths given UCDP's best count and its type of violence,
+# times the event's civilian share as 07 computes it, summed by year. 10 draws
+# them (uncertain_ucdp_n sets of the four years) and takes their exact mean.
+#
+# The estimate draws the civilians from a Beta-PERT on UCDP's low, best and high
+# values ("pert"); uncertainUCDP is the alternative, which 13t reports beside it
+# (Table 6, Table A14). With "uncertainUCDP" here the two change places: 11 then
+# samples 10's draws through the same uniform numbers the Beta-PERT takes, so
+# every other input keeps its draws.
+civilian_source <- "pert"
 uncertain_ucdp_n <- 4000
 
 # Each event's civilian deaths at UCDP's best, as 07 counts them: the deaths of
@@ -1734,6 +1744,51 @@ ucdp_civilian_events <- function() {
     filter(role == "civilians", year %in% 2022:2025) |>
     summarise(dts = sum(dts), .by = year) |>
     left_join(ev |> summarise(ours = sum(civ_best), .by = year), by = "year")
+  stopifnot(isTRUE(all.equal(check07$dts, check07$ours, tolerance = 1e-6)))
+  ev
+}
+
+# The same for Ukraine's combatants, for the scenario that takes every death from
+# UCDP (13t): each event's deaths of Ukraine's side as 07 counts them - in the
+# state dyad the deaths of the side that is the Government of Ukraine, wherever
+# the event was, and in the other events located in Ukraine both sides - with the
+# event's deaths of unknown side shared out as 07 does, within the dyad, country
+# and year. Returns the columns uncertain_ucdp_draws() and uncertain_ucdp_mean()
+# take: year, best count t, type of violence tov, the combatants' share s and
+# their deaths cmb_best, whose sums must reproduce 07's combatant totals.
+ucdp_combatant_events <- function() {
+  ev <- read_rds("data_inter/ucdp_ged_events_slim.rds") |> mutate(u = coalesce(u, 0))
+  in_crimea <- ev$country == "Ukraine" &
+    str_detect(coalesce(ev$adm1, ""), regex("crimea|sevastopol", ignore_case = TRUE))
+  ev$t[in_crimea] <- ev$t[in_crimea] - ev$c[in_crimea]
+  ev$c[in_crimea] <- 0
+  ev <- ev |>
+    mutate(inter = type_of_violence == 1 & str_detect(side_b, "Government"),
+           grp = if_else(inter, paste(country, side_a, side_b, sep = " | "), paste("intra", country)))
+  gy <- ev |> summarise(a = sum(a), b = sum(b), c = sum(c), u = sum(u), .by = c(grp, year))
+  ga <- gy |> summarise(pa = sum(a) / sum(a + b + c), pb = sum(b) / sum(a + b + c), .by = grp)
+  gy <- gy |>
+    left_join(ga, by = "grp") |>
+    mutate(full = a != 0 & b != 0 & c != 0,
+           pi_a = case_when(u == 0 ~ 0, full ~ a / (a + b + c), .default = pa),
+           pi_b = case_when(u == 0 ~ 0, full ~ b / (a + b + c), .default = pb)) |>
+    select(grp, year, pi_a, pi_b)
+  ev <- ev |>
+    left_join(gy, by = c("grp", "year")) |>
+    mutate(a2 = a + u * pi_a, b2 = b + u * pi_b,
+           cmb_best = case_when(inter & side_a == "Government of Ukraine" ~ a2,
+                                inter & side_b == "Government of Ukraine" ~ b2,
+                                !inter & country == "Ukraine" ~ a2 + b2,
+                                .default = 0),
+           s = if_else(t > 0, cmb_best / t, 0),
+           tov = c("sb", "ns", "os")[type_of_violence]) |>
+    filter(year %in% 2022:2025, cmb_best > 0) |>
+    select(year, t, tov, s, cmb_best, type_of_violence)
+  stopifnot(all(ev$s >= 0 & ev$s <= 1 + 1e-9), !anyNA(ev$s))
+  check07 <- read_rds("data_inter/ukr_ucdp_invals.rds") |>
+    filter(role == "combatants", year %in% 2022:2025) |>
+    summarise(dts = sum(dts), .by = year) |>
+    left_join(ev |> summarise(ours = sum(cmb_best), .by = year), by = "year")
   stopifnot(isTRUE(all.equal(check07$dts, check07$ours, tolerance = 1e-6)))
   ev
 }
@@ -1790,8 +1845,9 @@ uncertain_ucdp_mean <- function(ev) {
 #   counterfactual  the Lee-Carter index of each sex, a random walk with
 #                    drift: the drift's error and each year's innovation,
 #                    correlated between the sexes as 04 measured
-#   migration        the western blend weight once per simulation, applied to
-#                    every year's two readings; Russia once
+#   migration        the western blend weight once per simulation, uniform
+#                    between the two readings and applied to every year's
+#                    two; Russia once, from its Beta-PERT
 # The military total follows from the three inputs on the missing alive and
 # the window weights (military_draws()). The two groups are also run alone, the
 # other at its central values or point estimates, so that 15 can attribute the
@@ -1889,7 +1945,10 @@ simulation_draws <- function(param_table, mil, lc_error, n, shape = 4, seed = 42
   })
 
   west <- param_table |> filter(role == "mig_west")
-  w <- q(runif(n), 0, 0.5, 1)
+  # uniform between the two readings: nothing says the truth lies nearer their
+  # midpoint than either end, so no weight is favoured. The same uniform number
+  # as before, so every other input keeps its draws.
+  w <- runif(n)
   draws_west_long <-
     expand_grid(sim_id = seq_len(n), west |> select(year, crossings, register)) |>
     mutate(role = "mig_west", draw = crossings + w[sim_id] * (register - crossings)) |>

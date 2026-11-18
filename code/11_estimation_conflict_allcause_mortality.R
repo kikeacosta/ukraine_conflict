@@ -205,7 +205,7 @@ stopifnot(
 # MIGRATION is uncertain in how much of the outflow the sources capture, and a
 # register that keeps people after they return does so in every year alike.
 # The WESTERN component is bracketed by source: one weight w per simulation,
-# drawn from a symmetric Beta-PERT on [0, 1] with mode 0.5, blends the two
+# drawn uniformly on [0, 1], blends the two
 # readings' whole paths - w = 0 is the crossings reading in every year, w = 1
 # the register reading - so its four-year total runs between the two sources'
 # own totals, and the mode is their midpoint in every year (see 10). RUSSIA AND

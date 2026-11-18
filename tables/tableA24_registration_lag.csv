@@ -1,9 +1,0 @@
-scenario,military_deaths,male_2022,male_2023,male_2024,female_2025,male_2025
-as registered,148989,4.81,3.93,4.91,0.223,5.16
-to 48 months (used),154202,4.81,3.97,5.06,0.224,5.5
-to 60 months,156005,4.84,4,5.11,0.224,5.56
-to 72 months,157857,4.87,4.04,5.16,0.225,5.63
-"to 48 months, growth per person listed",154430,4.81,3.97,5.06,0.225,5.52
-"to 48 months, releases dated by Kaggle version",153320,4.81,3.96,5.03,0.224,5.44
-"to 48 months, the missing's rates as measured, rising after 24 months",154830,4.81,3.97,5.08,0.224,5.53
-"to 48 months, the dead's rates for the missing beyond 24 months",153691,4.81,3.96,5.04,0.224,5.47

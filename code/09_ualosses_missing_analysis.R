@@ -397,7 +397,7 @@ print(imputation_final)
 # over cohorts) applied to each event month's missing at its duration on the
 # last release's data date. Measured by duration, a recent cohort is not
 # penalised for the few months the releases observed it. The bodies in
-# proportion to each year's missing is an alternative (Table A22). The UPPER:
+# proportion to each year's missing is an alternative (Table A19). The UPPER:
 # the rule above.
 resolved_by_window <-
   maintain(production_windows) |>

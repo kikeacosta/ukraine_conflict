@@ -30,8 +30,8 @@ The one exception is step 11, which regenerates the simulation draws because
 they are too large to track. Their number is set once, as `n_sim` in
 `code/00_setup.R`: 20,000 for the reported estimates (about half an hour), or
 1,000 for a quick run while the code changes (about a minute). The cache is named
-for the size, so the two never mix, and `tables/_run_provenance.csv` records the
-size every table was built at.
+for the size, so the two never mix, and `outputs/manifest.csv` records the
+size every table and figure of the paper was built at.
 
 ## The pipeline
 
@@ -57,7 +57,7 @@ size every table was built at.
 | `09j` | Not part of the estimates: fits the duration model on four of the five release windows and predicts the fifth with the average of the fitted windows' multipliers, each window held out in turn, and reports the error by outcome and by months since the event. Reads 09's cached linkage, so it needs no register files | `ukr_ualosses_held_out_window.rds` |
 | `09k` | Not part of the estimates: whether an event-year cohort adds anything to duration in the register's resolutions, by quasi-F tests on cohort multipliers, and what the 2022 cohort's exits from the register would imply if they were carried to the later cohorts | `ukr_ualosses_cohort_overlap.rds` |
 | `09l` | Not part of the estimates: how the bound on the missing alive moves with the windows behind it - on each cumulative span of releases, with each window left out and with the windows resampled - and the drop-outs and deaths by event year and window per 1,000 person-months of the missing at risk, the evidence for pooling the bound of the events of 2023-2025 and for not reading the events of 2022 on their own. Reads tracked data only | `ukr_bound_stability.rds` |
-| `10` | The parameter table of the simulation, and the timing of 2022's deaths and net outflow within the year. Combatants: the resolution-based scenario, with the lower and the upper bound as minimum and maximum. Civilians: each year's deaths drawn from uncertainUCDP (Vesco et al. 2026), event by event, with the mean and the 2.5th and 97.5th percentiles of the draws in the table. Net migration: the two readings by component | `ukr_param_table.rds`, `ukr_civilians_uncertain_ucdp.rds`, `ukr_timing_absent.rds` |
+| `10` | The parameter table of the simulation, and the timing of 2022's deaths and net outflow within the year. Combatants: the resolution-based scenario, with the lower and the upper bound as minimum and maximum. Civilians: UCDP's low, best and high values of each year, the minimum, mode and maximum of a Beta-PERT; and the draws of each year's deaths from uncertainUCDP (Vesco et al. 2026), event by event, for the alternative. Net migration: the two readings by component | `ukr_param_table.rds`, `ukr_civilians_uncertain_ucdp.rds`, `ukr_timing_absent.rds` |
 | `11` | Monte Carlo cohort-component projection, drawing every uncertain input that has a distribution | `ukr_sim_draws_2022_2025_n<n_sim>.rds` |
 | `12` | Figures for the mortality estimates | `figures/mort_rates_*.png` |
 | `13` | Sensitivity: the migration denominator effect | `ukr_migration_decomposition.rds` |
@@ -78,14 +78,14 @@ size every table was built at.
 | `13q` | Three figures reported beside the headline, each in the central projection: the loss without the imputed missing, the change per 10 points of the missing alive (from `13s`'s sweep), and a territory-consistent second estimate for Ukraine without Crimea, Donetsk and Luhansk, with the combatants split by the register's place of origin (counted in `08`) and the civilians by UCDP's location | `ukr_headline_companions.rds` |
 | `13r` | Sensitivity: the register stock built bottom-up - Eurostat temporary protection with the clean-ups of invalid statuses back-cast, the Data Finder for other countries, Canada and the USA from programme counts - with Russia and Belarus as the separate component, and the loss under each stock; also writes the clean-ups for the docs | `ukr_bottom_up_stock.rds`, `ukr_bottom_up_stock_e0.rds`, `ukr_migration_breaks.rds` |
 | `13s` | The estimate at every share of the missing counted dead, from none to all, every other input at its central value: the loss of male life expectancy by year and for 2022-2025 as one period, combatant deaths by year and the four-year total, with the lower bound, the resolution-based scenario and the upper bound marked (main-text figure) and, for the Supplementary Materials, the bodies scenario, a heavy-desertion reading, the crossing at which 2025 overtakes 2022 as the deadliest year for men, the rule scenario, and the register's resolution models projected in the scenario's place; bars from the draws with the share fixed. Runs before `13q`, which reads its sweep | `ukr_missing_dead_share_sweep.rds`, `ukr_missing_dead_share_models.rds`, `ukr_missing_dead_share_bars.rds`, `figures/exploratory/missing_dead_share_main.png`, `missing_dead_share_sm.png` |
-| `13t` | Civilian deaths under the two methods: uncertainUCDP's distributions, which the estimate uses, and a Beta-PERT on UCDP's low, best and high values, with the loss under whichever is not used (`civilian_source` in `00_setup`); both beside OHCHR's verified counts, and the civilian deaths by the reported size of the event | `ukr_uncertain_ucdp.rds` |
+| `13t` | Civilian deaths under the two methods: a Beta-PERT on UCDP's low, best and high values, which the estimate uses, and uncertainUCDP's distributions, with the loss under whichever is not used (`civilian_source` in `00_setup`); both beside OHCHR's verified counts, and the civilian deaths by the reported size of the event. Also the scenario with every death from UCDP: Ukraine's combatants drawn from uncertainUCDP as the civilians are, in place of the register, with the register's ages, and the same with the combatants at UCDP's best value | `ukr_uncertain_ucdp.rds` |
 | `13k` | Not part of the estimates: fetches Belarus and Russia from the Human Mortality Database for `13j`'s pool, reading an account from `HMD_USER` and `HMD_PASS` in `~/.Renviron`. Neither series reaches 2019, so `13j` leaves out any country that does not cover its whole fit window; using them means ending that window earlier. The cache is gitignored: the HMD agreement governs redistribution | `data_input/hmd_neighbours/` (local) |
 | `14` | **Life expectancy loss decomposed by cause** | `ukr_e0_loss_by_cause_*.rds` |
 | `14b` | Years of life lost and adult mortality (45q15) | `ukr_yll_45q15_summary.rds` |
 | `14c` | The loss with the counterfactual fixed at its point forecast, beside it drawn: the two tiers of uncertainty | `ukr_fixed_counterfactual_e0.rds` |
 | `14d` | The loss with the population base of Donetsk and Luhansk drawn, PERT(0, 0.5, 1.0 million fewer), beside the base at the published estimates: the second tier of the structural uncertainty. The range is a judgement of the team, not a measurement, so it is reported beside the estimate and not inside it | `ukr_drawn_base_e0.rds` |
 | `14e` | The intervals with the structural choices folded in: one alternative per choice sampled in every draw with equal weights and its shift from the central projection added, reported beside the interval of the drawn inputs. The weights are a convention, not a measurement | `ukr_structural_uncertainty.rds` |
-| `15` | **All manuscript figures and tables** | `figures/fig*.png`, `tables/table*.csv` |
+| `17` | **The tables and figures of the paper**, main text and Supplement, and only those (`15`, which wrote the working tables of every analysis, is no longer run) | `outputs/` |
 | `16` | Figure A0: the pipeline from sources to estimates, each step's box drawn dashed if its output is drawn in the simulation and solid if it is held; the release list and the number of draws come from the run | `figures/figA0_pipeline.png` |
 | `a01` | UNICEF export (not part of the paper): every iteration, by cause | `data_inter/unicef/<yymmdd>_ukraine_mx_estimates_*.csv` |
 
@@ -111,8 +111,9 @@ mortality does not enter the "no war" baseline.
 
 Every uncertain input that can be given a distribution is drawn, and every draw
 is projected through the full accounting. Civilian deaths are drawn by year
-from uncertainUCDP's distributions of each UCDP event's deaths (Vesco et al.
-2026), summed over the events. Combatant deaths are the register's dead,
+from a Beta-PERT on UCDP's low, best and high values; uncertainUCDP's
+distributions of each UCDP event's deaths (Vesco et al. 2026) are the
+alternative reported beside the estimate. Combatant deaths are the register's dead,
 completed for registration lag, plus a share of the missing: the share the
 register's own resolved cases recorded dead, which is held fixed, so that the
 draws of the combatant total carry the registration-lag factors alone, rebuilt
@@ -122,7 +123,7 @@ appendix (no evidence of life means dead) has its own inputs drawn beside it:
 the prisoners of war among the missing, and where between none and its bound
 the share alive outside captivity sits.
 The western
-net outflow follows from one weight blending the two sources' four-year paths,
+net outflow follows from one weight, uniform between them, blending the two sources' four-year paths,
 and Russia from one draw. Each of these is held across the four
 years, because its uncertainty is one systematic quantity rather than four
 separate ones. The counterfactual follows each draw's own path of the
@@ -145,7 +146,7 @@ expectancy gap.
 
 | Where | Assumption |
 |---|---|
-| `00_setup`, `09`, `13s` | No source says how many of the missing are dead. The estimate is the resolution-based scenario: the missing not yet resolved are taken to resolve as the register's resolved cases did (dead, captivity and exits beyond list maintenance over the five windows, pooled), so the share those cases recorded dead is counted dead in every event year (`scenario_military()`; `data_inter/ukr_scenarios.rds`). It is reported between two bounds, none and all of the missing dead, which are the logical limits of that share and not plausible values. The simulation holds the share fixed and draws everything else. `13s` draws the estimate at every share from none to all, with the bounds and the estimate marked (figure 7, figure A9). Two further scenarios are kept for the appendix. The bodies scenario adds to the named dead the bodies awaiting identification (about 17,000 unidentified in September 2026, nine in ten taken as combatants listed as missing, which is a judgement; `official_figures.csv`), placed across event years by months since the event. The rule scenario counts a missing person as dead unless there is evidence of life, and its inputs are drawn beside the estimate. In the rule scenario the prisoners of war among the missing come from the official figures - about 7,000 held and 7,291 military personnel returned by February 2026, less the 11,325 the register records as prisoners - times the share of the returned whom the register had listed as missing (47.6% for 2024-2025 events, the mode). Of the rest, the share alive outside captivity lies between none and the share of the first resolutions outside captivity of the events of 2023-2025, pooled, that leave the register beyond list maintenance - beyond the rate at which the dead of the same cohort leave it in the same window - and is drawn uniformly between the two, one draw for the four event years. One bound serves every event year: the exits behind each later cohort's own bound fall in one window (72-100% of them in v18-v19), and the events of 2022 are not read on their own because their drop-outs are clean-ups of their records (09l); each cohort's own bound (6.6%, 1.9% and 6.2% for 2023-2025, 51% for 2022) is an alternative in table A22. The bound assumes the missing not yet resolved are no more often alive than those resolved, and holds only if the living leave the list at least as fast as the dead are identified. |
+| `00_setup`, `09`, `13s` | No source says how many of the missing are dead. The estimate is the resolution-based scenario: the missing not yet resolved are taken to resolve as the register's resolved cases did (dead, captivity and exits beyond list maintenance over the five windows, pooled), so the share those cases recorded dead is counted dead in every event year (`scenario_military()`; `data_inter/ukr_scenarios.rds`). It is reported between two bounds, none and all of the missing dead, which are the logical limits of that share and not plausible values. The simulation holds the share fixed and draws everything else. `13s` draws the estimate at every share from none to all, with the bounds and the estimate marked (figure 7, figure A6). Two further scenarios are kept for the appendix. The bodies scenario adds to the named dead the bodies awaiting identification (about 17,000 unidentified in September 2026, nine in ten taken as combatants listed as missing, which is a judgement; `official_figures.csv`), placed across event years by months since the event. The rule scenario counts a missing person as dead unless there is evidence of life, and its inputs are drawn beside the estimate. In the rule scenario the prisoners of war among the missing come from the official figures - about 7,000 held and 7,291 military personnel returned by February 2026, less the 11,325 the register records as prisoners - times the share of the returned whom the register had listed as missing (47.6% for 2024-2025 events, the mode). Of the rest, the share alive outside captivity lies between none and the share of the first resolutions outside captivity of the events of 2023-2025, pooled, that leave the register beyond list maintenance - beyond the rate at which the dead of the same cohort leave it in the same window - and is drawn uniformly between the two, one draw for the four event years. One bound serves every event year: the exits behind each later cohort's own bound fall in one window (72-100% of them in v18-v19), and the events of 2022 are not read on their own because their drop-outs are clean-ups of their records (09l); each cohort's own bound (6.6%, 1.9% and 6.2% for 2023-2025, 51% for 2022) is an alternative in table A19. The bound assumes the missing not yet resolved are no more often alive than those resolved, and holds only if the living leave the list at least as fast as the dead are identified. |
 | `00_setup`, `09` | A person recorded as missing who is no longer listed — absent from a later release and from every release after it — is resolved alive. Before that, each release is searched under a corrected name or date of birth. A person whose first resolution is a return from captivity was a prisoner the register had not recorded, and is resolved alive, to captivity. |
 | `08b`, `09` | The register's dead and missing are brought to the completeness events reach at four years, with the growth rates by lag held non-increasing within each status; the late registrations are reported apart. The missing are completed by the new persons listed only, since those who drop off the register are resolutions. How the missing resolve by months since the event is described, not projected: the estimate counts them by the identity above. |
 | `11` | Imputed combatant deaths take the age–sex profile of the missing; registered deaths that of the confirmed dead. |
@@ -155,7 +156,7 @@ expectancy gap.
 | `10`, `11` | Deaths and net outflow are spread evenly within each year (the mid-year convention), except in 2022, when their timing is taken from the months of the events: OHCHR's civilians killed by month, the register's dead and missing by month, and UNHCR's net border crossings by month. |
 | `11` | Starts from continental Ukraine (SSSU region `cnt`): the whole country without Crimea and Sevastopol, **including** Donetsk and Luhansk. SSSU population estimates for those two regions assume complete registration, which has not held since 2015. |
 | `13` | Conflict deaths are absolute counts, so net migration shrinks the denominator and raises the rates. Step 13 quantifies how much of the loss this accounts for; step 13c how far the loss moves across the range of each migration component. |
-| `06`, `11` | The western net outflow is bracketed by source: each draw blends the border-crossing reading's four-year path with the register reading's by one weight, so the four-year total stays between the two sources' own totals (4.29–5.27 million). |
+| `06`, `11` | The western net outflow is bracketed by source: each draw blends the border-crossing reading's four-year path with the register reading's by one weight, uniform between them, so the four-year total stays between the two sources' own totals (4.29–5.67 million). |
 
 ## Layout
 
@@ -165,85 +166,43 @@ code/              pipeline, numbered in execution order
 data_input/        raw sources (large ones untracked — see its README)
 data_inter/        intermediate results and cached extracts
 data_deprecated/   retired inputs and outputs, untracked
-figures/           manuscript figures, written only by step 15
+outputs/           the tables and figures of the paper, written only by step 17
+figures/           working figures of the analyses
   exploratory/     diagnostic plots from steps 02-14
   deprecated/      figures from previous versions, untracked
-tables/            manuscript tables as .csv, written only by step 15
 documents/         methodology reports and the draft paper, kept locally, untracked
 ```
 
 ## Figures and tables
 
-Everything the paper needs comes from **step 15**, so the whole set can be
-regenerated in one run and the styling stays consistent. Steps 02–14 still
-draw their own diagnostic plots, but those go to `figures/exploratory/` — so
-anything sitting directly in `figures/` is a manuscript deliverable.
+Everything in the paper, main text and Supplement, comes from **step 17**
+(`code/17_paper_outputs.R`) and goes to `outputs/`, one version of each item:
+the folder is emptied and written again on every run. `outputs/manifest.csv`
+lists every item with its number in the paper, its file, the files it is built
+from, the number of draws and the commit. The analysis steps (02-14) still draw
+their own diagnostic plots in `figures/exploratory/`; those are not the paper's.
 
-| Output | Content |
-|---|---|
-| `fig1_combatant_deaths_missing.png` | Registered deaths vs unresolved disappearances, counts and shares |
-| `fig2_mortality_rates_by_age.png` | All-cause vs counterfactual death rates by age, with 95% bands |
-| `fig3_life_expectancy_loss.png` | Distribution of the e0 loss across draws |
-| `fig4_decomposition_migration_mortality.png` | Mortality vs the migration denominator effect |
-| `fig5_decomposition_by_cause.png` | e0 loss by civilians / registered / imputed combatants |
-| `fig6_uncertainty_shares.png` | How much of the spread in the loss each input accounts for |
-| `fig7_missing_scenarios.png` | The estimate at every share of the missing counted dead, four panels (by year and 2022-2025; the loss and combatant deaths), marking the lower bound (none of the missing dead), the resolution-based scenario and the upper bound (all of them), with the values labelled (13s) |
-| `fig8_loss_by_scenario.png` | The loss of life expectancy by year and sex at the resolution-based scenario, with its mean and 95% interval, and at the two bounds, in the central projection with the interval of the same draws with the share of the missing fixed (14, 13s) |
-| `figA0_pipeline.png` | The pipeline from sources to estimates: what each source contributes, in which order, and which steps' outputs are drawn |
-| `figA4_pert_draw_distributions.png` | Densities of the drawn civilian and combatant deaths by year, against the values of Table 2 |
-| `figA2_pert_draw_distributions_migration.png` | Draws of the two migration components: the western blend of the two readings, and Russia |
-| `figA3_cumulative_migration_draws.png` | Cumulative net migration across draws |
-| `figA6_missing_alive_sensitivity.png` | Combatant deaths and e0 loss across the share of the missing who are alive, with the evidence range and the 95% interval of the draws |
-| `figA7_migration_sensitivity.png` | e0 loss across the range of each net migration component |
-| `figA1_duration_lexis.png` | The durations since disappearance each event month is observed at, window by window, and the projection to 48 months |
-| `figA8_multistate_cif_by_cohort.png` | The multistate model of `09g`, evaluated and not used: cumulative incidence of each resolution of the missing by event-year cohort, drawn from its tracked curves |
-| `figA9_missing_scenarios_all.png` | The estimate at every share of the missing counted dead, every point lettered, with the crossing and the projected resolution models (13s) |
-| `table1_source_totals.csv` | What each source reports, with bounds and age-sex availability |
-| `table2_pert_input_bounds.csv` | The simulation's inputs by year (Table 2): combatants at the resolution-based scenario, with the two bounds as minimum and maximum; civilians at uncertainUCDP's mean, with the 2.5th and 97.5th percentiles of its draws; net migration by component, the western one as its two readings |
-| `table3_missing_imputation.csv` | Combatant deaths by event year: the registered dead, their late registrations and the missing; the dead among the missing in the resolution-based scenario; and the total at the lower bound, the resolution-based scenario and the upper bound, with the simulated mean and interval (Table 3) |
-| `table3b_rule_scenario.csv` | Appendix: the rule scenario's parts by event year: the prisoners of war among the missing, the bound on the alive outside captivity and the share counted dead |
-| `table3c_appendix_scenarios.csv` | Appendix: the bodies scenario and the rule scenario by event year: the dead among the missing, their share and the total |
-| `tableA12_missing_alive_inputs.csv` | The inputs on the missing alive: the share of the unrecorded prisoners among the missing, the prisoners held, and the share of the unresolved alive for other reasons, with the means the deterministic analyses use |
-| `table4_conflict_deaths_by_cause.csv` | Deaths by year, cause and sex, with intervals |
-| `table5_life_expectancy_loss.csv` | e0 expected, observed and lost, by year and sex, with the loss at a fixed counterfactual and at the two bounds of the missing |
-| `tableA38_totals_by_cause.csv` | Deaths by component, summed over years |
-| `tableA39_totals_by_year.csv` | Deaths by year, summed over components |
-| `table6_structural_sensitivity.csv` | How far the combatant total and the loss move with each choice the intervals do not cover, in groups by how it bears on the estimate (Table 6) |
-| `tableA1_source_reconciliation.csv` | UCDP vs ACLED, Ukraine and Russia |
-| `tableA8_status_transitions.csv` | Resolution of the missing between the first and the last release, composed from the six register releases |
-| `tableA40_e0_loss_by_cause.csv` | Years of life expectancy lost, by cause |
-| `tableA41_uncertainty_shares.csv` | How much of the spread in the loss each input accounts for |
-| `tableA2_military_reconciliation.csv` | Ukrainian combatant deaths: UCDP against the register and this study |
-| `tableA20_missing_alive_sensitivity.csv` | Combatant deaths and e0 loss across the share of the missing who are alive |
-| `tableA28_migration_sensitivity.csv` | 2025 e0 loss across the range of each net migration component, and with no migration |
-| `tableA29_migration_specification.csv` | e0 loss under alternative specifications of the migration input |
-| `tableA22_linkage_and_chain.csv` | Combatant deaths and e0 loss under alternative rules of the imputation and the linkage, models of resolution projected in its place, and readings of the prisoner-of-war evidence |
-| `tableA24_registration_lag.csv` | The same across the horizon of the registration-lag correction, and with the register's growth measured per person listed or the releases dated by Kaggle version |
-| `tableA30_population_base_and_timing.csv` | e0 loss with a smaller Donetsk-Luhansk base, and with other timings of 2022's deaths and net outflow |
-| `tableA34_counterfactual_window.csv` | e0 loss and counterfactual e0 by Lee-Carter window, with a coherent forecast with eight neighbors, and with the forecast one standard deviation either way; the 95% band of each forecast |
-| `tableA36_pert_shape.csv` | e0 loss and its interval by PERT shape |
-| `tableA42_years_of_life_lost.csv` | Years of life lost by year and cause |
-| `tableA43_adult_mortality_45q15.csv` | 45q15 without and with conflict deaths |
-| `tableA25_missing_alive_by_lag_horizon.csv` | Combatant deaths and the 2025 male loss at the two bounds and the resolution-based scenario, by the horizon of the registration-lag correction |
-| `tableA49_uncertain_ucdp_civilians.csv` | Civilian deaths by year under uncertainUCDP and under the Beta-PERT on UCDP's low, best and high values, beside UCDP's values and OHCHR's verified counts, with the loss under each (13t) |
-| `tableA45_military_triangulation.csv` | Combatant deaths against official statements and other estimates at the dates they were made |
-| `tableA6_returned_prisoners_prior_status.csv` | Where the people the register records as returned from captivity were listed before |
-| `tableA5_register_dropout.csv` | How often the missing and the dead leave the register, window by window |
-| `tableA7_resolution_hazards.csv` | Monthly hazards of resolution by months since disappearance, and the release windows' multipliers |
-| `tableA46_civil_register_check.csv` | The projection's deaths and births against those the Ministry of Justice registered |
-| `tableA32_civilian_age_profile.csv` | e0 loss with an older age profile for the civilian deaths beyond OHCHR's verified count |
-| `tableA33_donbas_fighters.csv` | e0 loss with the residents of occupied Donbas killed in Russian-controlled forces added |
-| `tableA26_registration_lag_tail.csv` | Combatant deaths and e0 loss with the register's growth beyond four years modeled by a fitted curve |
-| `tableA31_base_coherent.csv` | e0 loss with a smaller base at working ages outside Donetsk and Luhansk, the counterfactual as fitted and refitted on exposures smaller by the same share |
-| `tableA35_covid_carryover.csv` | The 2022 loss with a quarter and a half of 2021's excess mortality carried into the counterfactual |
-| `tableA48_held_out_window.csv` | The duration model against each release window held out of its fit, by outcome |
-| `tableA17_structural_intervals.csv` | Combatant deaths, all conflict deaths and the e0 loss with the interval of the drawn inputs, and with the rival specifications folded in |
-| `tableA44_population_present.csv` | The population the rates are computed on, by draw: men aged 20-50, men, and both sexes, with 95% intervals (11, 15) |
-| `tableA3_register_status_by_year.csv` | The register's records of 2022-2025 events by event year and status in v19, the cross-section behind the linkage (15) |
-| `tableA27_register_coverage.csv` | Combatant deaths and the loss if the register misses 10%, 25% or 40% of combatant deaths (13o) |
-| `tableA13_register_stock_reconciliation.csv` | The register stock at 31 December: UNHCR's totals against the stock built bottom-up and its parts, with the reading of the western flow from each (06, 13r) |
-| `tableA14_register_stock_e0.csv` | e0 loss with UNHCR's totals and with the bottom-up stock, at the mode and the register end, and with the bottom-up stock as published (13r) |
-| `mariupol_split.csv` | The 2022 civilian total and loss under each rule for the Mariupol event's deaths of unknown status (13p); not yet numbered in the supplement |
-| `headline_companions.csv` | The loss without the imputed missing, the change per 10 points of the missing alive, and the estimate for Ukraine without Crimea, Donetsk and Luhansk, beside the central projection (13q); not yet numbered in the supplement |
-| `figA5_structural_tornado.png` | The range of each structural choice beside the 95% interval of the drawn inputs |
-| `_run_provenance.csv` | Draws, seed, draws file and commit the tables were built from |
+| Item | File in `outputs/` | Content |
+|---|---|---|
+| Table 1 | `tables/table1_conflict_deaths_inputs.csv` | Conflict deaths as they enter the estimate: civilians at UCDP's adjusted low, best and high; combatants at the lower bound, the resolution-based scenario and the upper bound |
+| Table 2 | `tables/table2_register_combatants.csv` | The register by year of the event: registered deaths, late registrations, the missing, and the missing counted dead in the resolution-based scenario |
+| Table 3 | `tables/table3_deaths_by_type_sex.csv` | Conflict deaths 2022-2025 by type and sex, mean and 95% interval; late registrations are part of the registered combatants |
+| Table 4 | `tables/table4_life_expectancy_loss.csv` | Life expectancy at birth expected and with war, the loss with its interval, and the loss at the two bounds |
+| Figure 1 | `figures/fig1_register_dead_missing.png` | Combatants registered as dead and as missing, counts and shares |
+| Figure 2 | `figures/fig2_death_rates_by_age.png` | Expected and with-war death rates by age, sex and year |
+| Figure 3 | `figures/fig3_loss_of_life_expectancy.png` | The loss between the two bounds, with the resolution-based scenario and its interval |
+| Figure 4 | `figures/fig4_loss_mortality_net_migration.png` | Shares of the loss due to conflict mortality and to net migration |
+| Figure 5 | `figures/fig5_loss_by_type_of_death.png` | Shares of the loss by type of death |
+| Table A1 | `tables/tableA1_sources.csv` | The sources as published (ACLED, UCDP, OHCHR, UALosses) and UCDP as adjusted, by year |
+| Table A2 | `tables/tableA2_life_expectancy_2000_2025.csv` | Life expectancy at birth: observed 2000-2021, expected and with war 2022-2025 |
+| Table A3 | `tables/tableA3_registration_lag.csv` | Combatant deaths and the male loss without the correction for registration lag and with it to 48, 60 and 72 months |
+| Table A4 | `tables/tableA4_resolution_of_missing.csv` | What became of the missing whose status a later release settled: the source of the 69.6% |
+| Table A5 | `tables/tableA5_net_migration.csv` | Net migration by year: border crossings, UNHCR's totals, their midpoint, and Russia |
+| Table A6 | `tables/tableA6_deaths_by_year_type_sex.csv` | Conflict deaths by year, type and sex |
+| Table A7 | `tables/tableA7a_ucdp_only_deaths.csv`, `tables/tableA7b_ucdp_only_loss.csv` | Every death from UCDP, in two panels: the deaths under uncertainUCDP beside the estimate, and the loss by sex with civilians, combatants and both replaced |
+| Figure A1 | `figures/figA1_loss_by_share_of_missing.png` | The loss and combatant deaths at every share of the missing counted dead (drawn by 13s) |
+| Figure A2 | `figures/figA2_loss_ucdp_only.png` | Figure 3 with the scenario that takes every death from UCDP |
+
+Step 15 (`code/15_paper_figures_tables.R`) is no longer run by the pipeline. It
+wrote the working tables of every analysis to `tables/`, which has been
+removed; it is kept for reference and still runs by hand.
