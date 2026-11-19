@@ -167,7 +167,6 @@ data_input/        raw sources (large ones untracked — see its README)
 data_inter/        intermediate results and cached extracts
 data_deprecated/   retired inputs and outputs, untracked
 outputs/           the tables and figures of the paper, written only by step 17
-figures/           working figures of earlier versions; no step writes here any more
 documents/         methodology reports and the draft paper, kept locally, untracked
 ```
 
