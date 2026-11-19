@@ -171,14 +171,22 @@ ged <-
   mutate(c = if_else(country == "Ukraine" & str_detect(coalesce(adm1, ""), crimea), 0, c),
          group = if_else(type_of_violence == 1 & str_detect(side_b, "Government"),
                          paste(side_a, side_b, sep = " | "), "intra-state"))
+# The siege of Mariupol is taken apart, as in 07: its deaths of unknown side leave
+# the pool and enter at the mix of the deaths attributed in Mariupol
+# (mariupol_siege, 00_setup.R); c_siege is its civilians, all in Donetsk oblast.
 by_group <-
   ged |>
-  summarise(across(c(a, b, c, u), sum), .by = c(country, group, year)) |>
+  mutate(siege = is_mariupol_siege(ged),
+         c_siege = if_else(siege, u * mariupol_siege$share[["c"]], 0),
+         u = if_else(siege, 0, u)) |>
+  summarise(across(c(a, b, c, u, c_siege), sum), .by = c(country, group, year)) |>
   mutate(c2 = case_when(u == 0 ~ c,
                         a != 0 & b != 0 & c != 0 ~ c + u * c / (a + b + c),
-                        .default = c + u * sum(c) / (sum(a) + sum(b) + sum(c))),
+                        .default = c + u * sum(c) / (sum(a) + sum(b) + sum(c))) + c_siege,
          .by = c(country, group)) |>
   filter(country == "Ukraine", year %in% 2022:2025)
+siege_by_year <- by_group |> summarise(c_siege = sum(c_siege), .by = year)
+stopifnot(sum(siege_by_year$c_siege > 0) == 1)
 # the attribution must reproduce UCDP's best civilian counts as 10 records them (its
 # ucdp_best column; the mode is uncertainUCDP's mean when that is the source). The
 # share outside the two oblasts is UCDP best's share, applied to the civilians as used
@@ -189,10 +197,14 @@ stopifnot(isTRUE(all.equal(
 cvs_shares <-
   ged |>
   filter(country == "Ukraine", year %in% 2022:2025, !is.na(adm1)) |>
-  left_join(by_group |> filter(c > 0) |> transmute(group, year, f = c2 / c), by = c("group", "year")) |>
+  # the siege's civilians are not spread over the other events: they are added in
+  # Donetsk oblast, where the siege was
+  left_join(by_group |> filter(c > 0) |> transmute(group, year, f = (c2 - c_siege) / c), by = c("group", "year")) |>
   filter(c > 0) |>
-  summarise(cvs = 1 - sum(c * f * (adm1 %in% c("Donetsk oblast", "Luhansk oblast"))) / sum(c * f),
-            .by = year)
+  summarise(in_dl = sum(c * f * (adm1 %in% c("Donetsk oblast", "Luhansk oblast"))), all = sum(c * f),
+            .by = year) |>
+  left_join(siege_by_year, by = "year") |>
+  transmute(year, cvs = 1 - (in_dl + c_siege) / (all + c_siege))
 stopifnot(!any(is.na(cvs_shares$cvs)))
 shares <- cmb_shares |> left_join(cvs_shares, by = "year") |> arrange(year)
 stopifnot(nrow(shares) == 4, !any(is.na(shares)))

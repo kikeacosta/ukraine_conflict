@@ -21,9 +21,9 @@ year,sex,observed,expected,with_war_resolution_based,with_war_minimum_scenario,w
 2019,Males,66.94,,,,
 2020,Males,66.40,,,,
 2021,Males,65.16,,,,
-2022,Males,,67.52,62.98,63.57,62.72
-2023,Males,,67.72,63.86,64.65,63.52
-2024,Males,,67.91,62.94,64.85,62.16
+2022,Males,,67.52,62.35,62.93,62.09
+2023,Males,,67.72,63.85,64.65,63.52
+2024,Males,,67.91,62.94,64.85,62.15
 2025,Males,,68.08,62.68,65.75,61.43
 2000,Females,73.72,,,,
 2001,Females,73.81,,,,
@@ -47,7 +47,7 @@ year,sex,observed,expected,with_war_resolution_based,with_war_minimum_scenario,w
 2019,Females,76.98,,,,
 2020,Females,76.21,,,,
 2021,Females,74.35,,,,
-2022,Females,,77.44,76.21,76.21,76.21
+2022,Females,,77.44,75.68,75.67,75.67
 2023,Females,,77.59,77.43,77.43,77.43
 2024,Females,,77.74,77.60,77.60,77.60
 2025,Females,,77.88,77.74,77.74,77.74

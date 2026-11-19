@@ -11,7 +11,10 @@
 #      governments) and everything else (intra-state).
 #   2. UCDP attributes some deaths to an unknown side. These are redistributed
 #      over side A / side B / civilians in proportion to the deaths that ARE
-#      attributed, within each dyad and year.
+#      attributed, within each dyad and year. One event is taken apart: the
+#      siege of Mariupol, which holds nine in ten of the deaths of unknown
+#      status of 2022, takes the mix of the deaths attributed in Mariupol
+#      itself (mariupol_siege, 00_setup.R).
 #   3. Combatant deaths in inter-state conflicts are reassigned to the
 #      combatant's OWN country, so the Ukrainian total excludes Russian losses.
 #   4. The low and high bounds are scaled by the same shares as the point
@@ -101,6 +104,8 @@ all2$t_l[in_crimea] <- pmax(0, all2$t_l[in_crimea] - all2$c[in_crimea])
 all2$t_u[in_crimea] <- pmax(0, all2$t_u[in_crimea] - all2$c[in_crimea])
 all2$c[in_crimea]   <- 0
 stopifnot(all(all2$c >= 0), all(all2$t >= 0))
+# the siege of Mariupol: its deaths of unknown status are shared out apart (below)
+all2$siege <- is_mariupol_siege(all2)
 
 all_sum <-
   all2 |>
@@ -161,11 +166,16 @@ inter_state <-
 
 inter_state2 <-
   inter_state %>%
+  # the siege's deaths of unknown status leave the pool that takes the dyad-year
+  # mix, and come back below at the mix of the deaths attributed in Mariupol;
+  # the event stays in the dyad-year's totals and bounds
+  mutate(u_siege = if_else(siege, u, 0), u = if_else(siege, 0, u)) %>%
   summarise(
     a = sum(a),
     b = sum(b),
     c = sum(c),
     u = sum(u),
+    u_siege = sum(u_siege),
     t = sum(t),
     t_l = sum(t_l),
     t_u = sum(t_u),
@@ -191,6 +201,9 @@ inter_state2 <-
       u != 0 & (a == 0 | b == 0 | c == 0) ~ c +
         u * sum(c) / (sum(a) + sum(b) + sum(c))
     ),
+    a2 = a2 + u_siege * mariupol_siege$share[["a"]],
+    b2 = b2 + u_siege * mariupol_siege$share[["b"]],
+    c2 = c2 + u_siege * mariupol_siege$share[["c"]],
     t2 = a2 + b2 + c2,
     diff = t - t2
   ) %>%

@@ -25,9 +25,9 @@
 # SCENARIOS
 # ---------
 #   none civilian      none of the event's deaths is civilian: all are combatants
-#   dyad-year share    the share of the dyad and year, as 07 splits it (used)
+#   dyad-year share    the share of the dyad and year, as 07 splits the other deaths of unknown status
 #   own share          the share among the deaths UCDP attributes to a side in
-#                      Mariupol raion in 2022
+#                      Mariupol raion in 2022 (used)
 #   all civilian       all of the event's deaths are civilian
 #
 # The rules move only the mode of the 2022 civilian total. Its low and high are
@@ -167,12 +167,14 @@ rules <- tibble(
   event_share = c(0, share_dyad, share_own, 1),
   scenario = c(
     "Mariupol's unknown-status deaths: none civilian",
-    sprintf("Mariupol's unknown-status deaths: dyad-year share, %.0f%% civilian (used)", 100 * share_dyad),
-    sprintf("Mariupol's unknown-status deaths: own attributed share, %.0f%% civilian", 100 * share_own),
+    sprintf("Mariupol's unknown-status deaths: dyad-year share, %.0f%% civilian", 100 * share_dyad),
+    sprintf("Mariupol's unknown-status deaths: own attributed share, %.0f%% civilian (used)", 100 * share_own),
     "Mariupol's unknown-status deaths: all civilian"
   )
 )
-used <- rules$scenario[rules$rule == "dyad-year share"]
+# the rule 07 applies (mariupol_siege, 00_setup.R)
+stopifnot(isTRUE(all.equal(share_own, mariupol_siege$share[["c"]])))
+used <- rules$scenario[rules$rule == "own share"]
 
 by_year <-
   rules |>
@@ -189,7 +191,7 @@ if (civilian_source == "uncertainUCDP") {
   uu_central <- read_rds("data_inter/ukr_param_table.rds") |> filter(role == "civilians") |> select(year, uu = mode)
   by_year <- by_year |>
     left_join(uu_central, by = "year") |>
-    mutate(central = uu + if_else(year == mariupol_event$year, (event_share - share_dyad) * event_mean, 0)) |>
+    mutate(central = uu + if_else(year == mariupol_event$year, (event_share - share_own) * event_mean, 0)) |>
     select(-uu)
 }
 

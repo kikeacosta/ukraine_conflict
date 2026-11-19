@@ -1707,10 +1707,33 @@ run_single_sim <- function(sim_id, draws_this_sim, static_inputs, pop22_ini) {
 civilian_source <- "pert"
 uncertain_ucdp_n <- 4000
 
+# The siege of Mariupol (GED event 438282, 2 March to 7 May 2022) is one record of
+# 15,996 deaths, none attributed to civilians or to either side: UCDP's sources for
+# it are the mayor, footage of mass graves and the city morgue's data. It holds
+# nine in ten of the deaths of unknown status of 2022. Shared out like the others,
+# by the mix of the attributed deaths of the whole front in that year, 22% of
+# them would be civilians; UCDP itself reads the deaths of unknown identity of
+# 2022 as civilians in their vast majority, because of Mariupol. So this one
+# event takes the mix of the deaths UCDP does attribute in Mariupol raion in 2022,
+# in every other event: 9,792 civilians, 542 combatants of side A and 878 of side
+# B, 87% civilian (13p checks these against the raw file, and shows the estimate
+# under the other rules). The other deaths of unknown status keep the dyad-year mix.
+mariupol_siege <- list(year = 2022, unknown = 15996, low = 12066, high = 64183,
+                       attributed = c(a = 542, b = 878, c = 9792))
+mariupol_siege$share <- mariupol_siege$attributed / sum(mariupol_siege$attributed)
+# the event in a table of GED events (columns country, year, u, t_l, t_u)
+is_mariupol_siege <- function(ev) {
+  hit <- ev$country == "Ukraine" & ev$year == mariupol_siege$year &
+    dplyr::coalesce(ev$u, 0) == mariupol_siege$unknown &
+    ev$t_l == mariupol_siege$low & ev$t_u == mariupol_siege$high
+  stopifnot(sum(hit) == 1, ev$a[hit] + ev$b[hit] + ev$c[hit] == 0)
+  hit
+}
 # Each event's civilian deaths at UCDP's best, as 07 counts them: the deaths of
 # civilians plus the event's deaths of unknown side times the civilians' share of
 # the attributed deaths in its dyad-year, with 07's fallback to the dyad's
-# all-year shares, Crimea and Sevastopol left out. Returns, for 2022-2025, each
+# all-year shares and the siege of Mariupol at its own share, Crimea and
+# Sevastopol left out. Returns, for 2022-2025, each
 # event's year, best count t, type of violence tov, civilian share s and
 # civilian deaths civ_best; their sums must reproduce 07's civilian totals.
 ucdp_civilian_events <- function() {
@@ -1718,6 +1741,7 @@ ucdp_civilian_events <- function() {
     read_rds("data_inter/ucdp_ged_events_slim.rds") |>
     filter(country == "Ukraine") |>
     mutate(u = coalesce(u, 0))
+  ev$siege <- is_mariupol_siege(ev)
   in_crimea <- str_detect(coalesce(ev$adm1, ""), regex("crimea|sevastopol", ignore_case = TRUE))
   ev$t[in_crimea] <- ev$t[in_crimea] - ev$c[in_crimea]
   ev$c[in_crimea] <- 0
@@ -1734,7 +1758,8 @@ ucdp_civilian_events <- function() {
     select(grp, year, pi_c)
   ev <- ev |>
     left_join(gy, by = c("grp", "year")) |>
-    mutate(civ_best = c + u * pi_c,
+    mutate(pi_c = if_else(siege, mariupol_siege$share[["c"]], pi_c),
+           civ_best = c + u * pi_c,
            s = if_else(t > 0, civ_best / t, 0),
            tov = c("sb", "ns", "os")[type_of_violence]) |>
     filter(year %in% 2022:2025) |>
@@ -1758,6 +1783,7 @@ ucdp_civilian_events <- function() {
 # their deaths cmb_best, whose sums must reproduce 07's combatant totals.
 ucdp_combatant_events <- function() {
   ev <- read_rds("data_inter/ucdp_ged_events_slim.rds") |> mutate(u = coalesce(u, 0))
+  ev$siege <- is_mariupol_siege(ev)
   in_crimea <- ev$country == "Ukraine" &
     str_detect(coalesce(ev$adm1, ""), regex("crimea|sevastopol", ignore_case = TRUE))
   ev$t[in_crimea] <- ev$t[in_crimea] - ev$c[in_crimea]
@@ -1775,7 +1801,9 @@ ucdp_combatant_events <- function() {
     select(grp, year, pi_a, pi_b)
   ev <- ev |>
     left_join(gy, by = c("grp", "year")) |>
-    mutate(a2 = a + u * pi_a, b2 = b + u * pi_b,
+    mutate(pi_a = if_else(siege, mariupol_siege$share[["a"]], pi_a),
+           pi_b = if_else(siege, mariupol_siege$share[["b"]], pi_b),
+           a2 = a + u * pi_a, b2 = b + u * pi_b,
            cmb_best = case_when(inter & side_a == "Government of Ukraine" ~ a2,
                                 inter & side_b == "Government of Ukraine" ~ b2,
                                 !inter & country == "Ukraine" ~ a2 + b2,

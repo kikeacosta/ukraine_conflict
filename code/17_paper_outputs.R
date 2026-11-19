@@ -7,7 +7,7 @@
 # Writes every table and figure that appears in the manuscript, main text and
 # Supplement, and nothing else, numbered as the manuscript numbers them:
 #
-#   outputs/tables/    Tables 1-4 and A1-A10
+#   outputs/tables/    Tables 1-4 and A1-A11
 #   outputs/figures/   Figures 1-5 and A1-A4
 #   outputs/manifest.csv   one row per item: its number, title, file, and
 #                                the files it is built from
@@ -95,7 +95,8 @@ f <- list(
   sweep = "data_inter/ukr_missing_dead_share_sweep.rds",
   bars = "data_inter/ukr_missing_dead_share_bars.rds",
   lag = "data_inter/ukr_registration_lag.rds",
-  param_table = "data_inter/ukr_param_table.rds"
+  param_table = "data_inter/ukr_param_table.rds",
+  mariupol = "data_inter/ukr_mariupol_split_e0.rds"
 )
 stopifnot(all(file.exists(unlist(f))))
 uu <- read_rds(f$uu)
@@ -358,6 +359,30 @@ tA2 <- read_rds(f$rates) |>
 stopifnot(nrow(tA2) == 2 * length(age_levels), !anyNA(tA2))
 out_tab(tA2, "Table A2", "Conflict deaths by age group, sex and type, Ukraine, 2022-2025",
         "tableA2_conflict_deaths_by_age.csv", f$rates)
+
+# TABLE A11 - the siege of Mariupol: the civilian deaths of 2022 and the loss by
+# the rule applied to the event's 15,996 deaths of unknown status (13p), every
+# other input at its central value. The rule used is the mix of the deaths
+# attributed in Mariupol itself (mariupol_siege, 00_setup.R).
+mar <- read_rds(f$mariupol)
+tA11 <- mar$civilians |>
+  transmute(scenario,
+            rule = c(`none civilian` = "None civilian",
+                     `dyad-year share` = "Proportions of the conflict and year",
+                     `own share` = "Proportions observed in Mariupol (used)",
+                     `all civilian` = "All civilian")[rule],
+            share_counted_as_civilians = scales::percent(event_share, accuracy = 1),
+            civilians_2022_best = round(civilians_mode)) |>
+  left_join(mar$conflict_deaths |>
+              transmute(scenario, civilians_2022_2025_central = round(civilians_central_total)), by = "scenario") |>
+  left_join(mar$loss |> filter(year == 2022) |>
+              transmute(scenario, sex = if_else(sex == "f", "loss_2022_females", "loss_2022_males"), loss = dec2(loss)) |>
+              pivot_wider(names_from = sex, values_from = loss), by = "scenario") |>
+  select(-scenario)
+stopifnot(nrow(tA11) == 4, !anyNA(tA11), sum(str_detect(mar$civilians$scenario, "own attributed.*\\(used\\)")) == 1)
+out_tab(tA11, "Table A11",
+        "Civilian deaths and loss of life expectancy in 2022 by the rule applied to the deaths of unknown status of the siege of Mariupol",
+        "tableA11_mariupol_rules.csv", f$mariupol)
 
 # ==============================================================================
 # FIGURES
